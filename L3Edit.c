@@ -887,7 +887,7 @@ int Print1Model(char *filename)
 
     // Print out MPD subfiles after the main file.
     LinePtr = Parts[0].FirstLine;
-    if (LinePtr->LineType == 0)
+    if (LinePtr && (LinePtr->LineType == 0))
     {
       char *c;
 
