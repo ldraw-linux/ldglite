@@ -2449,6 +2449,12 @@ void rendersetup(void)
 
   glColor3f(1.0, 1.0, 1.0); // White.
 
+  // Turn off dithering for more than 8bpp.  The default is enabled!
+  if ((rBits + gBits + bBits) > 8) // ((rBits + gBits + bBits) >= 15)
+    glDisable(GL_DITHER);
+  else
+    glEnable(GL_DITHER);
+
   glMatrixMode(GL_MODELVIEW);
 
 #ifdef USE_QUATERNION
@@ -3535,11 +3541,16 @@ int XORcurPiece()
   int retval = 0;
   int drawmode = ldraw_commandline_opts.F;
 
+  // Draw only edge lines.  No polygon faces.
+  ldraw_commandline_opts.F = TYPE_F_NO_POLYGONS;
+
+  // Consider forcing drawing studlines for slow Mesa XOR.
   //ldraw_commandline_opts.F |= TYPE_F_STUDLESS_MODE;
   //ldraw_commandline_opts.F = (TYPE_F_NO_POLYGONS | TYPE_F_STUDLESS_MODE);
-  ldraw_commandline_opts.F = TYPE_F_NO_POLYGONS;
   if ((drawmode & TYPE_F_STUDLINE_MODE) != 0)
     ldraw_commandline_opts.F |= TYPE_F_STUDLINE_MODE;
+
+  // Disable Lighting, glDisable(GL_LIGHTING) gets called in rendersetup()
   ldraw_commandline_opts.F &= ~(TYPE_F_SHADED_MODE); // zShading = 0;
 
   // Disable antialiasing and linewidths.
@@ -3553,6 +3564,9 @@ int XORcurPiece()
   glPushMatrix();
 
   rendersetup();
+
+  // No need to dither the XOR lines, even if at 8bpp.
+  glDisable(GL_DITHER);
 
 #ifdef USE_OPENGL_STENCIL
   // Too many lines cancel out in wireframe mode when viewed head on.
@@ -3629,9 +3643,15 @@ int XORcurPiece()
   glDisable(GL_STENCIL_TEST);
   glStencilMask(GL_FALSE);
 #endif
-  glDepthMask(GL_TRUE); // keep depth test, just disable depth writes
-  glEnable( GL_DEPTH_TEST ); 
+  glDepthMask(GL_TRUE); // Restore depth writes
+  glEnable( GL_DEPTH_TEST ); // Restore depth test
   glDisable( GL_COLOR_LOGIC_OP ); 
+
+  // Restore dithering to whatever rendersetup() sets it at.
+  if ((rBits + gBits + bBits) > 8) // ((rBits + gBits + bBits) >= 15)
+    glDisable(GL_DITHER);
+  else
+    glEnable(GL_DITHER);
 
   glCurColorIndex = -1;
 
