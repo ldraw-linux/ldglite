@@ -211,6 +211,7 @@ int buffer_swap_mode = SWAP_TYPE_UNDEFINED;
 
 int use_stencil_for_XOR = 1;
 int NVIDIA_XOR_HACK = 0;
+int MESA_3_COLOR_FIX = 0;
 
 int autoscaling = 0;
 int editing = 0;
@@ -6352,10 +6353,22 @@ void getDisplayProperties()
   glGetIntegerv(GL_STENCIL_BITS, &StencilBits);
   printf("GL_STENCIL_BITS = %d\n", StencilBits);
 
+  // This will leave "Mesa Offscreen" with SWAP_TYPE_UNDEFINED (OK)
   if (!strcmp(rendstr, "Mesa X11"))
     {
       // MESA 4.0 no longer seems to #define MESA so check GL_RENDERER instead.
       buffer_swap_mode = SWAP_TYPE_NODAMAGE;
+    }
+  if (strstr(rendstr, "Mesa"))
+    {
+      if (strstr(verstr, "Mesa 3.1") ||
+          strstr(verstr, "Mesa 3.2") ||
+          strstr(verstr, "Mesa 3.3") ||
+          strstr(verstr, "Mesa 3.4"))
+        {
+          MESA_3_COLOR_FIX = 1;
+          printf("MESA_COLOR_FIX = on\n");
+        }
     }
 
   if (strstr(extstr, "GL_WIN_swap_hint"))

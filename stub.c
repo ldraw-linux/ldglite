@@ -27,6 +27,8 @@
 #include <GL/glut.h>
 #include "platform.h"
 
+extern int MESA_3_COLOR_FIX;
+
 extern int curstep;
 extern int cropping;
 extern int panning;
@@ -224,11 +226,15 @@ void render_stud(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
   if (glCurColorIndex != -2)
   {
     if (glCurColorIndex != c)
+    {
       //Glcolor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
       glColor3ub(zc.r, zc.g, zc.b);
+#ifdef MESA_3_FLUSH_FIX
+      glFlush();
+#endif
+    }
     glCurColorIndex = c;
   }
-
   quadObj = gluNewQuadric (); 
   gluQuadricNormals (quadObj, GLU_SMOOTH); 
   gluQuadricOrientation(quadObj, GLU_OUTSIDE);
@@ -397,8 +403,12 @@ void render_line(vector3d *vp1, vector3d *vp2, int c)
   if (glCurColorIndex != -2)
   {
     if (glCurColorIndex != c)
+    {
       //Glcolor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
       glColor3ub(zc.r, zc.g, zc.b);
+      if (MESA_3_COLOR_FIX)
+	glFlush();
+    }
     glCurColorIndex = c;
   }
   if (lineWidth > 0.0)
@@ -552,8 +562,12 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
   if (glCurColorIndex != -2)
   {
     if (glCurColorIndex != c)
+    {
       //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
       glColor3ub(zc.r, zc.g, zc.b);
+      if (MESA_3_COLOR_FIX)
+	glFlush();
+    }
     glCurColorIndex = c;
   }
   glBegin(GL_TRIANGLES);
@@ -798,8 +812,12 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
   if (glCurColorIndex != -2)
   {
     if (glCurColorIndex != c)
+    {
       //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
       glColor3ub(zc.r, zc.g, zc.b);
+      if (MESA_3_COLOR_FIX)
+	glFlush();
+    }
     glCurColorIndex = c;
   }
   // LDRAW has the y value reversed, so negate the y.
@@ -971,10 +989,15 @@ void render_five(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
   if (glCurColorIndex != -2)
   {
     if (glCurColorIndex != c)
+    {
       //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
       glColor3ub(zc.r, zc.g, zc.b);
+      if (MESA_3_COLOR_FIX)
+	glFlush();
+    }
     glCurColorIndex = c;
   }
+
   if (lineWidth > 1.0)
   {
     glBegin(GL_POINTS);
