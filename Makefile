@@ -32,7 +32,7 @@ RANLIB = ranlib
 ## This is lame.  I don't know how to do both .c and .cpp for the OBJS line
 ## so I pretend L3*.cpp is L3*.c and make rules for them later.
 #
-SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c y.tab.c lex.yy.c qbuf.c main.c L3Edit.c L3Math.c L3Input.c L3View.c $(TR_SRC) 
+SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c y.tab.c lex.yy.c qbuf.c main.c ldglpr.c glfont.c L3Edit.c L3Math.c L3Input.c L3View.c $(TR_SRC) 
 OBJS = $(SRCS:.c=.o) $(RES_SRC:.rc=.o)
 
 all	: ldglite
