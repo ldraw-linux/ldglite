@@ -913,7 +913,7 @@ void FreeSomeParts(firstpart, lastpart)
 }
 
 /*****************************************************************************/
-#include <GL/Glut.h>
+#include <GL/glut.h>
 
 extern GLdouble model_mat[4*4];
 extern GLdouble proj_mat[4*4];
