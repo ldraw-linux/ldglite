@@ -85,6 +85,7 @@ GLubyte halftone[] = {
 
 int glCurColorIndex = -1;
 int glCurLighting = 1;
+int hardcolor = 0;
 
 // move lines closer before drawing (only if glPolygonOffset is broken)
 float z_line_offset = 0.0; 
@@ -444,6 +445,7 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
 	else
 #endif
 	if(ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) {
+	  if (!(hardcolor && qualityLines))
 		return;
 	};
 
@@ -570,17 +572,74 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
     }
     glCurColorIndex = c;
   }
-  glBegin(GL_TRIANGLES);
-  // LDRAW has the y value reversed, so negate the y.
-  if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
+  if ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) &&
+      hardcolor && qualityLines)
   {
-    getnormal(vp1, vp2, vp3, surf_norm);
-    glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+#if 0    
+    glEnable( GL_LINE_SMOOTH ); 
+    glHint( GL_LINE_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
+    glEnable( GL_BLEND );
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glBegin(GL_LINES); 
+    if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
+    {
+      //glDisable(GL_LIGHTING);
+      //glCurLighting = 0;
+      getnormal(vp1, vp2, vp3, surf_norm);
+      glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+    }
+    glVertex3f(vp1->x, -vp1->y, -vp1->z);
+    glVertex3f(vp2->x, -vp2->y, -vp2->z);
+    glVertex3f(vp3->x, -vp3->y, -vp3->z);
+    glVertex3f(vp1->x, -vp1->y, -vp1->z);
+    glEnd();
+
+    glDisable( GL_LINE_SMOOTH ); 
+    glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+    glDisable( GL_BLEND );
+#else
+    glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+    glEnable( GL_LINE_SMOOTH ); 
+    glHint( GL_LINE_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
+    glEnable( GL_POLYGON_SMOOTH ); 
+    glHint( GL_POLYGON_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
+    glEnable( GL_BLEND );
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glBegin(GL_TRIANGLES);
+    if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
+    {
+      getnormal(vp1, vp2, vp3, surf_norm);
+      glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+    }
+    glVertex3f(vp1->x, -vp1->y, -vp1->z);
+    glVertex3f(vp2->x, -vp2->y, -vp2->z);
+    glVertex3f(vp3->x, -vp3->y, -vp3->z);
+    glEnd();
+
+    glDisable( GL_POLYGON_SMOOTH ); 
+    glHint( GL_POLYGON_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+    glDisable( GL_LINE_SMOOTH ); 
+    glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+    glDisable( GL_BLEND );
+    glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+#endif
   }
-  glVertex3f(vp1->x, -vp1->y, -vp1->z);
-  glVertex3f(vp2->x, -vp2->y, -vp2->z);
-  glVertex3f(vp3->x, -vp3->y, -vp3->z);
-  glEnd();
+  else
+  // LDRAW has the y value reversed, so negate the y.
+  {
+    glBegin(GL_TRIANGLES);
+    if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
+    {
+      getnormal(vp1, vp2, vp3, surf_norm);
+      glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+    }
+    glVertex3f(vp1->x, -vp1->y, -vp1->z);
+    glVertex3f(vp2->x, -vp2->y, -vp2->z);
+    glVertex3f(vp3->x, -vp3->y, -vp3->z);
+    glEnd();
+  }
   if ((c > 32) && (c < 64)) // Translucent colors
   {
     glDisable(GL_POLYGON_STIPPLE);
@@ -634,6 +693,7 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
 	else
 #endif
 	if(ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) {
+	  if (!(hardcolor && qualityLines))
 		return;
 	};
 
@@ -820,6 +880,64 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
     }
     glCurColorIndex = c;
   }
+  if ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) &&
+      hardcolor && qualityLines)
+  {
+#if 0
+    // This does NOT work.  FRONT_AND_BACK does NOT work on GL_LINES!
+    glEnable( GL_LINE_SMOOTH ); 
+    glHint( GL_LINE_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
+    glEnable( GL_BLEND );
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glBegin(GL_LINES); 
+    if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
+    {
+      //glDisable(GL_LIGHTING);
+      //glCurLighting = 0;
+      getnormal(vp1, vp2, vp3, surf_norm);
+      glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+    }
+    glVertex3f(vp1->x, -vp1->y, -vp1->z);
+    glVertex3f(vp2->x, -vp2->y, -vp2->z);
+    glVertex3f(vp3->x, -vp3->y, -vp3->z);
+    glVertex3f(vp4->x, -vp4->y, -vp4->z);
+    glVertex3f(vp1->x, -vp1->y, -vp1->z);
+    glEnd();
+
+    glDisable( GL_LINE_SMOOTH ); 
+    glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+    glDisable( GL_BLEND );
+#else
+    glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+    glEnable( GL_LINE_SMOOTH ); 
+    glHint( GL_LINE_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
+    glEnable( GL_POLYGON_SMOOTH ); 
+    glHint( GL_POLYGON_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
+    glEnable( GL_BLEND );
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glBegin(GL_QUADS);
+    if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
+    {
+      getnormal(vp1, vp2, vp3, surf_norm);
+      glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+    }
+    glVertex3f(vp1->x, -vp1->y, -vp1->z);
+    glVertex3f(vp2->x, -vp2->y, -vp2->z);
+    glVertex3f(vp3->x, -vp3->y, -vp3->z);
+    glVertex3f(vp4->x, -vp4->y, -vp4->z);
+    glEnd();
+
+    glDisable( GL_POLYGON_SMOOTH ); 
+    glHint( GL_POLYGON_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+    glDisable( GL_LINE_SMOOTH ); 
+    glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+    glDisable( GL_BLEND );
+    glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+#endif
+  }
+  else
   // LDRAW has the y value reversed, so negate the y.
   if (use_quads)
   {
