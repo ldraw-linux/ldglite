@@ -250,6 +250,7 @@ Command line options (see also the original ldlite docs for more):
     5 = PPM.  Use -N to turn off output image cropping.
 -eN.NN fixes polyline offset driver errors.  Try -e0.95 if lines look bad.
 -p turns on polling mode.
+-l logs messages to the ldglite.log file instead of stdout.
 -ld forces the program to use the ldlite parser.
 -l3 forces the program to use the l3 parser.
 -le starts the program in LEDIT emulation mode. 
