@@ -154,6 +154,7 @@ int screenbuffer = GL_FRONT;
 GLuint cbuffer_region = 0;
 GLuint zbuffer_region = 0;
 static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
+extern int Find1PartMatrix(int partnum, float m[4][4]);
 extern int Find1Part(int partnum);
 extern int Draw1Part(int partnum, int Color);
 extern int Move1Part(int partnum, float m[4][4]);
@@ -2598,6 +2599,10 @@ void display(void)
 
   if (editing) 
   {
+    glDrawBuffer(screenbuffer); 
+    if (res = glutLayerGet(GLUT_NORMAL_DAMAGED))
+      dirtyWindow = 1;
+
     if (panning || dirtyWindow)
     {
       if (SOLID_EDIT_MODE)
@@ -3362,6 +3367,24 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	ldraw_commandline_opts.S *= (1.0 / 0.5);
 	dirtyWindow = 1;
 	glutPostRedisplay();
+	return 1;
+      case 'c':
+	{
+	  clear_edit_mode_gui(curpiece);
+	  if (Find1PartMatrix(curpiece, m))
+	  {
+	    //gluProject((GLdouble)x, (GLdouble)y, (GLdouble)z, model, proj, view, &sx, &sy, &sz);
+	    //printf("Center(%0.2f, %0.2f, %0.2f)\n", m[0][3],m[1][3],m[2][3]);
+	    m[0][3] -= (ldraw_commandline_opts.O.x + (zGetRowsize()/2));
+	    m[1][3] -= (ldraw_commandline_opts.O.y + (2*zGetColsize()/3));
+	    m[2][3] -= (ldraw_commandline_opts.O.z);
+	    //printf("Offset(%0.2f, %0.2f, %0.2f)\n", m[0][3],m[1][3],m[2][3]);
+	    ldraw_commandline_opts.O.x = -m[0][3];
+	    ldraw_commandline_opts.O.y = -m[1][3];
+	    ldraw_commandline_opts.O.z = -m[2][3];
+	  }
+	  edit_mode_gui();
+	}
 	return 1;
       }
       if (newview)
