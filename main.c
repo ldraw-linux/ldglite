@@ -4157,7 +4157,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	printf("Scaling by %f, %f, %f\n", m[0][0], m[1][1], m[2][2]);
 	CopyStaticBuffer();//It would be nice to rescale without "moving" it.
 	movingpiece = curpiece;
-        Move1Part(curpiece, m, 1);
+        //Move1Part(curpiece, m, 1);
+	Move1Part(curpiece, m, 2);
 	DrawMovingPiece();
 	if (ldraw_commandline_opts.debug_level == 1)
 	    Print1Part(curpiece, stdout);
@@ -6003,9 +6004,14 @@ void ParseParams(int *argc, char **argv)
 	      fogColor[1] = v[1][1];
 	      fogColor[2] = v[1][2];
 	    }
+	  case 'M': // Motion? Mouse Movement?
+	    if ((pszParam[2] == '0') && (toupper(pszParam[3]) == 'X'))
+	      sscanf(pszParam,"%c%c%x",&type,&c,&pan_visible);
+	    else
+	      sscanf(pszParam,"%c%c%d",&type,&c,&pan_visible);
+	    break;
 	  }
 	}
-	break;
 	break;
       case 'G':
       case 'g':
