@@ -78,18 +78,22 @@ void Bernstein(float r[4], float u, float m[4][4])
 0 Finish with a 750.dat (or 752.dat) End piece.
 */
 
+//************************************************************************
+#ifdef TESTING
+char maintext[100000];
+char helper[256];
+#endif
+
 //************************************************************************
 // The user inserts 2 colored end parts (754.dat) at the correct locations.
 // Then insert 2 hose parts (754.dat) for intermediate control points.
 // Key in the hoser command key 'H' followed by the number of steps,
 // and press <Enter> to send the goodies to this fn, which hoses it.
 //************************************************************************
-char maintext[10000];
-
 void hoser(float m[4][4], int color, int steps, int drawline,
 	   char *parttext, char *firstparttext)
 {
-  char helper[256];
+  float m1[4][4];
   float p[4],prevp[4],nextp[4],nextnextp[4];
   double Xaxisrotation,Yaxisrotation,pi,pidiv2;
   double pointtopointdistance,nextpointtopointdistance;
@@ -98,13 +102,15 @@ void hoser(float m[4][4], int color, int steps, int drawline,
   double RatioofDistancetoIdeal,nextRatioofDistancetoIdeal;
   double cumulatedITV,ITV; // ITV = IntermedTimeValue;
   double Prevpointtopointdistance,PrevRatioofDistancetoIdeal;
+  char *segname;
   int i;
 
   pi=acos(-1);
   pidiv2=pi/2;
 
-  // Start out with 3 comment lines letting us know about the control points.
-  sprintf(maintext,"0 new Bezier Curve maker made\n0 Bezier curve start\n");
+#ifdef TESTING
+  // Start out with comment lines letting us know about the control points.
+  sprintf(maintext,"0 Bezier ");
   sprintf(helper,"0 %g %g %g " ,m[0][0] ,m[0][1], m[0][2]);
   strcat(maintext, helper);
   sprintf(helper,"0 %g %g %g " ,m[1][0] ,m[1][1], m[1][2]);
@@ -115,6 +121,7 @@ void hoser(float m[4][4], int color, int steps, int drawline,
   strcat(maintext, helper);
   sprintf(helper,"0 %d %s %s %d %d\n" ,color ,parttext, firstparttext, steps, drawline);
   strcat(maintext, helper);
+#endif
 
   cumulatedptpdistance=0;
   for (i = 0; i < steps; i++)
@@ -255,7 +262,13 @@ void hoser(float m[4][4], int color, int steps, int drawline,
       Xaxisrotation=pi-(atan(sqrt(((nextp[0]-p[0])*(nextp[0]-p[0]))+((nextp[2]-p[2])*(nextp[2]-p[2])))/(nextp[1]-p[1])));
       Yaxisrotation=(-pi+(atan((nextp[0]-p[0])/(nextp[2]-p[2]))));}
 
+    if ((i==0) || (i==(steps-1))) 
+      segname = firstparttext;
+    else 
+      segname = parttext;
+
     // Format the new hose segment.
+#ifdef TESTING
     sprintf(helper,"1 %d " ,16); // color
     strcat(maintext, helper);
     sprintf(helper,"%g %g %g " ,p[0] ,p[1], p[2]);
@@ -270,11 +283,26 @@ void hoser(float m[4][4], int color, int steps, int drawline,
 	    (sin(Xaxisrotation)*cos(Yaxisrotation)),
 	    (cos(Xaxisrotation)*cos(Yaxisrotation)));
     strcat(maintext, helper);
-    if ((i==0) || (i==(steps-1))) 
-      sprintf(helper,"%s\n" ,firstparttext);
-    else 
-      sprintf(helper,"%s\n" ,parttext);
-    strcat(maintext, helper);
+    sprintf(helper,"%s\n" ,segname);
+#else
+    m1[0][0] = cos(Yaxisrotation);
+    m1[0][1] = (sin(Xaxisrotation)*sin(Yaxisrotation));
+    m1[0][2] = (cos(Xaxisrotation)*sin(Yaxisrotation));
+    m1[0][3] = p[0];
+    m1[1][0] = 0;
+    m1[1][1] = cos(Xaxisrotation);
+    m1[1][2] = -sin(Xaxisrotation);
+    m1[1][3] = p[1];
+    m1[2][0] = -sin(Yaxisrotation);
+    m1[2][1] = (sin(Xaxisrotation)*cos(Yaxisrotation));
+    m1[2][2] = (cos(Xaxisrotation)*cos(Yaxisrotation));
+    m1[2][3] = p[2];
+    m1[3][0] = 1;
+    m1[3][1] = 1;
+    m1[3][2] = 1;
+    m1[3][3] = 1;
+    hoseseg(segname, color, m1);
+#endif
 
     p[0] = nextp[0]; 
     p[1] = nextp[1]; 
@@ -282,6 +310,7 @@ void hoser(float m[4][4], int color, int steps, int drawline,
     PrevNTV = NTV;
   }
   
+#ifdef TESTING
   sprintf(helper,"0 Bezier curve end\n");
   strcat(maintext, helper);
 
@@ -301,9 +330,11 @@ void hoser(float m[4][4], int color, int steps, int drawline,
   strcat(maintext, helper);	
 
   hoseout();
+#endif
 
 }
 
+#ifdef TESTING
 /***************************************************************/
 #include <stdio.h>
 void hoseout(void)
@@ -318,7 +349,6 @@ void hoseout(void)
     printf(maintext);
   }
     
-#ifdef TESTING
 /***************************************************************/
 int 
 main(int argc, char **argv)
