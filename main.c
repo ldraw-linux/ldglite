@@ -110,6 +110,11 @@ double projection_towardz = 0.0;
 double projection_upx = 0.0;
 double projection_upy = 1.0;
 double projection_upz = 0.0;
+
+double camera_longitude = 0.0;
+double camera_latitude = 0.0;
+double camera_distance  = 0.0;
+
 int ldraw_image_type = IMAGE_TYPE_BMP8;
 
 // Set the light way up and behind us.  Will this make it too dim?
@@ -6247,11 +6252,16 @@ void ParseParams(int *argc, char **argv)
 	  projection_fromy = v[0][1];
 	  projection_fromz = v[0][2];
 	}
-        else if (toupper(pszParam[1]) == 'O') // Object Origin to look at.
+        else if ((toupper(pszParam[1]) == 'O') || // Object Origin to look at.
+		 ((toupper(pszParam[1]) == 'L') && 
+		  (toupper(pszParam[2]) == 'A')))
 	{
 	  float v[4][4];
 	  v[0][0] = v[0][1] = v[0][2] = 0.0;
-	  ScanPoints(v, 1, &(pszParam[2]));
+	  if (toupper(pszParam[1]) == 'O')
+	    ScanPoints(v, 1, &(pszParam[2]));
+	  else
+	    ScanPoints(v, 1, &(pszParam[3]));
 	  printf("LOOK AT (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
 	  projection_towardx = v[0][0];
 	  projection_towardy = v[0][1];
@@ -6266,6 +6276,16 @@ void ParseParams(int *argc, char **argv)
 	  projection_upx = v[0][0];
 	  projection_upy = v[0][1];
 	  projection_upz = v[0][2];
+	}
+        else if (toupper(pszParam[1]) == 'G') // Camera location (on Globe)
+	{
+	  float v[4][4];
+	  v[0][0] = v[0][1] = v[0][2] = 0.0;
+	  ScanPoints(v, 1, &(pszParam[2]));
+	  printf("FROM = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
+	  camera_longitude = v[0][0];
+	  camera_latitude = v[0][1];
+	  camera_distance  = v[0][2];
 	}
 	else
 	  sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.C));
@@ -6620,6 +6640,43 @@ void ParseParams(int *argc, char **argv)
 	}
 	break;
       }
+    }
+  }
+
+  if ((camera_longitude != 0.0) ||
+      (camera_latitude != 0.0) ||
+      (camera_distance > 0.0))
+  {				 
+    float v[4][4];
+    double distance;
+    double lo, la;
+    double x, y, z;
+
+    if (camera_distance <= 0.0)
+    {
+      camera_distance = projection_fromz;
+      //distance = sqrt(x*x + y*y + z*z);
+    }
+
+    lo = 3.1415927 * camera_longitude / 180.0;
+    projection_fromz = camera_distance * cos(lo);
+    projection_fromx = camera_distance * sin(lo);
+    la = 3.1415927 * camera_latitude / 180.0;
+    projection_fromy = camera_distance * sin(la);
+
+    projection_fromz *= cos(la);
+    projection_fromx *= cos(la);
+
+    v[0][0] = projection_fromx;
+    v[0][1] = projection_fromy;
+    v[0][2] = projection_fromz;
+    printf("CAM = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
+
+    // Yuck!  Gotta get rid of LdrawOblique!
+    if (m_viewMatrix == LdrawOblique)
+    {
+      parse_view(Front);
+      m_viewMatrix == Front;
     }
   }
 }
