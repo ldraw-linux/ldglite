@@ -306,6 +306,13 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			    stepcount++;
 			  }
 			}
+			else if (strncmp(s,"CLEAR",5) == 0)
+			{
+			  // if (include_stack_ptr <= ldraw_commandline_opts.output_depth )
+			  {
+			    zClear();
+			  }
+			}
 			if (ldraw_commandline_opts.M != 'C')
 			{
 			  // Non-continuous output stop after each step.
