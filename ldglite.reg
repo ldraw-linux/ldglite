@@ -1,0 +1,23 @@
+REGEDIT4
+
+[HKEY_CLASSES_ROOT\.ldr]
+@="ldraw.Document"
+"Content Type"="application/x-ldraw"
+
+[HKEY_CLASSES_ROOT\MIME\Database\Content Type\application/x-ldraw]
+"Extension"=".ldr"
+
+[HKEY_CLASSES_ROOT\ldraw.Document]
+@="ldraw Document"
+"EditFlags"=dword:00000000
+"AlwaysShowExt"=""
+"BrowserFlags"=dword:00000008
+
+[HKEY_CLASSES_ROOT\ldraw.Document\shell]
+@=""
+
+[HKEY_CLASSES_ROOT\ldraw.Document\shell\open]
+
+[HKEY_CLASSES_ROOT\ldraw.Document\shell\open\command]
+@="C:\\projects\\ldglite\\ldglite.exe -l3 -v3 \"%1\""
+
