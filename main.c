@@ -41,8 +41,10 @@
 char ldgliteVersion[] = "Version 1.1.0      ";
 
 // Use Glut popup menus if MUI is not available.
+#ifndef OFFSCREEN_ONLY
 #ifndef TEST_MUI_GUI
 #  define USE_GLUT_MENUS 1
+#endif
 #endif
 extern char dirfilepath[256]; // Used by bogus glut popup menu file browser
 extern int  mainmenunum;
