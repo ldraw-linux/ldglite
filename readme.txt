@@ -222,6 +222,17 @@ Command line options (see also the original ldlite docs for more):
    R,G,B = fog color (default = fade to white, try 0,0,0 for night scene)
    All fog params except T are optional.
    Try these:  -ff3,0.0004    -ff3,0.0003,0,0.8,0.8,1.0
+-fmN sets default mouse spin drawing mode bitmask (eg -fm0x80).  Bits are:
+   TYPE_F_NORMAL 		0x0000
+   TYPE_F_LOW_RES 		0x0001
+   TYPE_F_NO_POLYGONS	 	0x0002
+   TYPE_F_NO_LINES		0x0004
+   TYPE_F_BBOX_MODE		0x0008
+   TYPE_F_INVISIBLE		(TYPE_F_NO_POLYGONS | TYPE_F_NO_LINES)
+   TYPE_F_STUDLESS_MODE 	0x0010
+   TYPE_F_STUDONLY_MODE 	0x0020
+   TYPE_F_STUDLINE_MODE 	0x0040
+   TYPE_F_SHADED_MODE	 	0x0080
 -v0 displays in a 320x200 window.
 -v-1 displays in fullscreen with no decorations.
 -v-2 displays in fullscreen gamemode (no menus in gamemode).
