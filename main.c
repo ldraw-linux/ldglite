@@ -79,8 +79,9 @@ int use_png_alpha = 1;
 int ldraw_projection_type = 0;  // 1 = perspective, 0 = orthographic.
 #define WIDE_ANGLE_VIEW 1
 #if WIDE_ANGLE_VIEW
-double projection_znear = 10.0; // 1.0 gives zfighting with 16bit Mesa Zbuf
-double projection_zfar = 2000.0;
+// znear 1.0 gives zfighting with 16bit Mesa Zbuf, 10.0 still does on datsville
+double projection_znear = 10.0; 
+double projection_zfar = 4000.0;
 double projection_fov = 45.0;
 double projection_fromx = 0.0;
 double projection_fromy = 0.0;
@@ -102,6 +103,26 @@ double projection_upx = 0.0;
 double projection_upy = 1.0;
 double projection_upz = 0.0;
 int ldraw_image_type = IMAGE_TYPE_BMP8;
+
+// Set the light way up and behind us.  Will this make it too dim?
+// NOTE: The LDRAW polys are not CCW compliant so the normals are random
+// LdLite uses 2 opposing lights to avoid the problem with normals?
+// I attempted this below but it does not seem to work for OpenGL.
+// Hmmm, perhaps LdLite just took the fabs() of normals instead.
+// If I calculate normals then I could do that too.
+
+// x, y, z, dist divisor.  (divisor = 0 for light at infinite distance)
+GLfloat lightposition0[] = { -1000.0, 1000.0, 1000.0, 0.0 };
+GLfloat lightposition1[] = { 1000.0, -1000.0, -1000.0, 0.0 };
+GLfloat lightcolor0[] =  { 0.5, 0.5, 0.5, 1.0 }; // Half light
+GLfloat lightcolor1[] =  { 0.75, 0.75, 0.75, 1.0 }; // bright light
+
+#if 0
+GLfloat lightcolorWhite[] =  { 1.0, 1.0, 1.0, 1.0 }; // White light
+GLfloat lightcolorBright[] =  { 0.75, 0.75, 0.75, 1.0 }; // bright light
+GLfloat lightcolorHalf[] =  { 0.5, 0.5, 0.5, 1.0 }; // Half light
+GLfloat lightcolorDim[] =  { 0.25, 0.25, 0.25, 1.0 }; // dim light
+#endif
 
 // [Views] swiped from ldraw.ini
 // Modified some views to be orthogonal.
@@ -1505,21 +1526,6 @@ void init(void)
 {
   int i;
 
-  // Set the light way up and behind us.  Will this make it too dim?
-  // NOTE: The LDRAW polys are not CCW compliant so the normals are random
-  // LdLite uses 2 opposing lights to avoid the problem with normals?
-  // I attempted this below but it does not seem to work for OpenGL.
-  // Hmmm, perhaps LdLite just took the fabs() of normals instead.
-  // If I calculate normals then I could do that too.
-
-  // x, y, z, dist divisor.  (divisor = 0 for light at infinite distance)
-    GLfloat lightposition0[] = { -1000.0, 1000.0, 1000.0, 0.0 };
-    GLfloat lightposition1[] = { 1000.0, -1000.0, -1000.0, 0.0 };
-    GLfloat lightcolor0[] =  { 1.0, 1.0, 1.0, 1.0 }; // White light
-    GLfloat lightcolor1[] =  { 0.75, 0.75, 0.75, 1.0 }; // bright light
-    GLfloat lightcolor2[] =  { 0.5, 0.5, 0.5, 1.0 }; // Half light
-    GLfloat lightcolor3[] =  { 0.25, 0.25, 0.25, 1.0 }; // dim light
-
     // glSelectBuffer(SELECT_BUFFER, select_buffer);
 
     glEnable(GL_DEPTH_TEST);
@@ -1527,15 +1533,14 @@ void init(void)
 
     if (1) //(zShading)
     {
-
       glEnable(GL_LIGHT0);
       glLightfv(GL_LIGHT0, GL_POSITION, lightposition0);
-      glLightfv(GL_LIGHT0, GL_DIFFUSE, lightcolor2);
+      glLightfv(GL_LIGHT0, GL_DIFFUSE, lightcolor0);
       //glLightfv(GL_LIGHT0, GL_AMBIENT, lightcolor1);
-#if 0
+#ifdef USE_TWO_SPOT_LIGHTS
       glEnable(GL_LIGHT1);
       glLightfv(GL_LIGHT1, GL_POSITION, lightposition1);
-      glLightfv(GL_LIGHT1, GL_DIFFUSE, lightcolor3);
+      glLightfv(GL_LIGHT1, GL_DIFFUSE, lightcolor1);
       glLightfv(GL_LIGHT1, GL_AMBIENT, lightcolor1);
 #endif
       glEnable(GL_LIGHTING);
@@ -5707,7 +5712,7 @@ void ParseParams(int *argc, char **argv)
 	{
 	  float v[4][4];
 	  v[0][0] = v[0][1] = v[0][2] = 0.0;
-	  ScanPoints(v, 3, &(pszParam[2]));
+	  ScanPoints(v, 1, &(pszParam[2]));
 	  printf("CAM = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
 	  projection_fromx = v[0][0];
 	  projection_fromy = v[0][1];
@@ -5717,7 +5722,7 @@ void ParseParams(int *argc, char **argv)
 	{
 	  float v[4][4];
 	  v[0][0] = v[0][1] = v[0][2] = 0.0;
-	  ScanPoints(v, 3, &(pszParam[2]));
+	  ScanPoints(v, 1, &(pszParam[2]));
 	  printf("LOOK AT (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
 	  projection_towardx = v[0][0];
 	  projection_towardy = v[0][1];
@@ -5727,7 +5732,7 @@ void ParseParams(int *argc, char **argv)
 	{
 	  float v[4][4];
 	  v[0][0] = v[0][1] = v[0][2] = 0.0;
-	  ScanPoints(v, 3, &(pszParam[2]));
+	  ScanPoints(v, 1, &(pszParam[2]));
 	  printf("UP = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
 	  projection_upx = v[0][0];
 	  projection_upy = v[0][1];
@@ -5826,6 +5831,33 @@ void ParseParams(int *argc, char **argv)
 	    ldraw_commandline_opts.F |= STUDLINE_MODE;
 	    DrawToCurPiece = 1;
 	  }
+	}
+	else if (pszParam[1] == 'c') //Spotlight coords
+	{
+	  float v[4][4];
+	  char *colorstring;
+	  v[0][0] = -1.0;
+	  v[0][1] = v[0][2] = 1.0;
+	  v[1][0] = v[1][1] = v[1][2] = 0.5;
+	  ScanPoints(v, 2, &(pszParam[2]));
+	  printf("LightPos = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
+	  lightposition0[0] = v[0][0];
+	  lightposition0[1] = v[0][1];
+	  lightposition0[2] = v[0][2];
+	  printf("LightColor = (%g, %g, %g)\n", v[1][0], v[1][1], v[1][2]);
+	  lightcolor0[0] = v[1][0];
+	  lightcolor0[1] = v[1][1];
+	  lightcolor0[2] = v[1][2];
+	}
+	else if (pszParam[1] == 'C') // Ambient light color
+	{
+	  float v[4][4];
+	  v[0][0] = v[0][1] = v[0][2] = 0.75;
+	  ScanPoints(v, 1, &(pszParam[2]));
+	  printf("AmbientColor = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
+	  lightcolor1[0] = v[0][0];
+	  lightcolor1[1] = v[0][1];
+	  lightcolor1[2] = v[0][2];
 	}
 	else 
 	  ldraw_commandline_opts.log_output = 1;
@@ -6140,6 +6172,10 @@ main(int argc, char **argv)
   glGetIntegerv(GL_DEPTH_BITS, &DepthBits);
   printf("GL_DEPTH_BITS = %d\n", DepthBits);
 
+  // Change the default znear for skimpy depth buffers like the Mesa Default.
+  if (DepthBits < 24) 
+    projection_znear = 100.0; 
+
   glGetIntegerv(GL_STENCIL_BITS, &StencilBits);
   printf("GL_STENCIL_BITS = %d\n", StencilBits);
 
@@ -6280,7 +6316,7 @@ main(int argc, char **argv)
 
   helpmenunum = glutCreateMenu(menu);
   glutAddMenuEntry(progname             , '\0');
-  glutAddMenuEntry("Version 0.9.1d     ", '\0');
+  glutAddMenuEntry("Version 0.9.2      ", '\0');
 
   mainmenunum = glutCreateMenu(menu);
   glutAddSubMenu(  "File               ", filemenunum);
