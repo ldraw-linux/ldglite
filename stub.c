@@ -612,6 +612,7 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
     z.extent_y2 = max(s3y,z.extent_y2);
   }
 
+#ifdef EXPERIMENTAL_STIPPLE
   if (c == 374)
   {
     // Draw stippled gold (334) before drawing the quad
@@ -636,8 +637,11 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
 
     unset_material(46,&zc,&zs);
     unset_material(334,&zc,&zs);
+    c = 373;  // Use sand violet instead of grey brown.
+    c = 19;  // tan  
     translate_color(c,&zc,&zs);
   }
+#endif // EXPERIMENTAL_STIPPLE
 
   setup_material(c,&zc,&zs);
 
@@ -853,6 +857,7 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
   }
 
   // opengl render it as a quad
+#ifdef EXPERIMENTAL_STIPPLE
   if (c == 374)
   {
     // Draw stippled gold (334) before drawing the quad
@@ -916,8 +921,11 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
 
     unset_material(46,&zc,&zs);
     unset_material(334,&zc,&zs);
+    c = 373;  // Use sand violet instead of grey brown.
+    c = 19;  // tan  
     translate_color(c,&zc,&zs);
   }
+#endif // EXPERIMENTAL_STIPPLE
 
   setup_material(c,&zc,&zs);
 
