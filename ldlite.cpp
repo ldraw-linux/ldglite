@@ -215,6 +215,11 @@ BOOL CldliteApp::InitInstance()
 			} else {
 				mMenu->CheckMenuItem( IDR_WIRE, MF_BYCOMMAND | MF_UNCHECKED );
 			}
+			if (ldraw_commandline_opts.M == 'P') {
+				mMenu->CheckMenuItem( IDR_PAUSE, MF_BYCOMMAND | MF_CHECKED  );
+			} else {
+				mMenu->CheckMenuItem( IDR_PAUSE, MF_BYCOMMAND | MF_UNCHECKED  );
+			}
 		}
 	}
 	return TRUE;
@@ -323,6 +328,16 @@ CDocument* CldliteApp::OpenDocumentFile(LPCTSTR lpszFileName)
 	pos = GetFirstDocTemplatePosition();
 	if (found_it == 0) {
 		selected_document = GetNextDocTemplate( pos )->OpenDocumentFile(NULL);
+		// assume no path is given
+		strcpy(base_filename, selected_filename);
+		// remove trailing .dat if it is there.
+		int len;
+		len = strlen(base_filename);
+		if (len > 4) {
+			if(base_filename[len-4] == '.') {
+				base_filename[len-4] = 0;
+			}
+		}
 	} else {
 		selected_document = CWinApp::OpenDocumentFile(selected_filename);
 	}
