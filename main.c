@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.0.3      ";
+char ldgliteVersion[] = "Version 1.0.4      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -216,11 +216,17 @@ int sc[4];
 #define SWAP_TYPE_COPY 2	// unchanged
 #define SWAP_TYPE_NODAMAGE 3	// unchanged even by X expose() events
 #define SWAP_TYPE_KTX 4		// use the GL_KTX_buffer_region extension
+#define SWAP_TYPE_APPLE 5	// OSX fakes GL_FRONT by drawing in GL_BACK
 
+// Set default editing mode.
 #ifdef MESA
 int buffer_swap_mode = SWAP_TYPE_NODAMAGE;
 #else
+#  ifdef MACOS_X
+int buffer_swap_mode = SWAP_TYPE_APPLE;
+#  else
 int buffer_swap_mode = SWAP_TYPE_UNDEFINED;
+#  endif
 #endif
 
 int use_stencil_for_XOR = 1;
@@ -646,6 +652,14 @@ void pasteCommand(int x, int y)
   
 }
 #endif
+
+//---------------MESA TESTING BLOCK----------------------
+//#define SIMULATE_MESA 1     
+//#define WINTIMER 1
+//#define SAVE_COLOR_ALL 1
+//#define SAVE_DEPTH_ALL 1
+//#define MESA_XOR_TEST 1
+//---------------MESA TESTING BLOCK----------------------
 
 //---------------OSX MAC TESTING BLOCK----------------------
 //#define SIMULATE_APPLE_BUGS 1
@@ -1466,7 +1480,7 @@ int edit_mode_gui()
   }
 
   // If nothing is happening and hiding the LEDIT GUI just return.
-  if (show_edit_mode_gui == 2)
+  if ((show_edit_mode_gui == 2) && (ecommand[0] == 0))
   {
     show_edit_mode_gui = 0;
     // NOTE:  I may be able to just copy from the BACK buffer here.
@@ -3646,7 +3660,35 @@ int XORcurPiece()
   ldraw_commandline_opts.F |= TYPE_F_XOR_MODE;
   glColor3f(1.0, 1.0, 1.0); // white
   glCurColorIndex = -2;
+
+#ifdef MESA_XOR_TEST
+  if (buffer_swap_mode == SWAP_TYPE_NODAMAGE) // Mesa
+    glDrawBuffer(staticbuffer); 
+#endif
+
   retval = Draw1Part(curpiece, 15);
+  glFlush(); // Force display now.  For OSX, this copies BACK to FRONT.
+
+#ifdef MESA_XOR_TEST
+  if (buffer_swap_mode == SWAP_TYPE_NODAMAGE) // Mesa
+  {
+    //CopyColorBuffer(renderbuffer, screenbuffer); 
+    glutSwapBuffers(); // Copy the BACK buffer with XOR part to FRONT.
+    retval = Draw1Part(curpiece, 15);  // Erase it in the BACK buffer.
+    glDrawBuffer(screenbuffer); // Switch to FRONT buffer for LEDIT menu.
+  }
+#endif
+
+#ifdef MACOS_X_TEST2
+  // Apple Fakes GL_FRONT drawing by drawing in the back buffer
+  // so we need to erase the XOR after the flush so it doesnt leave a trail.
+  // (The flush supposedly forces a copy from BACK to FRONT)
+  if ((buffer_swap_mode == SWAP_TYPE_APPLE) && panning)
+    retval = Draw1Part(curpiece, 15);
+  // The part may flicker during panning because of another flush after the GUI
+  // gets drawn, but its better than XOR droppings.
+#endif
+
   glLogicOp(GL_COPY);
   ldraw_commandline_opts.F &= ~(TYPE_F_XOR_MODE);
   if (movingpiece == curpiece)
@@ -3676,7 +3718,7 @@ int XORcurPiece()
 
   glCurColorIndex = -1;
 
-  glFlush();
+  // Move glFlush(); to right after Draw1Part() so I can erase it in BACK buffer.
 
   glPopMatrix();
 
@@ -8081,7 +8123,7 @@ int setfilename(const char *newfile)
 
 
 /***************************************************************/
-int registerGlutCallbacks()
+int setGlutCallbacks()
 {
   // I think I have to reregister all of these again for gamemode.
   glutDisplayFunc(display);
@@ -8092,13 +8134,20 @@ int registerGlutCallbacks()
   glutMotionFunc(motion);
   glutIdleFunc(myGlutIdle);
   glutPassiveMotionFunc(passive_motion);
+  glutWindowStatusFunc(visibility);
+  glutVisibilityFunc(VISIBILITY);
   glutMenuStateFunc(NULL); //#ifdef TEST_MUI_GUI
+}
+
+/***************************************************************/
+int registerGlutCallbacks()
+{
+  // I think I have to reregister all of these again for gamemode.
+  setGlutCallbacks();
 #ifdef USE_GLUT_MENUS
   glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
   glutAttachMenu(GLUT_RIGHT_BUTTON); // And reattach it
 #endif
-  glutWindowStatusFunc(visibility);
-  glutVisibilityFunc(VISIBILITY);
 }
 
 /***************************************************************/
@@ -8212,6 +8261,9 @@ int getDisplayProperties()
     {
       // Assume Microsoft software opengl which blits rather than page flips.
       buffer_swap_mode = SWAP_TYPE_COPY;
+#ifdef SIMULATE_MESA      
+      buffer_swap_mode = SWAP_TYPE_NODAMAGE;
+#endif
     }
   }
 
@@ -8662,14 +8714,8 @@ main(int argc, char **argv)
 
   getDisplayProperties();
 
-  glutDisplayFunc(display);
-  glutReshapeFunc(reshape);
-  glutKeyboardFunc(keyboard);
-  glutSpecialFunc(fnkeys);
-  glutMouseFunc(mouse);
-  glutMotionFunc(motion);
-  glutIdleFunc(myGlutIdle);
-
+  // Should be registerGlutCallbacks() but mainmenu not created yet.
+  setGlutCallbacks(); 
   initializeMenus();
 
 #ifdef USE_GLFONT
