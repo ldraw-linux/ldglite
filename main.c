@@ -121,6 +121,12 @@ static int list_made = 0;
 #define USE_DOUBLE_BUFFER
 #define USE_OPENGL_STENCIL
 
+#define SAVE_DEPTH_BOX
+
+#ifdef SAVE_DEPTH_BOX
+int sc[4];
+#endif
+
 // Stuff for editing mode
 // contents of back buffer after glutSwapBuffers():
 #define SWAP_TYPE_UNDEFINED 0 	// unknown
@@ -177,6 +183,8 @@ extern int Print1Part(int partnum, FILE *f);
 extern int Print1Model(char *filename);
 extern int Print3Parts(int partnum, char *s1, char *s2, char *s3);
 extern int Comment1Part(int partnum, char *Comment);
+extern int Switch1Part(int partnum);
+extern int Get1PartBox(int partnum, int sc[4]);
 
 int use_quads = 0;
 int curstep = 0;
@@ -2395,11 +2403,26 @@ void SaveDepthBuffer(void)
   else
   {
     // Apparently there is only ONE zbuffer shared by front & back buffers.
+#ifdef SAVE_DEPTH_BOX
+    // Gotta figure out the src,dst stuff.  glTranslate()?
+    //glRasterPos2i((int)sc[0], (int)sc[1]);
+    Get1PartBox(curpiece, sc);
+    printf("sbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
+    if (zbufdata)
+      free (zbufdata);  // NOTE: gotta free this when finished editing.
+    zbufdata = (int *) malloc(sc[2] * sc[3] * sizeof(int));
+    glReadBuffer(staticbuffer); // set pixel source
+    //glReadPixels(0,0, Width,Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+    glReadPixels(sc[0],sc[1],sc[2],sc[3],
+		 GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
+#else
     if (zbufdata)
       free (zbufdata);  // NOTE: gotta free this when finished editing.
     zbufdata = (float *) malloc(Width * Height * sizeof(float));
     glReadBuffer(staticbuffer); // set pixel source
-    glReadPixels(0,0, Width,Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+    //glReadPixels(0,0, Width,Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+    glReadPixels(0,0,Width,Height,GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
+#endif
   }
   //NOTE:  I have to reallocate zbufdata whenever we resize the window.
 }
@@ -2568,6 +2591,8 @@ glPopAttrib();
 /***************************************************************/
 void CopyStaticBuffer(void)
 {
+  int goodZ = 0;
+
   if (SOLID_EDIT_MODE)
   {
     if (movingpiece != curpiece)
@@ -2580,6 +2605,7 @@ void CopyStaticBuffer(void)
       render();
 
       SaveDepthBuffer();
+      goodZ = 1; // No need to copy depth back in yet.
     }
     movingpiece = curpiece;
     
@@ -2587,8 +2613,11 @@ void CopyStaticBuffer(void)
     if (buffer_swap_mode == SWAP_TYPE_KTX)
     {
       glDrawBuffer(staticbuffer); 
-      glDrawBufferRegion(zbuffer_region,0,0,Width,Height,0,0);
-      glDrawBufferRegion(cbuffer_region,0,0,Width,Height,0,0);
+      if (!goodZ)
+      {
+	glDrawBufferRegion(zbuffer_region,0,0,Width,Height,0,0);
+	glDrawBufferRegion(cbuffer_region,0,0,Width,Height,0,0);
+      }
       glutSwapBuffers(); 
       glDrawBuffer(screenbuffer); 
       rendersetup();
@@ -2623,13 +2652,25 @@ void CopyStaticBuffer(void)
     // The moving piece gets half the depth range with GL_GREATER...
     glDepthMask(GL_FALSE); // disable updates to depth buffer
 #else
+    //NOTE: This would be a lot faster if we got a bounding rect.
     glRasterPos2i(0, 0);
     glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
     glDepthMask(GL_TRUE); // enable updates to depth buffer
     glEnable( GL_DEPTH_TEST ); 
     glDepthFunc(GL_ALWAYS);
     glRasterPos2i(0, 0);
-    glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+    if (!goodZ) // Don't bother with z restore if we just rendered.
+    {
+#ifdef SAVE_DEPTH_BOX
+      // Gotta figure out the src,dst stuff.  glTranslate()?
+      glRasterPos2i(sc[0], sc[1]);
+      printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
+      glDrawPixels(sc[2],sc[3],GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
+#else
+      //glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+      glDrawPixels(Width,Height,GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
+#endif
+    }
     glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
 #endif
     glPopMatrix();
@@ -2661,6 +2702,10 @@ void DrawMovingPiece(void)
 {
   if (SOLID_EDIT_MODE)
   {
+#ifdef SAVE_DEPTH_BOX
+    // Save depth buffer BEFORE drawing the current part into it.
+    SaveDepthBuffer();
+#endif
     if (zShading)
       glEnable(GL_LIGHTING);
     else
@@ -2964,7 +3009,7 @@ void TranslateCurPiece(float m[4][4])
 }
 
 /***************************************************************/
-void HiLightCurPiece(int piecenum)
+void UnLightCurPiece(void)
 {
   EraseCurPiece();
   if (DrawToCurPiece)
@@ -2975,6 +3020,11 @@ void HiLightCurPiece(int piecenum)
       Draw1Part(curpiece, -1);
     }
   }
+}
+
+/***************************************************************/
+void HiLightNewPiece(int piecenum)
+{
   curpiece = Find1Part(piecenum);
   if (movingpiece >= 0)
   {
@@ -3003,12 +3053,21 @@ void HiLightCurPiece(int piecenum)
 }
 
 /***************************************************************/
+void HiLightCurPiece(int piecenum)
+{
+  UnLightCurPiece();
+  HiLightNewPiece(piecenum);
+}
+
+/***************************************************************/
 void InsertNewPiece(void)
 {
+#if 0  
   if (movingpiece >= 0)
   {
     if (SOLID_EDIT_MODE)
     {
+      EraseCurPiece(); // Unselect current piece
       // Add the current moving piece into the staticbuffer
       // Dont bother, CopyStaticBuffer gets a new copy of z-buffer.
       //glDrawBuffer(staticbuffer); 
@@ -3044,6 +3103,12 @@ void InsertNewPiece(void)
   DrawMovingPiece();
   Print1Part(curpiece, stdout);
   edit_mode_gui();
+#else
+  UnLightCurPiece();
+  movingpiece = -1; // Make sure movingpiece != curpiece so we save z-buffer.
+  curpiece = Add1Part(curpiece);
+  HiLightNewPiece(curpiece);
+#endif
 }
 
 /***************************************************************/
@@ -3457,7 +3522,9 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       case 's':
 	ecommand[0] = 0; // wipe the command char
 	clear_edit_mode_gui();
-	//SwapCurPiece(curpiece);
+	UnLightCurPiece();
+	Switch1Part(curpiece);
+	HiLightNewPiece(curpiece);
 	return 1;
       case 'l':
 	clear_edit_mode_gui();
@@ -3826,7 +3893,9 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     glutPostRedisplay();
     return 1;
   case 'w':
-    printf("Swap current piece with next piece\n");
+    UnLightCurPiece();
+    Switch1Part(curpiece);
+    HiLightNewPiece(curpiece);
     return 1;
   case '\n':
   case '\r':
