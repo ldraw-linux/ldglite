@@ -179,6 +179,7 @@ Command line options (see also the original ldlite docs for more):
 
 -fh turns on shading mode.
 -fs turns off stud drawing. (l3glite only)
+-fsl draws studs as lines. (l3glite only)
 -fe turns off edge lines 
 -fr same as -fe (Render mode?  Rough draft?  I don't know what R stands for.)
 -ffT,E,S,R,G,B turns on fogging 
@@ -357,3 +358,8 @@ use the X Virtual FrameBuffer (xvfb) to render offscreen.  I suspect
 xvfb may also require the changes to the MESA config file to produce
 large images.
 
+		       -----------------------
+
+Here's a batch file for nifty fogged perspective rendering of datsville.
+
+ldglite v5 -fs -fe -J -mc -s0.2 town.dat -ff3,0.0003,0,0.8,0.8,1.0
