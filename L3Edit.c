@@ -1675,6 +1675,7 @@ int Hose1Part(int partnum, int steps)
 
       steps -=2;  // Subtract the end ribs from the total.
       v1[1] = -4; // Offset in y of intermediate control points.
+      v[1] *= 2; // Double the velocity to clear technic pins.
     }
     else if (stricmp(SubPartDatName, "stud3a.dat") == 0)
     {
