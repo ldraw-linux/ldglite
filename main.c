@@ -1259,6 +1259,16 @@ void platform_step_filename(int step, char *filename)
   if (picfilename)
   {
     strcpy(filename, picfilename);
+    if ((dotptr = strrchr(filename, '#')) != NULL)
+    {
+      *dotptr = 0;
+      if (step != INT_MAX)
+      {
+	sprintf(filenum,"%0d",step+1);
+	strcat(filename,filenum);
+      }
+      strcat(filename, use_uppercase ? ".BMP" : ".bmp");
+    }
     return;
   }
     

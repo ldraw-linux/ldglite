@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------
 
+Add some sort of wildcard option to -MSfilename.out to allow adding
+step numbers to the suggested filename.  Fix it to work with twirl.
+
+----------------------------------------------------------------------
+
 Fix crash when you press an arrow key in LEDIT mode with no .DAT file
 loaded yet.
 
