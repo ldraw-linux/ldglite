@@ -207,6 +207,7 @@ int buffer_swap_mode = SWAP_TYPE_UNDEFINED;
 int use_stencil_for_XOR = 1;
 int NVIDIA_XOR_HACK = 0;
 
+int autoscaling = 0;
 int editing = 0;
 int curpiece = 0;
 int curpoint = -1;
@@ -1786,6 +1787,68 @@ int ldlite_parse_with_rc(char *filename)
 }
 
 /***************************************************************/
+// NOTE: this assumes cropping == 1 (which may not be true)
+// I should really just get a bounding sphere
+// and scale it to fit in the view frustrum.
+// Calculate a bounding sphere from the bounding box of the model?
+void autoscale(void)
+{
+  int width = Width;
+  int height = Height;
+  float xs, ys;
+  
+#ifdef USE_L3_PARSER_AND_BBOX
+#include "L3Def.h"
+  struct L3LineS       Data;
+  int sc[4];
+  int n;
+
+  void GetPartBox(struct L3LineS *LinePtr, int sc[4]);
+
+  if (parsername == L3_PARSER)
+  {
+    memset(&Data, 0, sizeof(Data));
+    n = sscanf("1 16 1 0 0 0 1 0 0 0 1 0 0 0",
+	       "%d %d %f %f %f %f %f %f %f %f %f %f %f %f",
+                 &Data.LineType, &Data.Color,
+                 &Data.v[0][0], &Data.v[0][1], &Data.v[0][2],
+                 &Data.v[1][0], &Data.v[1][1], &Data.v[1][2],
+                 &Data.v[2][0], &Data.v[2][1], &Data.v[2][2],
+                 &Data.v[3][0], &Data.v[3][1], &Data.v[3][2]);
+    Data.PartPtr = &Parts[0];
+
+    GetPartBox(&Data, sc);
+    printf("sbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
+
+    width = sc[2];
+    height = sc[3];
+  }
+  else
+#endif  
+  {
+  width = z.extent_x2 - z.extent_x1;
+  height = z.extent_y2 - z.extent_y1;
+  }
+
+  // NOTE: gluProject() seems to clip coords at the window edges
+  // so this will not scale down
+  printf("%d, %d\n", width, height);
+  if ((width <= 0) || (height <= 0)) return; //break;
+  xs = (float) (Width) / (float) width;
+  ys = (float) (Height) / (float) height;
+  
+  printf("%0.3f, %0.3f\n", xs, ys);
+  // scale up by the smaller amount so it fits both ways.
+  if (xs > ys)
+    xs = ys;
+  ldraw_commandline_opts.S *= xs;
+  
+  // If its off center then center it.  Does not work too well.
+  fCamX -= (float)(z.extent_x2 - Width + z.extent_x1) / 2.0;
+  fCamY -= (float)(z.extent_y2 - Height + z.extent_y1) / 2.0;
+}
+  
+/***************************************************************/
 /* render gets called both by "display" (in OpenGL render mode)
    and by "outputEPS" (in OpenGL feedback mode). */
 void
@@ -1856,6 +1919,13 @@ render(void)
     // printf("LoadModel: %d",ttt);
     list_made = 1;
   }
+#if 0
+  if (autoscaling)
+  {
+    autoscaling = 0;
+    autoscale();
+  }
+#endif
   if (ldraw_commandline_opts.debug_level == 1)
     printf("DrawModel %s\n", datfilename);
 #ifdef ONE_BIG_DISPLAY_LIST
@@ -4737,36 +4807,7 @@ void keyboard(unsigned char key, int x, int y)
 #define AUTOSCALE_OPTION 1
 #ifdef AUTOSCALE_OPTION
     case 'S':
-      // NOTE: this assumes cropping == 1 (which may not be true)
-      // I should really just get a bounding sphere
-      // and scale it to fit in the view frustrum.
-      // Calculate a bounding sphere from the bounding box of the model?
-      {
-	int width = Width;
-	int height = Height;
-	float xs, ys;
-
-	width = z.extent_x2 - z.extent_x1;
-	height = z.extent_y2 - z.extent_y1;
-
-	// NOTE: gluProject() seems to clip coords at the window edges
-	// so this will not scale down
-	printf("%d, %d\n", width, height);
-	if ((width <= 0) || (height <= 0)) break;
-	xs = (float) (Width) / (float) width;
-	ys = (float) (Height) / (float) height;
-	
-	printf("%0.3f, %0.3f\n", xs, ys);
-	// scale up by the smaller amount so it fits both ways.
-	if (xs > ys)
-	  xs = ys;
-        ldraw_commandline_opts.S *= xs;
-
-	// If its off center then center it.  Does not work too well.
-	fCamX -= (float)(z.extent_x2 - Width + z.extent_x1) / 2.0;
-	fCamY -= (float)(z.extent_y2 - Height + z.extent_y1) / 2.0;
-      }
-  
+        autoscale();
 	reshape(Width, Height);
 	break;
 #endif
@@ -6153,7 +6194,18 @@ void ParseParams(int *argc, char **argv)
 	break;
       case 'S':
       case 's':
+#if 0
 	sscanf(pszParam,"%c%g",&type,&(ldraw_commandline_opts.S));
+#else
+	{
+	  float s;
+	  sscanf(pszParam,"%c%g",&type,&s);
+	  if (s != 0.0)
+	    ldraw_commandline_opts.S = s;
+	  else
+	    autoscaling = 1;
+	}
+#endif
 	break;
       case 'T':
       case 't':
@@ -6376,6 +6428,16 @@ void getDisplayProperties()
     }
   }
 #endif
+
+  if ((!strcmp(verstr, "1.1 APPLE-1.1")) &&
+      (!strcmp(vendstr, "Apple")) &&
+      (!strcmp(rendstr, "Generic"))
+      )
+  {
+    printf("Stencil buffer disabled for XOR with Apple driver.\n");
+    // Generic Apple driver has problem with XOR similar to NVIDIA.
+    use_stencil_for_XOR = 0;
+  }
 
   printf("Buffer Swap Mode = %d\n", buffer_swap_mode);
 
