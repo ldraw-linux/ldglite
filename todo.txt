@@ -1,4 +1,10 @@
 ----------------------------------------------------------------------
+
+Fix crash when you press an arrow key in LEDIT mode with no .DAT file
+loaded yet.
+
+----------------------------------------------------------------------
+
 Add more MPD support to LEDIT mode.  Perhaps add a command to split 
 off part of a file as MPD.  Or a command to start a new MPD section
 with a filename.  Add a command to jump into the MPD parts and back
