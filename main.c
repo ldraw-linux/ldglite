@@ -44,15 +44,22 @@ extern void          LoadModelPre(void);
 extern int           LoadModel(const char *lpszPathName);
 extern void          LoadModelPost(void);
 extern void          DrawModel(void);
-#else
-extern void ldlite_parse(char *filename, char *ldraw_lines);
 #endif
+
+extern void ldlite_parse(char *filename, char *ldraw_lines);
 
 extern char pathname[256];
 extern char primitivepath[256];
 extern char partspath[256];
 extern char modelspath[256];
 extern char datfilepath[256];
+
+#ifdef USE_L3_PARSER
+#define LDLITE_PARSER 0
+#define L3_PARSER     1
+
+int parsername = LDLITE_PARSER;
+#endif
 
 char datfilename[256];
 char title[256];
@@ -103,6 +110,7 @@ static int list_made = 0;
 
 #define USE_DOUBLE_BUFFER
 
+int use_quads = 0;
 int curstep = 0;
 int cropping = 1;
 int panning = 0;
@@ -1375,7 +1383,8 @@ void display(void)
   }
 
 #ifdef USE_L3_PARSER
-  // Give the L3 parser a shot
+  if (parsername == L3_PARSER)
+  {
   if (!list_made)
   {
     // LoadModel frees Parts[0] and Lights etc.
@@ -1390,7 +1399,11 @@ void display(void)
   if (ldraw_commandline_opts.debug_level == 1)
     printf("DrawModel %s\n", datfilename);
   DrawModel();
-#else
+  }
+  else
+#endif
+
+  {
 #ifdef ONE_BIG_DISPLAY_LIST
   // Nice speedup: Displays in 1/3 time, but does allow other views.
   if (!list_made)
@@ -1440,7 +1453,7 @@ void display(void)
     znamelist_pop();
   }
 #endif
-#endif
+  }
 
 #if 0
   glColor3f(1.0, 1.0, 1.0); // White.
@@ -2312,21 +2325,23 @@ void menu(int item)
 void colormenu(int c)
 {
   ZCOLOR zc, zs;
-#ifndef USE_L3_PARSER
+
   extern ZCOLOR_DEF_TABLE_ENTRY zcolor_table_default[];
-#endif
 
   ldraw_commandline_opts.B = c;
 
 #ifdef USE_L3_PARSER
-  translate_color(c,&zc,&zs);
-#else
+  if (parsername == L3_PARSER)
+    translate_color(c,&zc,&zs);
+  else
+#endif
+  {
   // NOTE:  I dont understand the colortable stack used in translate_color()
   // so use the default color_table to avoid bad colors (bad stack ptr?).
   zc.r = zcolor_table_default[c].primary.r;
   zc.b = zcolor_table_default[c].primary.b;
   zc.g = zcolor_table_default[c].primary.g;
-#endif
+  }
   glClearColor(((float)zc.r)/255.0,((float)zc.g)/255.0,((float)zc.b)/255.0,0.0);
   if (ldraw_commandline_opts.debug_level == 1)
     printf("clearcolor %d = (%d, %d, %d)\n", c, zc.r, zc.g, zc.b);
@@ -2479,7 +2494,8 @@ void filemenu(int item)
       glutSetWindowTitle(title);
 
 #ifdef USE_L3_PARSER
-      list_made = 0; // Gotta reparse the file.
+      if (parsername == L3_PARSER)
+        list_made = 0; // Gotta reparse the file.
 #endif
       glutPostRedisplay();
     }
@@ -2546,7 +2562,8 @@ void myGlutIdle( void )
     {
       printf("Reloading %s = %d\n", filename, last_file_time);
 #ifdef USE_L3_PARSER
-      list_made = 0; // Gotta reparse the file.
+      if (parsername == L3_PARSER)
+	list_made = 0; // Gotta reparse the file.
 #endif
       glutPostRedisplay();
     }
@@ -2912,6 +2929,18 @@ main(int argc, char **argv)
     sprintf(title, "%s - %s", progname, datfilename);
   else
     sprintf(title, "%s - %s", progname, filename);
+
+#ifdef USE_L3_PARSER
+  if (stricmp("l3glite", basename(progname)) == 0)
+  {
+    parsername = L3_PARSER;
+
+    // The L3 parser fixes bowtie quads once during parsing.
+    // and (I hope) turns concave quads into 2 triangles?
+    // So I don't need my slow 3 triangle hack.
+    use_quads = 1;
+  }
+#endif
 
   //glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL);
 #ifdef USE_DOUBLE_BUFFER
