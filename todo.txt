@@ -1,4 +1,10 @@
 ----------------------------------------------------------------------
+Add an option to the LEDIT menu to hide it when not in use to maximize
+screen space for the model and to minimize the annoyance of the flashing
+menu when I'm not really looking at it.  I think it's just a matter of
+checking that the first char of the command is a null.
+
+----------------------------------------------------------------------
 Add mklist to the makefile, or at least make instructions for how to
 build it.  Include mklist, glut dlls, plugins, and readme.txt in any
 binary distributions from now on.
@@ -12,7 +18,18 @@ and make the File Open part of the glut menu an optional compilation
 Figure out another way to highlight a part in Mesa.  It's painfully 
 slow to draw the XOR wireframe, at least it is on the PII-266 I tested
 it on.  It was still slow, even with the stencil buffer turned off.
-Moving parts in SOLID mode was quite reasonable though.
+Moving parts in SOLID mode was quite reasonable though.  This might 
+also be handy for Apple and TNT displays which have trouble with the
+stencil buffer and thus have trouble with the double XOR from certain
+view points.  
+
+An unblended magic halo may work for Mesa (and all the others).  
+
+MLCAD draws a rectangle around the part in the front, side, and top
+views, and does nothing in the 3D views.  Perhaps I could adapt this
+to fit my single view.  If it's a side view, use a rectangle.  For
+Mesa, also use a Wire Box for any other view.  This may be fast
+enough and obvious enough to work.
 
 ----------------------------------------------------------------------
 Make a portable lddp style plugin.  For example, make a minifig
