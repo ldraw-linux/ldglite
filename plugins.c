@@ -23,6 +23,13 @@ void WINAPI plugCallBack (char *strCBCompleteText, char *strCBSelText)
 
   printf("Results:\n%s\n", strCBCompleteText);
   printf("selected:\n%s\n", strCBSelText);
+  if ((!strCBCompleteText || !strlen(strCBCompleteText)) && 
+      (!strCBSelText || !strlen(strCBSelText)))
+  {
+    // Got nothing back from the plugin, so skip the temp file.
+    strcpy(plugoutfilename, "");
+    return;
+  }
   fp = fopen(plugoutfilename, "w+");
   if (!fp)
   {
@@ -157,7 +164,7 @@ plugstruct *pluginfo(char *dllname)
   PluginInfo('\5', buffer, 100);
   printf("PluginInfo(5) = %s\n", buffer);
   plug->comment = strdup(buffer);
-  
+
   buffer[0] = 0;
   PluginInfo('\6', buffer, 100);
   printf("PluginInfo(6) = %s\n", buffer);
