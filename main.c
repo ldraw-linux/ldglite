@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.1.0      ";
+char ldgliteVersion[] = "Version 1.1.2      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -2302,13 +2302,16 @@ void setBackgroundColor(int c)
     translate_color(c,&zc,&zs);
   else
 #endif
+  if ((c>=0) && (c<ZCOLOR_TABLE_SIZE))
   {
-  // NOTE:  I dont understand the colortable stack used in translate_color()
-  // so use the default color_table to avoid bad colors (bad stack ptr?).
-  zc.r = zcolor_table_default[c].primary.r;
-  zc.b = zcolor_table_default[c].primary.b;
-  zc.g = zcolor_table_default[c].primary.g;
+    // NOTE:  I dont understand the colortable stack used in translate_color()
+    // so use the default color_table to avoid bad colors (bad stack ptr?).
+    zc.r = zcolor_table_default[c].primary.r;
+    zc.b = zcolor_table_default[c].primary.b;
+    zc.g = zcolor_table_default[c].primary.g;
   }
+  else
+    translate_color(c,&zc,&zs);
   glClearColor(((float)zc.r)/255.0,((float)zc.g)/255.0,((float)zc.b)/255.0,0.0);
   if (ldraw_commandline_opts.debug_level == 1)
     printf("clearcolor %d = (%d, %d, %d)\n", c, zc.r, zc.g, zc.b);
@@ -5966,7 +5969,7 @@ int edit_mode_keyboard(int key, int x, int y)
 	HiLightCurPiece(i);
 	break;
       case 'c':
-	sscanf(&(ecommand[1]),"%d", &color);
+	sscanf(&(ecommand[1]),"%i", &color);
 	CopyStaticBuffer(0);//It would be nice to recolor without "moving" it.
 	movingpiece = curpiece;
 	Color1Part(curpiece, color);
@@ -7828,7 +7831,7 @@ void CldliteCommandLineInfo()
 void ParseParams(int *argc, char **argv)
 {
   char *pszParam;
-  int i, x, y;
+  int i, n, x, y;
 
   char type;
   int mode;
@@ -7897,7 +7900,7 @@ void ParseParams(int *argc, char **argv)
 	break;
       case 'B':
       case 'b':
-	sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.B));
+	sscanf(pszParam,"%c%i",&type,&(ldraw_commandline_opts.B));
 	break;
       case 'C':
       case 'c':
@@ -7955,7 +7958,7 @@ void ParseParams(int *argc, char **argv)
 	  camera_distance  = v[0][2];
 	}
 	else
-	  sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.C));
+	  n = sscanf(pszParam,"%c%i",&type,&(ldraw_commandline_opts.C));
 	break;
       case 'D':
       case 'd':
