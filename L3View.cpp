@@ -588,9 +588,9 @@ int Draw1Part(int partnum, int Color)
 	{
 	    if (i == partnum)
 	    {
-		ldraw_commandline_opts.F |= XOR_MODE;
+		//ldraw_commandline_opts.F |= XOR_MODE;
 		Draw1PartPtr(LinePtr, Color);
-		ldraw_commandline_opts.F &= ~(XOR_MODE);
+		//ldraw_commandline_opts.F &= ~(XOR_MODE);
 		return 1;
 	    }
 	    i++;
