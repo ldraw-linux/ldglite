@@ -1939,12 +1939,14 @@ void platform_setpath()
   else if (GetPrivateProfileString("LDraw","BaseDirectory","",
 			  pathname,256,"ldraw.ini") == 0)
   {
-#if defined(UNIX)
+#if defined MACOS_X
+    sprintf(pathname, "/Library/ldraw");
+#elif defined(UNIX)
     sprintf(pathname, "/usr/local/ldraw");
 #elif defined(MAC)
     sprintf(pathname, "Aulus:Code:Lego.CAD:LDRAW");
 #elif defined(WINDOWS)
-    sprintf(pathname, "c:/legos/ldraw/");
+    sprintf(pathname, "c:/ldraw/");
 #else
 #error unspecified platform in platform_getenv() definition
 #endif
