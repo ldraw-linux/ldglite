@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.1.5      ";
+char ldgliteVersion[] = "Version 1.1.6      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -986,6 +986,8 @@ void printModelMat(char *name)
 /***************************************************************/
 void parse_view(char *viewMatrix);
 void getCamera(float m[4][4], float v[3]);
+
+#include "L3Def.h" /* For m4v3mul() */
 
 /***************************************************************/
 void printPOVMatrix(FILE *f)
@@ -2585,6 +2587,44 @@ void reshapeCB(int width, int height)
 }
 
 /***************************************************************/
+void reproject()
+{
+    GLdouble left, right, top, bottom, aspect, znear, zfar, fov;
+
+    aspect = ((GLdouble)Width/(GLdouble)Height);
+    left = (GLdouble)-Width / 2.0;
+    right = left + (GLdouble)Width;
+    bottom = (GLdouble)-Height / 2.0;
+    top = bottom + (GLdouble)Height;
+    
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    // frustrum = clipping space(left, right, bottom, top, near, far)
+    //glFrustum(-3.0, 3.0, -3.0, 3.0, 64, 256);
+ 
+    //fov = projection_fov;
+    //Convert from horizontal FOV to vertical for gluPerspective()
+    fov =  2.0*atan(tan(PI_180*projection_fov/2.0)/((double)Width/(double)Height))/PI_180;
+    znear = projection_znear;
+    zfar = projection_zfar;
+
+    // try to get better resolution in depth buffer.  Move near, far.
+    if (ldraw_projection_type)
+    {
+      // fov, aspect, near, far
+      gluPerspective(fov, aspect, znear, zfar);
+      //glDepthRange(0.0, 1.0); // I do NOT understand this fn.
+    }
+    else
+    {
+      // left, right, bottom, top, near, far
+      glOrtho(left, right, bottom, top, znear, zfar);
+    }
+
+    glMatrixMode(GL_MODELVIEW);
+}
+
+/***************************************************************/
 void reshape(int width, int height)
 {
     GLdouble left, right, top, bottom, aspect, znear, zfar, fov;
@@ -2627,40 +2667,12 @@ void reshape(int width, int height)
     Width = width;
     Height = height;
 
-    aspect = ((GLdouble)Width/(GLdouble)Height);
-    left = (GLdouble)-Width / 2.0;
-    right = left + (GLdouble)Width;
-    bottom = (GLdouble)-Height / 2.0;
-    top = bottom + (GLdouble)Height;
-    
     //    int x, y;
     //    GLdouble pan_x, pan_y, pan_z;
 
     glViewport(0, 0, Width, Height);
 
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    // frustrum = clipping space(left, right, bottom, top, near, far)
-    //glFrustum(-3.0, 3.0, -3.0, 3.0, 64, 256);
- 
-    //fov = projection_fov;
-    //Convert from horizontal FOV to vertical for gluPerspective()
-    fov =  2.0*atan(tan(PI_180*projection_fov/2.0)/((double)Width/(double)Height))/PI_180;
-    znear = projection_znear;
-    zfar = projection_zfar;
-
-    // try to get better resolution in depth buffer.  Move near, far.
-    if (ldraw_projection_type)
-    {
-      // fov, aspect, near, far
-      gluPerspective(fov, aspect, znear, zfar);
-      //glDepthRange(0.0, 1.0); // I do NOT understand this fn.
-    }
-    else
-    {
-      // left, right, bottom, top, near, far
-      glOrtho(left, right, bottom, top, znear, zfar);
-    }
+    reproject();
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -2744,7 +2756,66 @@ void rendersetup(void)
 
 #ifdef USE_F00_CAMERA
   applyCamera();
+
+#ifdef TESTING_F00_CAMERA_CONVERSION
+{
+  matrix3d *oldm, *m, mat, newm;
+
+  GLdouble model[4*4];
+
+  glGetDoublev(GL_MODELVIEW_MATRIX, model);
+  printf("%s(%g,%g,%g,%g, %g,%g,%g,%g %g,%g,%g,%g, %g,%g,%g,%g)\n", "MV",
+	 model[0], model[1] , model[2], model[3],
+	 model[4], model[5] , model[6], model[7],
+	 model[8], model[9] , model[10], model[11],
+	 model[12], model[13] , model[14], model[15]);
+
+//#define CONVERT_F00_CAMERA  1
+#ifdef CONVERT_F00_CAMERA  
+  mat.a = model[0];
+  mat.b = model[1];
+  mat.c = model[2];
+  mat.d = model[4];
+  mat.e = model[5];
+  mat.f = model[6];
+  mat.g = model[8];
+  mat.h = model[9];
+  mat.i = model[10];
+
+#if 1
+  // This applies the new rotation to the model before the view transform.
+  // Which feels wrong.  (not like orbiting the camera about the model)
+  m = &mat;
+  oldm = &(ldraw_commandline_opts.A);
+#else
+  // This seems to apply the new rotation after the view transform,
+  oldm = &mat;
+  m = &(ldraw_commandline_opts.A);
 #endif
+
+  newm.a = oldm->a * m->a + oldm->b * m->d + oldm->c * m->g;
+  newm.b = oldm->a * m->b + oldm->b * m->e + oldm->c * m->h;
+  newm.c = oldm->a * m->c + oldm->b * m->f + oldm->c * m->i;
+  newm.d = oldm->d * m->a + oldm->e * m->d + oldm->f * m->g;
+  newm.e = oldm->d * m->b + oldm->e * m->e + oldm->f * m->h;
+  newm.f = oldm->d * m->c + oldm->e * m->f + oldm->f * m->i;
+  newm.g = oldm->g * m->a + oldm->h * m->d + oldm->i * m->g;
+  newm.h = oldm->g * m->b + oldm->h * m->e + oldm->i * m->h;
+  newm.i = oldm->g * m->c + oldm->h * m->f + oldm->i * m->i;
+
+  ldraw_commandline_opts.A = newm;
+
+  projection_fromx -= model[3];
+  projection_fromy -= model[7];
+  projection_fromz -= model[11];
+
+  // Clear the quaternion camera.
+  //resetCamera();
+#endif // CONVERT_F00_CAMERA  
+}
+#endif // TESTING_F00_CAMERA_CONVERSION
+
+#endif // USE_F00_CAMERA  
 
 #define ORBIT_THE_CAMERA_ABOUT_THE_MODEL 1
 
@@ -2778,6 +2849,9 @@ void rendersetup(void)
   uz = projection_upz;
   // from, toward, upvector
   gluLookAt(fx, fy, fz, tx, ty, tz, ux, uy, uz);
+
+  // Redo the projection using model sphere to calculate znear, zfar.
+  //reproject();
 
 #ifdef ORBIT_THE_CAMERA_ABOUT_THE_MODEL
   // Do camera translation/rotation AFTER the GluLookAt camera transform.
@@ -7157,7 +7231,7 @@ void rotate_the_model(double y_angle, double x_angle)
 void rotate_about(float x, float y, float z, float degrees)
 {
   // convert axis - degrees into rotation matrix
-  matrix3d *m;
+  matrix3d *m, *mat;
   matrix3d newm;
   matrix3d *oldm; 
   vector3d t = {0.0, 0.0, 0.0};
@@ -7178,7 +7252,7 @@ void rotate_about(float x, float y, float z, float degrees)
   s = cos((3.1415927*degrees)/360.0);
 
   // convert quaternion into a rotation matrix.
-  m = (matrix3d *)malloc(sizeof(matrix3d));
+  m = mat = (matrix3d *)malloc(sizeof(matrix3d));
 
   m->a = (float)(1 - 2*b*b-2*c*c);
   m->b = (float)(2*a*b - 2*s*c);
@@ -7188,6 +7262,7 @@ void rotate_about(float x, float y, float z, float degrees)
   m->f = (float)(2*b*c - 2*s*a);
   m->g = (float)(2*a*c - 2*s*b);
   m->h = (float)(2*b*c + 2*s*a);
+
   m->i = (float)(1 - 2*a*a - 2*b*b);
 
 #if 0
@@ -7228,6 +7303,8 @@ void rotate_about(float x, float y, float z, float degrees)
   }
 
   ldraw_commandline_opts.A = newm;
+
+  free(mat);
 }
 
 /***************************************************************/
@@ -7938,6 +8015,47 @@ void CldliteCommandLineInfo()
 }
 
 /***************************************************************/
+void PrintParams(int *argc, char **argv)
+{
+  char filename[256];
+  FILE *fp;
+  char *p;
+  int i;
+  
+  for (i = 1; i < *argc; i++)
+  {
+    if ((p[0] != '+') && (p[0] != '-'))
+    {
+      // It must be a filename.  Save it for parsing.
+      strcpy(filename, basename(argv[i]));
+    }
+  }
+  
+  if ((p = strrchr(filename, '.')) != NULL)
+    *p = 0;
+  else 
+    p = filename + strlen(filename);
+  
+  strcat(filename, ".bat");
+			      
+  fp = fopen(filename, "w+");
+  if (!fp)
+  {
+    printf("Could not open %s\n", filename);
+    return;
+  }
+
+  for (i = 0; i < *argc; i++)
+  {
+    p = argv[i];
+    fprintf(fp, "%s ", p);
+  }
+  fprintf(fp, "\n");
+
+  fclose(fp);
+}
+
+/***************************************************************/
 // Mostly stolen from ParseParam() in ldliteCommandLineInfo.cpp
 void ParseParams(int *argc, char **argv)
 {
@@ -7947,6 +8065,8 @@ void ParseParams(int *argc, char **argv)
   char type;
   int mode;
   int camera_globe_set = 0;
+  int camera_znear_set = 0;
+  int camera_zfar_set = 0;
 
   // Initialize datfilepath to none so we can take commands from stdin.
   strcpy(datfilename, " ");
@@ -8030,7 +8150,7 @@ void ParseParams(int *argc, char **argv)
 	  ScanPoints(v, 1, &(pszParam[2]));
 	  printf("CAM = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
 	  projection_fromx = v[0][0];
-	  projection_fromy = v[0][1];
+	  projection_fromy = -v[0][1]; // L3P uses LDRAW y (-OpenGL y).
 	  projection_fromz = v[0][2];
 	}
         else if ((toupper(pszParam[1]) == 'O') || // Object Origin to look at.
@@ -8045,18 +8165,28 @@ void ParseParams(int *argc, char **argv)
 	    ScanPoints(v, 1, &(pszParam[3]));
 	  printf("LOOK AT (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
 	  projection_towardx = v[0][0];
-	  projection_towardy = v[0][1];
+	  projection_towardy = -v[0][1]; // L3P uses LDRAW y (-OpenGL y).
 	  projection_towardz = v[0][2];
 	}
-        else if (toupper(pszParam[1]) == 'U') // Camera up vector.
+        else if ((toupper(pszParam[1]) == 'U') || // Camera up vector.
+		 ((toupper(pszParam[1]) == 'S') && 
+		  (toupper(pszParam[2]) == 'K') && 
+		  (toupper(pszParam[3]) == 'Y')))
 	{
 	  float v[4][4];
 	  v[0][0] = v[0][1] = v[0][2] = 0.0;
-	  ScanPoints(v, 1, &(pszParam[2]));
+	  if (toupper(pszParam[1]) == 'U')
+	    ScanPoints(v, 1, &(pszParam[2]));
+	  else
+	    ScanPoints(v, 1, &(pszParam[4]));
 	  printf("UP = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
 	  projection_upx = v[0][0];
-	  projection_upy = v[0][1];
+	  projection_upy = -v[0][1]; // L3P uses LDRAW y (-OpenGL y).
 	  projection_upz = v[0][2];
+	}
+        else if (toupper(pszParam[1]) == 'R') // Camera roll vector.
+	{
+	  // Todo...
 	}
         else if (toupper(pszParam[1]) == 'G') // Camera location (on Globe)
 	{
@@ -8428,9 +8558,15 @@ void ParseParams(int *argc, char **argv)
 	  float g;
 	  sscanf(pszParam,"%c%f",&type,&g);
 	  if (pszParam[0] == 'z')
+	  {
 	    projection_znear = g;
+	    camera_znear_set = 1;
+	  }
 	  else // (pszParam[0] == 'Z')
+	  {
 	    projection_zfar = g;
+	    camera_zfar_set = 1;
+	  }
 	  printf("ZClip = (%g, %g)\n", projection_znear, projection_zfar);
 #endif
 	}
@@ -8464,31 +8600,71 @@ void ParseParams(int *argc, char **argv)
       camera_distance = projection_fromz;
       //distance = sqrt(x*x + y*y + z*z);
     }
+    else // Adjust clip planes for camera_distance (if not manually set).
+    {
+      if (camera_distance > projection_fromz)
+	if (camera_zfar_set == 0)
+	  projection_zfar = camera_distance + 3000;
+      if (camera_distance > 3000)
+	if (camera_znear_set == 0)
+	  projection_znear = 100;
+      if (camera_distance > 10000)
+	if (camera_znear_set == 0)
+	  projection_znear = camera_distance - 3000;
+    }
 
+    printf("Znear, Zfar = %g, %g\n", projection_znear, projection_zfar);
+
+#if 0
+    // Since spin is based on Oblique, subtract -cg30,45.
+    lo = 3.1415927 * (camera_longitude-45) / 180.0;
+    projection_fromz = camera_distance * cos(lo);
+    projection_fromx = camera_distance * sin(lo);
+    la = 3.1415927 * (camera_latitude -30.0) / 180.0;
+    projection_fromy = camera_distance * sin(la);
+#else
+    // Base spin on Front but call it Oblique, subtract nothing.
     lo = 3.1415927 * camera_longitude / 180.0;
     projection_fromz = camera_distance * cos(lo);
     projection_fromx = camera_distance * sin(lo);
     la = 3.1415927 * camera_latitude / 180.0;
     projection_fromy = camera_distance * sin(la);
+#endif
 
     projection_fromz *= cos(la);
     projection_fromx *= cos(la);
 
+    // Err, should I also add projection_toward to projection_from
+    // so the globe is centered around the lookat point.  What does
+    // L3P do?  Test it with a small stack of bricks.
+
+    // What happens to the up vector for negative latitudes?
+    // The new l3p says -cr roll vector defaults to 0.
+    
     v[0][0] = projection_fromx;
     v[0][1] = projection_fromy;
     v[0][2] = projection_fromz;
     printf("CAM = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
 
     // Yuck!  Gotta get rid of LdrawOblique!
-    // L3p defaults to Oblique view, but bases -cg on the front view.
-    // I think L3p puts origin at the center of model, not ldraw (0,0,0).
+    // L3p defaults to Oblique view (-cg30,45) but uses front view for -cg.
+    // L3p puts the origin at the center of model bbox, not ldraw (0,0,0).
     // Maybe I should offset by the center of the model bbox to match it.
     // Unfortunately I don't have that until I parse the model...
     if (m_viewMatrix == LdrawOblique)
     {
-      parse_view(Front);
-      m_viewMatrix == Front;
+      m_viewMatrix = Front;
+      parse_view(m_viewMatrix);
+      m_viewMatrix = Oblique; // Use Front, but call it oblique for spin.
     }
+
+    // Does the view matrix get set back to oblique when I use the arrows?
+    // Arrow left, then back right.  The view is not the same.  What is up?
+    // Did this happen in version 1.1.5?
+
+    // I think panning works from Oblique, so I should go with that too.
+    // That doesn't seem to work though.  I get both tilts.  I must make
+    // it work with Oblique.  That's used everywhere.
   }
 }
 
@@ -8984,6 +9160,8 @@ main(int argc, char **argv)
   printf("\n");
 #endif
   
+  printf("Ldglite %s\n", ldgliteVersion);
+
   platform_startup(&argc, &argv);
 	
   // glutInit moved first, so that GL can have as many args as it can recognize
@@ -9029,6 +9207,8 @@ main(int argc, char **argv)
   }
 #  endif
 #endif
+
+  // PrintParams(&argc, argv);
 
   ParseParams(&argc, argv);
 
