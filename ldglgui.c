@@ -735,10 +735,30 @@ void freels(void)
     }
 }
 
+extern int isDir(char *filename);
+
 /***************************************************************/
 int mystrcmp(char **s1, char **s2)
 {
-    return strcmp(*s1,*s2);
+  //return strcmp(*s1,*s2);
+
+  int filetype = 0;
+
+  //Sort with directories followed by files.  Case insensitive.
+#if 0
+  filetype = isDir(*s2) - isDir(*s1);
+#else
+  // isDir() does not work because we already stuck the slash at the end of dirs.
+  if ((*s1)[strlen(*s1)-1] == '/') 
+    filetype -= 1;
+  if ((*s2)[strlen(*s2)-1] == '/') 
+    filetype += 1;
+#endif
+
+  if (filetype == 0)
+    return stricmp(*s1,*s2); // Both directories or both files, sort by name
+
+  return filetype;
 }
 
 /***************************************************************/
@@ -792,21 +812,6 @@ void ls(void)
     qsort(&filelist[0], i, sizeof (char *), 
 	  (int (*)(const void *, const void *))mystrcmp);
     closedir(dirp);
-}
-
-/***************************************************************/
-// see if its a directory
-static int isDir(char *filename)
-{
-  struct stat st;
-
-  if (stat(filename, &st))
-    return 0;
-
-  if (S_ISDIR(st.st_mode))
-    return 1;
-
-  return 0;
 }
 
 /***************************************************************/
