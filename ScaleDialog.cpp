@@ -77,9 +77,9 @@ void CScaleDialog::OnDeltaposScalespin1(NMHDR* pNMHDR, LRESULT* pResult)
 	NM_UPDOWN* pNMUpDown = (NM_UPDOWN*)pNMHDR;
 	// TODO: Add your control notification handler code here
 	UpdateData(TRUE);
-	m_scale += -(pNMUpDown->iDelta) * 0.1;
+	m_scale += -(pNMUpDown->iDelta) * (float)0.1;
 	if( m_scale < 0.1 ) {
-		m_scale = 0.1;
+		m_scale = (float)0.1;
 	}
 	UpdateData(FALSE);
 
@@ -95,7 +95,7 @@ void CScaleDialog::OnDeltaposScalespin2(NMHDR* pNMHDR, LRESULT* pResult)
 	UpdateData(TRUE);
 	m_scale += -(pNMUpDown->iDelta) * 1;
 	if( m_scale < 0.1 ) {
-		m_scale = 0.1;
+		m_scale = (float)0.1;
 	}
 	UpdateData(FALSE);
 
