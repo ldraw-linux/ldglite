@@ -700,6 +700,20 @@ void write_bmp(char *filename)
   glReadBuffer(GL_FRONT);
   for (i = 0; i < height; i++)
   {
+#ifdef OSMESA_OPTION
+    if (OffScreenRendering)
+    {
+      int j;
+      char *p = (char *)&OSbuffer[(i+yoff)*Width +xoff];
+      for (j=0; j<width; j++) {
+	buf[4*j] = *p++;
+	buf[4*j+1] = *p++;
+	buf[4*j+2] = *p++;
+	p++;
+      }
+    }
+    else
+#endif
     glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, buf);
     p = buf;
     for (j = 0; j < width; j++) // RGB -> BGR
@@ -777,6 +791,20 @@ void write_ppm(char *filename)
   //png_write_image(png_ptr, row_pointers);
   for (i = height-1; i >= 0; i--)
   {
+#ifdef OSMESA_OPTION
+    if (OffScreenRendering)
+    {
+      int j;
+      char *p = (char *)&OSbuffer[(i+yoff)*Width +xoff];
+      for (j=0; j<width; j++) {
+	buf[4*j] = *p++;
+	buf[4*j+1] = *p++;
+	buf[4*j+2] = *p++;
+	p++;
+      }
+    }
+    else
+#endif
     glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, buf);
     fwrite(buf, width*3, 1, fp);
   }
@@ -786,42 +814,52 @@ void write_ppm(char *filename)
 
 /***************************************************************/
 static void
-write_targa(const char *filename, const GLubyte *buffer, int width, int height)
+write_targa(char *filename, const GLubyte *buffer, int width, int height)
 {
-   FILE *f = fopen( filename, "w" );
-   if (f) {
-      int i, x, y;
-      const GLubyte *ptr = buffer;
-      printf ("osdemo, writing tga file \n");
-      fputc (0x00, f);	/* ID Length, 0 => No ID	*/
-      fputc (0x00, f);	/* Color Map Type, 0 => No color map included	*/
-      fputc (0x02, f);	/* Image Type, 2 => Uncompressed, True-color Image */
-      fputc (0x00, f);	/* Next five bytes are about the color map entries */
-      fputc (0x00, f);	/* 2 bytes Index, 2 bytes length, 1 byte size */
-      fputc (0x00, f);
-      fputc (0x00, f);
-      fputc (0x00, f);
-      fputc (0x00, f);	/* X-origin of Image	*/
-      fputc (0x00, f);
-      fputc (0x00, f);	/* Y-origin of Image	*/
-      fputc (0x00, f);
-      fputc (Width & 0xff, f);      /* Image Width	*/
-      fputc ((Width>>8) & 0xff, f);
-      fputc (Height & 0xff, f);     /* Image Height	*/
-      fputc ((Height>>8) & 0xff, f);
-      fputc (0x18, f);		/* Pixel Depth, 0x18 => 24 Bits	*/
-      fputc (0x20, f);		/* Image Descriptor	*/
-      fclose(f);
-      f = fopen( filename, "ab" );  /* reopen in binary append mode */
-      for (y=height-1; y>=0; y--) {
-         for (x=0; x<width; x++) {
-            i = (y*width + x) * 4;
-            fputc(ptr[i+2], f); /* write blue */
-            fputc(ptr[i+1], f); /* write green */
-            fputc(ptr[i], f);   /* write red */
-         }
+  char *p;
+  FILE *f;
+
+  if ((p = strrchr(filename, '.')) != NULL)
+    *p = 0;
+  strcat(filename, use_uppercase ? ".TGA" : ".tga");
+
+  f = fopen( filename, "w" );
+  if (f) {
+    int i, x, y;
+    const GLubyte *ptr = buffer;
+    printf ("Write TGA %s\n", filename);
+    fputc (0x00, f);	/* ID Length, 0 => No ID	*/
+    fputc (0x00, f);	/* Color Map Type, 0 => No color map included	*/
+    fputc (0x02, f);	/* Image Type, 2 => Uncompressed, True-color Image */
+    fputc (0x00, f);	/* Next five bytes are about the color map entries */
+    fputc (0x00, f);	/* 2 bytes Index, 2 bytes length, 1 byte size */
+    fputc (0x00, f);
+    fputc (0x00, f);
+    fputc (0x00, f);
+    fputc (0x00, f);	/* X-origin of Image	*/
+    fputc (0x00, f);
+    fputc (0x00, f);	/* Y-origin of Image	*/
+    fputc (0x00, f);
+    fputc (Width & 0xff, f);      /* Image Width	*/
+    fputc ((Width>>8) & 0xff, f);
+    fputc (Height & 0xff, f);     /* Image Height	*/
+    fputc ((Height>>8) & 0xff, f);
+    fputc (0x18, f);		/* Pixel Depth, 0x18 => 24 Bits	*/
+    fputc (0x20, f);		/* Image Descriptor	*/
+    fclose(f);
+    f = fopen( filename, "ab" );  /* reopen in binary append mode */
+    for (y=height-1; y>=0; y--) {
+      for (x=0; x<width; x++) {
+	i = (y*width + x) * 4;
+	fputc(ptr[i+2], f); /* write blue */
+	fputc(ptr[i+1], f); /* write green */
+	fputc(ptr[i], f);   /* write red */
       }
-   }
+    }
+    fclose(f);
+  }
+  else
+    printf ("Failed to write tga %s\n", filename);
 }
 
 #ifdef USE_PNG
@@ -962,6 +1000,22 @@ void write_png(char *filename)
   //png_write_image(png_ptr, row_pointers);
   for (i = height-1; i >= 0; i--)
   {
+#ifdef OSMESA_OPTION
+    if (OffScreenRendering)
+    {
+      int j;
+      char *p = (char *)&OSbuffer[(i+yoff)*Width +xoff];
+      for (j=0; j<width; j++) {
+	buf[4*j] = *p++;
+	buf[4*j+1] = *p++;
+	buf[4*j+2] = *p++;
+	if (use_png_alpha)
+	  buf[4*j+3] = *p;
+	p++;
+      }
+    }
+    else
+#endif
     if (use_png_alpha)
       glReadPixels(xoff, i+yoff, width, 1, GL_RGBA, GL_UNSIGNED_BYTE, buf);
     else
@@ -1201,6 +1255,24 @@ void write_bmp8(char *filename)
   printf("Write BMP8 %s\n", filename);
   
   glReadBuffer(GL_FRONT);
+#ifdef OSMESA_OPTION
+  if (OffScreenRendering)
+  {
+    int i;
+    for (i = 0; i < height; i++)
+    {
+      int j;
+      char *p = (char *)&OSbuffer[(i+yoff)*Width +xoff];
+      for (j=0; j<width; j++) {
+	data[4*j] = *p++;
+	data[4*j+1] = *p++;
+	data[4*j+2] = *p++;
+	p++;
+      }
+    }
+  }
+  else
+#endif
   glReadPixels(xoff, yoff, (GLint)width, (GLint)height, GL_RGB, GL_UNSIGNED_BYTE, data);
 
   dl1quant(data, colormappedBuffer, width, height, 256, TRUE, tmpPal); 
@@ -4324,7 +4396,10 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	for (i = 1; ecommand[i] == ' '; i++); // Strip leading spaces
 	printf("Save as: %s\n", &(ecommand[i]));
 	sscanf(&(ecommand[i]),"%s", &datfilename);
+	i = UnSelect1Part(curpiece); // Link part back in before printing
 	Print1Model(datfilename);
+	if (i != -1)
+	  Select1Part(curpiece); // Unlink part again if needed.
 	SetTitle(1); // Change the title of the window.
 	edit_mode_gui();
 	break;
@@ -6592,7 +6667,7 @@ main(int argc, char **argv)
 
   helpmenunum = glutCreateMenu(menu);
   glutAddMenuEntry(progname             , '\0');
-  glutAddMenuEntry("Version 0.9.2      ", '\0');
+  glutAddMenuEntry("Version 0.9.3      ", '\0');
 
   mainmenunum = glutCreateMenu(menu);
   glutAddSubMenu(  "File               ", filemenunum);
