@@ -69,6 +69,7 @@ extern int parsername;
 extern int ldraw_projection_type;  // 1 = perspective, 0 = orthographic.
 extern int pan_visible;
 extern int qualityLines;
+extern double projection_fov;
 
 extern char Back[];
 extern char Left[];
@@ -89,7 +90,7 @@ extern void keyboard(unsigned char key, int x, int y);
 muiObject *b1, *b2, *b3, *b4, *b5, *b6, *b7, *b8;
 muiObject *b9, *b10, *b11, *b12, *b13, *b14, *b15, *b16;
 muiObject *l1, *l2, *l3, *l4, *l5, *l6, *l7, *l8;
-muiObject *t, *t1, *tl;
+muiObject *t, *t1, *t2, *tl;
 muiObject *pd, *hs, *vs;
 
 int M1, M2, M3;	/* menus */
@@ -440,6 +441,28 @@ void readbutton(muiObject *obj, enum muiReturnValue r)
 }
 
 /***************************************************************/
+void tbcallback(muiObject *obj, enum muiReturnValue value)
+{
+    char *s;
+    double fov = 0.0;
+
+    if (value != MUI_TEXTBOX_RETURN) return;
+    s = strdup(muiGetTBString(obj));  
+    fov = atof(s);
+
+    if (fov <= 0.0)
+      fov = projection_fov;
+    if (fov >360.0)
+      fov = projection_fov;
+
+    printf("FOV = %f\n",fov);
+    projection_fov = fov;
+
+    free(s);
+    return; //exit(0);
+}
+
+/***************************************************************/
 void vbcallback(muiObject *obj, enum muiReturnValue r)
 {
   int i = 0;
@@ -451,6 +474,7 @@ void vbcallback(muiObject *obj, enum muiReturnValue r)
   switch (i)
   {
   case 3:
+    tbcallback(t2, MUI_TEXTBOX_RETURN);
     muiSetActiveUIList(MAIN_UILIST);
     mui_cleanup();
     if (viewchoice)
@@ -476,6 +500,7 @@ void makeviewui(void)
   int xmin, ymin, xmax, ymax;
 
   static int MUIstarted = 0;
+  char FOVstr[100];
 
   if (MUIstarted == 0)
   {
@@ -501,6 +526,12 @@ void makeviewui(void)
     rb13 = muiNewTinyRadioButton(ow+dw/2, oh+dh-60);
     //rb14 = muiNewTinyRadioButton(ow+dw/2, oh+dh-80);
     //rb15 = muiNewTinyRadioButton(ow+dw/2, oh+dh-100);
+    l1 = muiNewLabel(ow+dw/2+2, oh+dh-100, "FOV:");
+    t2 = muiNewTextbox(ow+dw/2+40, ow+dw-4, oh+dh-108);
+    muiSetActive(t2, 1);
+    muiSetCallback(t2, tbcallback);
+    sprintf(FOVstr, "%.03f", projection_fov);
+    muiSetTBString(t2, FOVstr);
     //rb16 = muiNewTinyRadioButton(ow+dw/2, oh+dh-120);
     //rb17 = muiNewTinyRadioButton(ow+dw/2, oh+dh-140);
     //rb18 = muiNewTinyRadioButton(ow+dw/2, oh+dh-160);
@@ -517,8 +548,8 @@ void makeviewui(void)
     muiLoadButton(rb9, "UpsideDown");
     muiLoadButton(rb10, "Natural");
     //muiLoadButton(rb11, "");
-    muiLoadButton(rb12, "Perspective");
-    muiLoadButton(rb13, "Orthographic");
+    muiLoadButton(rb12, "Orthographic");
+    muiLoadButton(rb13, "Perspective");
     //muiLoadButton(rb14, "");
     //muiLoadButton(rb15, "");
     //muiLoadButton(rb16, "");
@@ -564,8 +595,8 @@ void makeviewui(void)
     muiSetID(rb9, '8');
     muiSetID(rb10, '9');
     //muiSetID(rb11, 11);
-    muiSetID(rb12, 'J');
-    muiSetID(rb13, 'j');
+    muiSetID(rb12, 'j');
+    muiSetID(rb13, 'J');
     //muiSetID(rb14, 14);
     //muiSetID(rb15, 15);
     //muiSetID(rb16, 16);
@@ -612,9 +643,9 @@ void makeviewui(void)
 
   muiClearRadio(rb12);
   if (ldraw_projection_type == 1)
-    muiSetActive(rb12, 1); // 1 = perspective
+    muiSetActive(rb13, 1); // 1 = perspective
   else
-    muiSetActive(rb13, 1); // 0 = orthographic
+    muiSetActive(rb12, 1); // 0 = orthographic
 
   viewchoice = 0;
   projchoice = 0;
@@ -1568,11 +1599,13 @@ void	handlefileselection(muiObject *obj, enum muiReturnValue value)
     char *fname;
     int len;
 
+    printf("tl fn %d\n", value);
+
+    selectedfile = muiGetTLSelectedItem(obj);
+    fname = filelist[selectedfile];
+    if (fname == NULL)
+      return;
     if (value == MUI_TEXTLIST_RETURN_CONFIRM) {
-	selectedfile = muiGetTLSelectedItem(obj);
-	fname = filelist[selectedfile];
-	if (fname == NULL)
-	  return;
 	printf("Selected file %s\n", fname);
 	len = strlen(fname);
 	if (fname[len-1] == '/') {
@@ -1584,8 +1617,9 @@ void	handlefileselection(muiObject *obj, enum muiReturnValue value)
 	    return; //exit(0);
 	}
     }
-    if (value != MUI_TEXTLIST_RETURN) return;
-    selectedfile = muiGetTLSelectedItem(obj);
+    else if (value != MUI_TEXTLIST_RETURN) return;
+
+    muiSetTBString(t1, fname);
     muiSetVSValue(vs, 1.0);
 }
 
