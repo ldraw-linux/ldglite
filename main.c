@@ -119,6 +119,30 @@ static int list_made = 0;
 
 #define USE_DOUBLE_BUFFER
 
+int editing = 0;
+int curpiece = 0;
+int movingpiece = -1;
+char editingprevmode = 'C';
+int editingkey = -1;
+// staticbuffer is where our non-moving background goes
+// screenbuffer is where the final composite goes
+int staticbuffer = GL_BACK;
+int screenbuffer = GL_FRONT; 
+extern int Draw1Part(int partnum, int Color);
+extern int Move1Part(int partnum, float m[4][4]);
+extern int Rotate1Part(int partnum, float m[4][4]);
+extern int Translate1Part(int partnum, float m[4][4]);
+extern int Color1Part(int partnum, int Color);
+extern int Add1Part(int partnum);
+extern int Select1Part(int partnum);
+extern int UnSelect1Part(int partnum);
+extern int Delete1Part(int partnum);
+extern int Swap1Part(int partnum, char *SubPartDatName);
+extern int Print1Part(int partnum, FILE *f);
+extern int Print1Model(char *filename);
+// If I ever get SOLID_EDIT_MODE working I should make it a runtime option.
+//#define SOLID_EDIT_MODE 1
+
 int use_quads = 0;
 int curstep = 0;
 int cropping = 1;
@@ -1392,19 +1416,36 @@ void reshape(int width, int height)
 {
     GLdouble left, right, top, bottom, aspect;
 
+#if 0
+    if (editing)
+    {
+	// Leave some space at the top of the screen for the "GUI"
+	// NOTE: This would work better if reshape() called myreshape()
+	// which contains all this code except perhaps the Width, Height =.
+	// Also replace all calls to reshape() with myreshape().
+	// This way I can tell real reshape events from my calls.
+	
+      // Scissor is probably easier than viewport
+      glEnable(GL_SCISSOR_TEST);
+      glScissor(0, 0, Width, Height-40);
+    }
+    else
+      glDisable(GL_SCISSOR_TEST);
+#endif
+
     Width = width;
     Height = height;
 
-    aspect = ((GLdouble)width/(GLdouble)height);
-    left = (GLdouble)-width / 2.0;
-    right = left + (GLdouble)width;
-    bottom = (GLdouble)-height / 2.0;
-    top = bottom + (GLdouble)height;
+    aspect = ((GLdouble)Width/(GLdouble)Height);
+    left = (GLdouble)-Width / 2.0;
+    right = left + (GLdouble)Width;
+    bottom = (GLdouble)-Height / 2.0;
+    top = bottom + (GLdouble)Height;
     
     //    int x, y;
     //    GLdouble pan_x, pan_y, pan_z;
 
-    glViewport(0, 0, width, height);
+    glViewport(0, 0, Width, Height);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -2055,6 +2096,47 @@ void display(void)
   }
 #endif
 
+  if (editing) 
+  {
+    if (dirtyWindow)
+    {
+#ifdef SOLID_EDIT_MODE
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      render();
+      if (movingpiece == curpiece)
+	DrawCurPart(-1);
+      else
+	XORcurPiece();
+#else
+      if (movingpiece == curpiece)
+      {
+	Select1Part(curpiece);
+	if (panning)
+	  glDrawBuffer(staticbuffer); 
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	render();
+	if (panning)
+	{
+	  glutSwapBuffers();
+	  glDrawBuffer(screenbuffer); 
+	}
+	UnSelect1Part(curpiece);
+      }
+      else
+      {
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	render();
+      }
+      XORcurPiece();
+#endif
+    }
+
+#if 0 // This doesn't work for some reason
+    dirtyWindow = 0;  // The window is nice and squeaky clean now.
+#endif
+    return;
+  }
+
   if (panning)
     glDrawBuffer(GL_BACK);  // Enable double buffer for spin mode.
   else
@@ -2240,8 +2322,341 @@ void parse_view(char *viewMatrix)
 }
 
 /***************************************************************/
+int XORcurPiece()
+{
+  int retval = 0;
+
+  glDisable(GL_LIGHTING);
+
+  glCurColorIndex = -1;
+
+  glColor3f(1.0, 1.0, 1.0); // White.
+
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+
+#ifdef USE_QUATERNION
+  // NOTE:  This does NOT work since I'm doing the spin transform BEFORE
+  // the gluLookAt() transform, so the model moves around the camera 
+  // rather than the camera orbiting the model.
+  if (qspin[3] == 0.0)
+  {
+    glLoadIdentity();
+  }
+#else
+  glLoadIdentity();
+#endif
+
+#ifdef USE_F00_CAMERA
+  applyCamera();
+#endif
+
+#define ORBIT_THE_CAMERA_ABOUT_THE_MODEL 1
+
+#ifdef ORBIT_THE_MODEL_ABOUT_THE_CAMERA
+  // Do camera translation/rotation BEFORE GluLookAt()
+  glRotatef(fXRot, 1.0f, 0.0f, 0.0f);
+  glRotatef(360 - fYRot, 0.0f, 1.0f, 0.0f);
+  glTranslatef(fCamX, fCamY, fCamZ);        
+  // Draw everything else below after gluLookAt()
+#endif
+
+  // ldlite_parse seems to offset x,y coords by half the window size.
+
+  // Hmmm, my up vector is straight up.  This may NOT be perpendicular 
+  // to my view vector if it looks down at an angle toward (0,100,0).
+
+  // from, toward, upvector
+#if WIDE_ANGLE_VIEW
+  // Height/6 moves the origin from halfway to 2/3 of the way down the screen.
+  // Original LdLite uses zGetRowsize() and zGetColsize() to do this.
+  // I stubbed them to return 0 for OpenGL since its origin is the window
+  // center, not the corner.  See LDRAW_COMPATIBLE_CENTER in LdliteVR_main.c.
+  gluLookAt(0.0, Height/6.0, 1000.0, 0.0, Height/6.0, 0.0, 0.0, 1.0, 0.0);
+#else
+  gluLookAt(0.0, Height/6.0, 2000.0, 0.0, Height/6.0, 0.0, 0.0, 1.0, 0.0);
+#endif
+
+#ifdef ORBIT_THE_CAMERA_ABOUT_THE_MODEL
+  // Do camera translation/rotation AFTER the GluLookAt camera transform.
+  glRotatef(fXRot, 1.0f, 0.0f, 0.0f);
+  glRotatef(-fYRot, 0.0f, 1.0f, 0.0f);
+  glTranslatef(fCamX, fCamY, fCamZ);        
+  // Draw everything else below
+#endif
+
+#ifdef USE_GL_TWIRL
+  gluLookAt(400.0, 600.0, 1000.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+
+  // This does not work right because the ldlite default model matrix
+  // has already tilted the model so it twirls tilted if I do this.
+  // This WOULD work if I used glulookAt() to set the view angle and
+  // substituted an identity matrix for the ldlite model matrix.
+  if (twirl_angle != 0.0)
+    glRotatef((float)-twirl_angle, 0.0, 1.0, 0.0);
+#endif
+#ifdef USE_QUATERNION
+  printf("spin(%0.2f, %0.2f, %0.2f, %0.2f)\n", 
+	 qspin[3], qspin[0], qspin[1], qspin[2]);
+  glRotatef(qspin[3], qspin[0], qspin[1], qspin[2]);
+#endif
+
+  glDisable( GL_DEPTH_TEST ); // don't test for depth -- just put in front
+  glEnable( GL_COLOR_LOGIC_OP ); 
+  glLogicOp(GL_XOR);
+  retval = Draw1Part(curpiece, 15);
+  glLogicOp(GL_COPY);
+  glEnable( GL_DEPTH_TEST ); 
+  glDisable( GL_COLOR_LOGIC_OP ); 
+
+  glCurColorIndex = -1;
+
+  glFlush();
+
+  glPopMatrix();
+
+  return retval;
+}
+
+/***************************************************************/
+void CopyStaticBuffer(void)
+{
+#ifdef SOLID_EDIT_MODE
+      if (movingpiece != curpiece)
+      {
+	  printf("selecting piece %d to move instead of %d\n",curpiece, movingpiece);
+	  Select1Part(curpiece);
+	  // Draw stuff into the staticbuffer
+	  glDrawBuffer(staticbuffer); 
+
+	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	  render();
+      }
+      movingpiece = curpiece;
+
+      // get fresh copy of static data
+      glReadBuffer(staticbuffer); // set pixel source
+      glDrawBuffer(screenbuffer); // set pixel destination
+      printf("Clearing both buffers\n");
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      glDisable( GL_DEPTH_TEST ); // Speed up copying
+      glDisable(GL_LIGHTING);     // Speed up copying
+      glMatrixMode( GL_PROJECTION );
+      glLoadIdentity();
+      //gluOrtho2D( 0., 100., 0., 100. ); /* "percent units" */
+      gluOrtho2D(0, Width, 0, Height);
+      glMatrixMode( GL_MODELVIEW );
+      glPushMatrix();
+      glLoadIdentity();
+      glRasterPos2i(0, 0);
+      glDepthMask(GL_FALSE); // disable updates to depth buffer
+      glCopyPixels(0, 0, Width, Height, GL_COLOR);
+      glRasterPos2i(0, 0);
+      printf("Copying color buffer\n");
+      glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); // disable updates to color buffer
+      glDepthMask(GL_TRUE); // enable updates to depth buffer
+      glEnable( GL_DEPTH_TEST ); 
+      glDepthFunc(GL_ALWAYS);
+      printf("Clearing depth buffer\n");
+      glClear(GL_DEPTH_BUFFER_BIT); // Just in case, clear it before the copy.
+      printf("Copying depth buffer\n");
+      //glCopyPixels(0, 0, Width, Height, GL_DEPTH);
+      glPopMatrix();
+      glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);  // enable updates to color buffer
+      reshape(Width, Height);
+      glEnable( GL_DEPTH_TEST ); 
+      glDepthFunc(GL_LESS);
+      printf("Buffers Copied.\n");
+      // screenbuffer is ready for dynamic data
+#else
+      XORcurPiece(); // Erase the previous piece
+      if (movingpiece != curpiece)
+      {
+	  Select1Part(curpiece);
+	  glDrawBuffer(staticbuffer); 
+	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	  render();
+	  glutSwapBuffers();
+	  glDrawBuffer(screenbuffer); 
+	  UnSelect1Part(curpiece);
+      }
+#endif
+}
+      
+/***************************************************************/
+void DrawMovingPiece(void)
+{
+#ifdef SOLID_EDIT_MODE
+  if (zShading)
+    glEnable(GL_LIGHTING);
+  else
+    glDisable(GL_LIGHTING);
+  DrawCurPart(-1);
+#else      
+  XORcurPiece();
+#endif
+}
+
+/***************************************************************/
+void EraseCurPiece(void)
+{
+#ifdef SOLID_EDIT_MODE
+      if (movingpiece == curpiece)
+      {
+	  UnSelect1Part(curpiece);
+	  movingpiece = -1;
+      }
+      else
+#endif
+      XORcurPiece(); // Erase the previous piece
+}
+
+/***************************************************************/
 void fnkeys(int key, int x, int y)
 {
+#ifdef USE_L3_PARSER
+  if (editing) 
+  {
+    float m[4][4] = {
+      {1.0,0.0,0.0,0.0},
+      {0.0,1.0,0.0,0.0},
+      {0.0,0.0,1.0,0.0},
+      {0.0,0.0,0.0,1.0}
+    };
+
+    switch(key) {
+    case GLUT_KEY_INSERT:
+#ifdef SOLID_EDIT_MODE
+      if (movingpiece == curpiece)
+      {
+	  UnSelect1Part(curpiece);
+	  movingpiece = -1;
+      }
+#endif
+      // if (parsername == L3_PARSER)
+      editing ^= 1;
+      // if (ldraw_commandline_opts.debug_level == 1)
+      printf("Editing mode =  %d\n", editing);
+
+      XORcurPiece(); // Erase the previous piece
+
+      // Restore previous continuous mode.
+      ldraw_commandline_opts.M = editingprevmode;
+      dirtyWindow = 1;
+      glutPostRedisplay();
+      break;
+    case GLUT_KEY_PAGE_UP:
+      EraseCurPiece();
+      curpiece--;
+      if (curpiece < 0) curpiece = 0;
+      if (movingpiece >= 0)
+      {
+	movingpiece = -1;
+#ifdef SOLID_EDIT_MODE
+	dirtyWindow = 1;
+	glutPostRedisplay();
+	if (Print1Part(curpiece, stdout) == 0)
+	{
+	  curpiece--;
+	  Print1Part(curpiece, stdout);
+	}
+	return;
+#else
+	glDrawBuffer(staticbuffer); 
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	render();
+	glutSwapBuffers();
+	glDrawBuffer(screenbuffer); 
+#endif
+      }
+      XORcurPiece();
+      Print1Part(curpiece, stdout);
+      break;
+    case GLUT_KEY_PAGE_DOWN:
+      EraseCurPiece();
+      curpiece++;
+      if (movingpiece >= 0)
+      {
+	movingpiece = -1;
+#ifdef SOLID_EDIT_MODE
+	dirtyWindow = 1;
+	glutPostRedisplay();
+	if (Print1Part(curpiece, stdout) == 0)
+	{
+	  curpiece--;
+	  Print1Part(curpiece, stdout);
+	}
+	return;
+#else
+	glDrawBuffer(staticbuffer); 
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	render();
+	glutSwapBuffers();
+	glDrawBuffer(screenbuffer); 
+#endif
+      }
+      if (XORcurPiece() == 0) // if past last piece...
+      {
+	curpiece--;
+	XORcurPiece();
+      }
+      Print1Part(curpiece, stdout);
+      break;
+    case GLUT_KEY_RIGHT:
+      CopyStaticBuffer();
+      m[0][3] += 10.0;
+      Translate1Part(curpiece, m);
+      movingpiece = curpiece;
+      DrawMovingPiece();
+      Print1Part(curpiece, stdout);
+      break;
+    case GLUT_KEY_LEFT:
+      CopyStaticBuffer();
+      m[0][3] -= 10.0;
+      movingpiece = curpiece;
+      Translate1Part(curpiece, m);
+      DrawMovingPiece();
+      Print1Part(curpiece, stdout);
+      break;
+    case GLUT_KEY_UP:
+      CopyStaticBuffer();
+      m[2][3] += 10.0;
+      movingpiece = curpiece;
+      Translate1Part(curpiece, m);
+      DrawMovingPiece();
+      Print1Part(curpiece, stdout);
+      break;
+    case GLUT_KEY_DOWN:
+      CopyStaticBuffer();
+      m[2][3] -= 10.0;
+      movingpiece = curpiece;
+      Translate1Part(curpiece, m);
+      DrawMovingPiece();
+      Print1Part(curpiece, stdout);
+      break;
+    case GLUT_KEY_HOME:
+      CopyStaticBuffer();
+      m[1][3] -= 8.0;
+      movingpiece = curpiece;
+      Translate1Part(curpiece, m);
+      DrawMovingPiece();
+      Print1Part(curpiece, stdout);
+      break;
+    case GLUT_KEY_END:
+      CopyStaticBuffer();
+      m[1][3] += 8.0;
+      movingpiece = curpiece;
+      Translate1Part(curpiece, m);
+      DrawMovingPiece();
+      Print1Part(curpiece, stdout);
+      break;
+    default:
+      return;
+    }
+    return;
+  }
+  else
+#endif
   /*
     This will rotate you around x and y and translate you along x, y, and z. 
     It shouldn't take much to add rotation around the z axis.
@@ -2260,6 +2675,26 @@ void fnkeys(int key, int x, int y)
   // The PG_UP, PG_DN keys seem to zoom in and out (only in perspective mode)
   // You can NOT zoom in or out in orthographic mode, only scale.
   switch(key) {
+#ifdef USE_L3_PARSER
+  case GLUT_KEY_INSERT:
+    editing ^= 1;
+    // if (ldraw_commandline_opts.debug_level == 1)
+      printf("Editing mode =  %d\n", editing);
+
+    curpiece = 0;
+    movingpiece = -1;
+    XORcurPiece();
+    Print1Part(curpiece, stdout);
+
+    // Switch to continuous mode.
+    editingprevmode = ldraw_commandline_opts.M;
+    ldraw_commandline_opts.M = 'C';
+    ldraw_commandline_opts.poll = 0; // Disable polling 
+    curstep = 0; // Reset to first step
+    dirtyWindow = 1;
+    return;
+    break;
+#endif
 #ifdef USE_F00_CAMERA
   case GLUT_KEY_PAGE_UP:
   case GLUT_KEY_PAGE_DOWN:
@@ -2363,6 +2798,10 @@ void fnkeys(int key, int x, int y)
     m_viewMatrix = Oblique;
     parse_view(m_viewMatrix);
   }
+  else //if (editing) 
+  { // lets call any random orientation oblique, just dont parse it.
+    m_viewMatrix = Oblique;
+  }
 
   dirtyWindow = 1;
   glutPostRedisplay();
@@ -2389,8 +2828,89 @@ void keyboard(unsigned char key, int x, int y)
   int newview = 0;
   char c;
   
+  float m[4][4] = {
+    {1.0,0.0,0.0,0.0},
+    {0.0,1.0,0.0,0.0},
+    {0.0,0.0,1.0,0.0},
+    {0.0,0.0,0.0,1.0}
+  };
+  double angle;
+  int color;
+  char partname[256];
+
   glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
 
+  if (editing)
+  {
+    switch(key) {
+    case 'a':
+      CopyStaticBuffer();
+      angle = (3.1415927/2.0);
+      m[0][0] = 0.0;  //(float)cos(angle);
+      m[0][2] = 1.0;  //(float)sin(angle);
+      m[2][0] = -1.0; //(float)(-1.0*sin(angle));
+      m[2][2] = 0.0;  //(float)cos(angle);
+      movingpiece = curpiece;
+      Move1Part(curpiece, m);
+      DrawMovingPiece();
+      Print1Part(curpiece, stdout);
+      return;
+    case 'i':
+      if (movingpiece >= 0)
+      {
+#ifdef SOLID_EDIT_MODE
+	// Add the current moving piece into the staticbuffer
+	glDrawBuffer(staticbuffer); 
+	DrawCurPart(-1); 
+	glDrawBuffer(screenbuffer); 
+#else
+	glDrawBuffer(staticbuffer); 
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	render();
+	glutSwapBuffers();
+	glDrawBuffer(screenbuffer); 
+#endif
+      }
+      else 
+	EraseCurPiece();
+      curpiece = Add1Part(curpiece);
+      movingpiece = curpiece;
+      DrawMovingPiece();
+      Print1Part(curpiece, stdout);
+      return;
+    case 'c':
+      CopyStaticBuffer(); // It would be nice to recolor without "moving" it.
+      printf("New Color: ");
+      scanf("%d", &color);
+      movingpiece = curpiece;
+      Color1Part(curpiece, color);
+      DrawMovingPiece();
+      Print1Part(curpiece, stdout);
+      return;
+    case 'p':
+      CopyStaticBuffer();
+      printf("New Part: ");
+      scanf("%s", partname);
+      movingpiece = curpiece;
+      Swap1Part(curpiece, partname);
+      DrawMovingPiece();
+      Print1Part(curpiece, stdout);
+      return;
+    case 'o':
+      Print1Model(datfilename);
+      return;
+    case 'd':
+      CopyStaticBuffer();      
+      movingpiece = -1;
+      curpiece = Select1Part(curpiece);
+      Delete1Part(curpiece);
+      curpiece--;
+      if (curpiece < 0) curpiece = 0;
+      DrawMovingPiece();
+      Print1Part(curpiece, stdout);
+      return;
+    }
+  }
     switch(key) {
 #if 0
     case 'e':
@@ -2887,6 +3407,11 @@ mouse(int button, int state, int x, int y)
       m_viewMatrix = Oblique;
       parse_view(m_viewMatrix);
     }
+    else //if (editing) 
+    { // lets call any random orientation oblique, just dont parse it.
+      m_viewMatrix = Oblique;
+    }
+ 
     glGetDoublev(GL_MODELVIEW_MATRIX, model);
     glGetDoublev(GL_PROJECTION_MATRIX, proj);
     glGetIntegerv(GL_VIEWPORT, view);
