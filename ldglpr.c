@@ -46,6 +46,7 @@ extern char progname[256];
 
 extern int curstep;
 extern int OffScreenRendering;
+extern int renderbuffer; 
 
 #ifdef OSMESA_OPTION
 #include "GL/osmesa.h"
@@ -183,7 +184,7 @@ void write_bmp(char *filename)
 
   // no pallete since we use RGB
 
-  glReadBuffer(GL_FRONT);
+  glReadBuffer(renderbuffer);
   for (i = 0; i < height; i++)
   {
 #ifdef OSMESA_OPTION
@@ -288,7 +289,7 @@ void write_ppm(char *filename)
   if (fp == NULL)
     return;
 
-  glReadBuffer(GL_FRONT);
+  glReadBuffer(renderbuffer);
   // Write image rows
   //png_write_image(png_ptr, row_pointers);
   for (i = height-1; i >= 0; i--)
@@ -509,7 +510,7 @@ void write_png(char *filename)
   if (fp == NULL)
     return;
 
-  glReadBuffer(GL_FRONT);
+  glReadBuffer(renderbuffer);
   // Write image rows
   //png_write_image(png_ptr, row_pointers);
   for (i = height-1; i >= 0; i--)
@@ -772,7 +773,7 @@ void write_bmp8(char *filename)
 
   printf("Write BMP8 %s\n", filename);
   
-  glReadBuffer(GL_FRONT);
+  glReadBuffer(renderbuffer);
 #ifdef OSMESA_OPTION
   if (OffScreenRendering)
   {
