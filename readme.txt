@@ -73,62 +73,6 @@ For Netscape:
     3) Edit, and set the mime type to application/x-ldraw.
     4) Browse for the ldglite.exe executable.
 
-For Internet Explorer in Win2k (and perhaps Millenium):
-
-    Thank you Micro$oft.  In Win2k you can no longer create new MIME types
-    from an Explorer window.  You must use regedit instead.
-
-    1) Start/Run
-       Type "regedit" in the box and click "OK"
-
-    2) Right click on HKEY_CLASSES_ROOT.
-       Add a new key and rename it to ".dat"
-       Right click on (Default) for this new key and modify the value.
-       Enter "ldlite.Document" for the Value data.
-
-    3) Right click on the key HKEY_CLASSES_ROOT/.dat
-       Add a new string value and rename it to "Content Type"
-       Right click on "Content Type" and select modify.
-       Change the Value data to "application/x-ldraw".
-
-    4) Find the key:
-       HKEY_CLASSES_ROOT/MIME/Database/Content Type.  
-       Under this key, create a key for application/x-ldraw.
-
-    5) Under the application/x-ldraw key, create a string value:
-       "Extension", with data ".dat".
-
-    6) Quit regedit.
-
-    7) Open an Explorer window (or any folder window).
-
-    8) Select the "Tools->Folder Options" menu selection.
-
-    9) Go to the "File Types" tab.
-
-   10) Scroll down and double click on the "ldlite Document" line.  
-       (On Win2K search for the "DAT" extension)
-           If there is no "DAT" extension line, click the "New" button
-           and then click on the "Advanced >>" button.
-           Enter "DAT" in the "File Extension" field.
-           and scroll to select "ldlite Document" for "Associated File Type".
-           (If you can't find it go back to step 1)
-           Press OK.
-
-   11) Press the "Advanced" button.
-
-   12) If "open" is not listed under "Actions" click the "New" button.
-       Otherwise click on "open" and then click "Edit".
-       
-   13) In the "Actions" field, enter "open" if it's not already there.
-       For "Application...", browse to the location of ldglite.exe (or l3glite.exe)
-
-   14) Add any extra command line arguments in the "Application..." field
-       Mine says this (I use the l3 parser and a small window):  
-       C:\projects\ldglite\ldglite -l3 -v3 "%1"
-
-   15) Press enough OK buttons to finish this up.
-
 
 
                         LdGLite for linux README
@@ -214,12 +158,16 @@ Command line options (see also the original ldlite docs for more):
 -l3 forces the program to use the l3 parser.
 -wN sets linewidth to N.
 -q quality lines (antialiased)
+-uX,Y saves a huge output image from window sized tiles.  (see notes below)
 -& windows mode.  Detach from the console window.  Windows version only.
-
-NOTE: if no DAT filename is given on the command line ldglite will read
-from stdin.  (l3glite does not do this)  Try this:
-  cat file.dat | ldglite -v3 -fh
-Kinda neat, but I don't know if this is good for much.
+-- if no DAT filename is given on the command line ldglite will read
+   from stdin.  (l3glite does not do this)  Try this:
+     cat file.dat | ldglite -v3 -ms -- 
+   Kinda neat, but I don't know if this is good for much.  Perhaps if you
+   have an application that generates dat files you can pipe the output
+   through ldglite and produce an image file.  For example ldrawmode for
+   emacs could possibly be extended to use this to send a dat file in the
+   buffer out to the printer.  (especially if I add postscript output)
 
 
 Hot Keys (especially useful in fullscreen gamemode):
@@ -254,4 +202,49 @@ y attempts to scale the model to fit the window.  Needs work though.
 q toggles line quality (antialiasing)
 Esc quits.
 
+
+				Notes
+
+Lugnet news article http://news.lugnet.com/cad/?n=5344 describes
+how linux users can use ldglite to convert DAT or MPD files to GIF 
+and JPEG.
+
+LDGLite (see http://www.ldraw.org/reference/linux for installation
+instructions on Linux) can convert DAT and MPD files to PNG:
+
+  ldglite-run -i2 -ms model.mpd
+
+Using netpbm/pbmplus (and tcsh) it is easy to convert the PNG files
+to GIF and JPEG:
+
+  foreach file ( /usr/local/share/ldraw/bitmap/model*.png )
+    pngtopnm < ${file} | cjpeg > `basename ${file} .png`.jpeg
+    pngtopnm < ${file} | ppmtogif > `basename ${file} .png`.gif
+  end
+
+And if you want to improve the looks of the model, you can render
+the model in double size, and then scale down the images:
+
+  ldglite-run -i2 -ms -s2 -w2 model.mpd
+
+  foreach file ( /usr/local/share/ldraw/bitmap/model*.png )
+    pngtopnm < ${file} | pnmscale 0.5 | cjpeg > `basename ${file} .png`.jpeg
+    pngtopnm < ${file} | pnmscale 0.5 | ppmtogif > `basename ${file} .png`.gif
+  end
+
+		       -----------------------
+
+Use -uX,Y on the command line to build and save an image larger than
+the screen made out of several tiles, each the size of the ldglite
+window.  This can be used in combination with the -W option for wide
+lines and/or the -Q switch for antialiased lines to generate high
+quality instructions.  Currently this dumps PPM files instead of BMP
+files.  PNG works, but transparent backgrounds and cropping are not
+supported in tiled mode.  Ldglite automatically exits after saving the
+images (much like the -MS mode).  The following command renders
+the model in double size and saves a 2000 by 2000 PNG file.  It uses
+the l3 parser so it only has to parse the mpd file once for the multiple
+rendering passes required for the tiles.
+
+  ldglite -l3 -i2 -s2 -w2 -u2000,2000 model.mpd
 
