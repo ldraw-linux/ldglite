@@ -301,8 +301,9 @@ int SetViewMatrix(char *Values)
 		&m[2][0], &m[2][1], &m[2][2]);
 	if (r != 9) return 0;
 	m[3][3] = 1.0;
-	m[0][3] = (zGetRowsize()/2);
-	m[1][3] = (2*zGetColsize()/3);
+	m[0][3] = ldraw_commandline_opts.O.x + (zGetRowsize()/2);
+	m[1][3] = ldraw_commandline_opts.O.y + (2*zGetColsize()/3);
+	m[2][3] = ldraw_commandline_opts.O.z;
 	memcpy(m_m,m,sizeof(m));
 	return 1;
 }
