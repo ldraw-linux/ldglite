@@ -1445,6 +1445,116 @@ int Inline1Part(int partnum)
 }
 
 /*****************************************************************************/
+extern void hoser(float m[4][4], int color, int steps, int drawline,
+		  char *parttext, char *firstparttext);
+
+/*****************************************************************************/
+int Hose1Part(int partnum, int steps)
+{
+    int            i = 0;
+    int            n, Color, CurColor;
+    struct L3LineS *LinePtr;
+    struct L3LineS *PrevPtr;
+    struct L3LineS *NextPtr;
+    struct L3LineS *FirstPtr;
+    struct L3LineS *LastPtr;
+    struct L3PartS *PartPtr;
+    float          r[4];
+    float          m[4][4];
+    float          m1[4][4];
+    char           Comment[256];
+    char *parttext = NULL;
+    char *firstparttext = NULL;
+
+    if (SelectedLinePtr)
+	LinePtr = SelectedLinePtr;
+    else
+    for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+    {
+	if (i == partnum)
+	    break;	    // Found the part
+	i++;
+    }
+
+    if (!LinePtr)
+	return -1; //partnum not found
+    
+    if (LinePtr->LineType != 1)
+      return i;
+
+    FirstPtr = LinePtr->NextLine; 
+    if (!FirstPtr)
+      return i;
+    if (FirstPtr->LineType != 1)
+      return i;
+
+    NextPtr = FirstPtr->NextLine; 
+    if (!NextPtr)
+      return i;
+    if (NextPtr->LineType != 1)
+      return i;
+
+    LastPtr = NextPtr->NextLine; 
+    if (!LastPtr)
+      return i;
+    if (LastPtr->LineType != 1)
+      return i;
+
+    // Get the color and the names of the hose parts.
+    CurColor = LinePtr->Color;
+    if (LinePtr->PartPtr)
+      parttext = LinePtr->PartPtr->DatName;
+    if (FirstPtr->PartPtr)
+      firstparttext = FirstPtr->PartPtr->DatName;
+
+    // Get the 4 control points from the part locations.
+    m[0][0] = LinePtr->v[0][3];
+    m[0][1] = LinePtr->v[1][3];
+    m[0][2] = LinePtr->v[2][3];
+    m[0][3] = 0;
+    m[1][0] = FirstPtr->v[0][3];
+    m[1][1] = FirstPtr->v[1][3];
+    m[1][2] = FirstPtr->v[2][3];
+    m[1][3] = 0;
+    m[2][0] = NextPtr->v[0][3];
+    m[2][1] = NextPtr->v[1][3];
+    m[2][2] = NextPtr->v[2][3];
+    m[2][3] = 0;
+    m[3][0] = LastPtr->v[0][3];
+    m[3][1] = LastPtr->v[1][3];
+    m[3][2] = LastPtr->v[2][3];
+    m[3][3] = 0;
+    
+    // Convert LinePtr into comments.
+    strcpy(Comment, "Hosed: ");
+    n = strlen(Comment);
+    Print1LinePtr(LinePtr, i, &(Comment[n]));
+
+    //Start the inlined part with a blank comment.
+    Comment1LinePtr(LinePtr, " "); 
+
+    //Make 3 more comments.
+    NextPtr = LinePtr; 
+    for (i=0; i<3; i++)
+    {
+      LinePtr = NextPtr; 
+      NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+      memcpy(NextPtr, LinePtr, sizeof(struct L3LineS));
+      NextPtr->Comment = NULL;
+      if (i == 0) //Then add the "Inlined" comment.
+	Comment1LinePtr(NextPtr, Comment);
+      else
+	Comment1LinePtr(NextPtr, " ");
+      LinePtr->NextLine = NextPtr; 
+    }
+
+    // Insert the hosed part between the last two comment lines.
+    hoser(m, CurColor, steps, 1, parttext,firstparttext);
+
+    return 0;
+}
+
+/*****************************************************************************/
 int GetCurLineType(int partnum)
 {
     int            i = 0;
