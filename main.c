@@ -4086,31 +4086,27 @@ int edit_mode_fnkeys(int key, int x, int y)
     {
       switch(key) {
       case GLUT_KEY_PAGE_UP:
-	partlookup -= 20;
+	partlookup -= 10;
 	if (partlookup < 1)
 	  partlookup = 1;
-	printf("partlookup = %d\n", partlookup);
 	edit_mode_gui(); // Redisplay the GUI
 	break;
       case GLUT_KEY_PAGE_DOWN:
-	partlookup += 20;
+	partlookup += 10;
 	if (partlookup > partlistsize)
 	  partlookup = partlistsize;
-	printf("partlookup = %d\n", partlookup);
 	edit_mode_gui(); // Redisplay the GUI
 	break;
       case GLUT_KEY_UP:
 	partlookup -= 1;
 	if (partlookup < 1)
 	  partlookup = 1;
-	printf("partlookup = %d\n", partlookup);
 	edit_mode_gui(); // Redisplay the GUI
 	break;
       case GLUT_KEY_DOWN:
 	partlookup += 1;
 	if (partlookup > partlistsize)
 	  partlookup = partlistsize;
-	printf("partlookup = %d\n", partlookup);
 	edit_mode_gui(); // Redisplay the GUI
 	break;
       default:
@@ -4768,6 +4764,18 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	  }
 	  partlookup = 0;
 	}
+	else if (ecommand[1] == 0)
+	{
+	  // Part lookup?
+	  sprintf(eprompt[0], "New Part: ");
+	  ecommand[0] = 'p';
+	  //StashPart0();
+	  loadpartlist();
+	  partlookup = 1;
+	  edit_mode_gui(); // Redisplay the GUI
+	  return 1;
+	}
+
 	for (i = 1; ecommand[i] == ' '; i++); // Strip leading spaces
 	strcpy(partname, &(ecommand[i]));
 	CopyStaticBuffer();
