@@ -141,7 +141,7 @@ extern int Swap1Part(int partnum, char *SubPartDatName);
 extern int Print1Part(int partnum, FILE *f);
 extern int Print1Model(char *filename);
 // If I ever get SOLID_EDIT_MODE working I should make it a runtime option.
-//#define SOLID_EDIT_MODE 1
+#define SOLID_EDIT_MODE 1
 
 int use_quads = 0;
 int curstep = 0;
@@ -1518,16 +1518,10 @@ void reshape(int width, int height)
 #endif
 
 /***************************************************************/
-/* render gets called both by "display" (in OpenGL render mode)
-   and by "outputEPS" (in OpenGL feedback mode). */
-void
-render(void)
+// Setup view matrix, lighting, and flat shading before rendering.
+// Note any push/pop of model matrix must be done outside of this fn.
+void rendersetup(void)
 {
-  int rc;
-  int client_rect_right;
-  int client_rect_bottom;
-  int res;
-
   if (zShading)
     glEnable(GL_LIGHTING);
   else
@@ -1535,13 +1529,9 @@ render(void)
 
   glCurColorIndex = -1;
 
-  client_rect_right = Width;
-  client_rect_bottom = Height;
-
   glColor3f(1.0, 1.0, 1.0); // White.
 
   glMatrixMode(GL_MODELVIEW);
-  glPushMatrix();
 
 #ifdef USE_QUATERNION
   // NOTE:  This does NOT work since I'm doing the spin transform BEFORE
@@ -1609,6 +1599,32 @@ render(void)
   glRotatef(qspin[3], qspin[0], qspin[1], qspin[2]);
 #endif
 
+  //glEdgeFlag(GL_FALSE); // Do not draw poly edges?
+  glShadeModel(GL_FLAT); // not GL_SMOOTH
+  //glShadeModel(GL_SMOOTH); // not GL_SMOOTH
+
+  //glPolygonMode(GL_FRONT,GL_FILL);
+  //glPolygonMode(GL_BACK,GL_FILL);
+  //glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+  //glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+}
+
+/***************************************************************/
+/* render gets called both by "display" (in OpenGL render mode)
+   and by "outputEPS" (in OpenGL feedback mode). */
+void
+render(void)
+{
+  int rc;
+  int client_rect_right;
+  int client_rect_bottom;
+  int res;
+
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+
+  rendersetup();
+
   if (drawAxis)
   {
     glBegin(GL_LINES);
@@ -1626,14 +1642,8 @@ render(void)
 
   glColor3f(1.0, 1.0, 1.0); // White.
 
-  //glEdgeFlag(GL_FALSE); // Do not draw poly edges?
-  glShadeModel(GL_FLAT); // not GL_SMOOTH
-  //glShadeModel(GL_SMOOTH); // not GL_SMOOTH
-
-  //glPolygonMode(GL_FRONT,GL_FILL);
-  //glPolygonMode(GL_BACK,GL_FILL);
-  //glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
-  //glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+  client_rect_right = Width;
+  client_rect_bottom = Height;
 
   zcolor_init();
 
@@ -2326,81 +2336,12 @@ int XORcurPiece()
 {
   int retval = 0;
 
-  glDisable(GL_LIGHTING);
-
-  glCurColorIndex = -1;
-
-  glColor3f(1.0, 1.0, 1.0); // White.
-
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
 
-#ifdef USE_QUATERNION
-  // NOTE:  This does NOT work since I'm doing the spin transform BEFORE
-  // the gluLookAt() transform, so the model moves around the camera 
-  // rather than the camera orbiting the model.
-  if (qspin[3] == 0.0)
-  {
-    glLoadIdentity();
-  }
-#else
-  glLoadIdentity();
-#endif
+  rendersetup();
 
-#ifdef USE_F00_CAMERA
-  applyCamera();
-#endif
-
-#define ORBIT_THE_CAMERA_ABOUT_THE_MODEL 1
-
-#ifdef ORBIT_THE_MODEL_ABOUT_THE_CAMERA
-  // Do camera translation/rotation BEFORE GluLookAt()
-  glRotatef(fXRot, 1.0f, 0.0f, 0.0f);
-  glRotatef(360 - fYRot, 0.0f, 1.0f, 0.0f);
-  glTranslatef(fCamX, fCamY, fCamZ);        
-  // Draw everything else below after gluLookAt()
-#endif
-
-  // ldlite_parse seems to offset x,y coords by half the window size.
-
-  // Hmmm, my up vector is straight up.  This may NOT be perpendicular 
-  // to my view vector if it looks down at an angle toward (0,100,0).
-
-  // from, toward, upvector
-#if WIDE_ANGLE_VIEW
-  // Height/6 moves the origin from halfway to 2/3 of the way down the screen.
-  // Original LdLite uses zGetRowsize() and zGetColsize() to do this.
-  // I stubbed them to return 0 for OpenGL since its origin is the window
-  // center, not the corner.  See LDRAW_COMPATIBLE_CENTER in LdliteVR_main.c.
-  gluLookAt(0.0, Height/6.0, 1000.0, 0.0, Height/6.0, 0.0, 0.0, 1.0, 0.0);
-#else
-  gluLookAt(0.0, Height/6.0, 2000.0, 0.0, Height/6.0, 0.0, 0.0, 1.0, 0.0);
-#endif
-
-#ifdef ORBIT_THE_CAMERA_ABOUT_THE_MODEL
-  // Do camera translation/rotation AFTER the GluLookAt camera transform.
-  glRotatef(fXRot, 1.0f, 0.0f, 0.0f);
-  glRotatef(-fYRot, 0.0f, 1.0f, 0.0f);
-  glTranslatef(fCamX, fCamY, fCamZ);        
-  // Draw everything else below
-#endif
-
-#ifdef USE_GL_TWIRL
-  gluLookAt(400.0, 600.0, 1000.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-
-  // This does not work right because the ldlite default model matrix
-  // has already tilted the model so it twirls tilted if I do this.
-  // This WOULD work if I used glulookAt() to set the view angle and
-  // substituted an identity matrix for the ldlite model matrix.
-  if (twirl_angle != 0.0)
-    glRotatef((float)-twirl_angle, 0.0, 1.0, 0.0);
-#endif
-#ifdef USE_QUATERNION
-  printf("spin(%0.2f, %0.2f, %0.2f, %0.2f)\n", 
-	 qspin[3], qspin[0], qspin[1], qspin[2]);
-  glRotatef(qspin[3], qspin[0], qspin[1], qspin[2]);
-#endif
-
+  glDisable(GL_LIGHTING); // No need for lighting
   glDisable( GL_DEPTH_TEST ); // don't test for depth -- just put in front
   glEnable( GL_COLOR_LOGIC_OP ); 
   glLogicOp(GL_XOR);
@@ -2419,67 +2360,125 @@ int XORcurPiece()
 }
 
 /***************************************************************/
+// Here is a snippet from the web. 
+#if 0
+glGet(GL_CURRENT_RASTER_POSITION); //0.5000 165.0000 0.5000 1.0000
+glGet(GL_DEPTH_BIAS); //0.0000
+glGet(GL_DEPTH_BITS); //32.0000
+glGet(GL_DEPTH_CLEAR_VALUE); //1.0000
+glGet(GL_DEPTH_FUNC); //513.0000
+glGet(GL_DEPTH_RANGE); //0.0000 1.0000
+glGet(GL_DEPTH_SCALE); //1.0000
+glGet(GL_DEPTH_TEST); //0.0000
+glGet(GL_DEPTH_WRITEMASK); //1.0000
+
+glPushAttrib(GL_COLOR_BUFFER_BIT|GL_CURRENT_BIT|GL_DEPTH_BUFFER_BIT|GL_FOG_BIT|GL_LIGHTING_BIT|GL_MISC_BIT_EXT|GL_VIEWPORT_BIT);
+glViewport(0, 0, 470, 330);
+glScissor(0, 0, 470, 330);
+glDisable(GL_DEPTH_TEST);
+glDisable(GL_FOG);
+glMatrixMode(GL_PROJECTION);
+glPushMatrix();
+glLoadIdentity();
+glOrtho(-0.5000f, 470.5000f, -0.5000f, 330.5000f, -1.0000f, 1.0000f);
+glMatrixMode(GL_MODELVIEW);
+glPushMatrix();
+glLoadIdentity();
+glDrawBuffer(GL_FRONT_AND_BACK);
+glRasterPos2f(0.0000f, 165.0000f);
+glCopyPixels(0, 0, 470, 165, GL_COLOR);
+glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+// Added these two lines
+glEnable(GL_DEPTH_TEST);
+glDepthFunc(GL_ALWAYS);     // New value always wins.
+// *********************
+glCopyPixels(0, 0, 470, 165, GL_DEPTH);
+glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+glPopMatrix();
+glMatrixMode(GL_PROJECTION);
+glPopMatrix();
+glMatrixMode(GL_MODELVIEW);
+glDrawBuffer(GL_BACK);
+glPopAttrib();
+#endif
+
+/***************************************************************/
+static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
+
+/***************************************************************/
+// CopyStaticBuffer is fairly slow but should always work.
+// I could speed this up with opengl extensions when I get more time
+// Look for:
+// WGL_ARB_pbuffer and/or WGL_EXT_pbuffer
+// GLX_MESA_copy_sub_buffer / glXCopySubBufferMESA()
+// WGL_ARB_buffer_region
+// GL_WIN_swap_hint
+// GLX_SGIX_pbuffer
+// GL_KTX_buffer_region
+// Also I wonder if I could copy the depth buffer to the accumulation buffer.
+/***************************************************************/
 void CopyStaticBuffer(void)
 {
 #ifdef SOLID_EDIT_MODE
-      if (movingpiece != curpiece)
-      {
-	  printf("selecting piece %d to move instead of %d\n",curpiece, movingpiece);
-	  Select1Part(curpiece);
-	  // Draw stuff into the staticbuffer
-	  glDrawBuffer(staticbuffer); 
+  if (movingpiece != curpiece)
+  {
+    Select1Part(curpiece);
+    // Draw stuff into the staticbuffer
+    glDrawBuffer(staticbuffer); 
+    
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    render();
 
-	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	  render();
-      }
-      movingpiece = curpiece;
-
-      // get fresh copy of static data
-      glReadBuffer(staticbuffer); // set pixel source
-      glDrawBuffer(screenbuffer); // set pixel destination
-      printf("Clearing both buffers\n");
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      glDisable( GL_DEPTH_TEST ); // Speed up copying
-      glDisable(GL_LIGHTING);     // Speed up copying
-      glMatrixMode( GL_PROJECTION );
-      glLoadIdentity();
-      //gluOrtho2D( 0., 100., 0., 100. ); /* "percent units" */
-      gluOrtho2D(0, Width, 0, Height);
-      glMatrixMode( GL_MODELVIEW );
-      glPushMatrix();
-      glLoadIdentity();
-      glRasterPos2i(0, 0);
-      glDepthMask(GL_FALSE); // disable updates to depth buffer
-      glCopyPixels(0, 0, Width, Height, GL_COLOR);
-      glRasterPos2i(0, 0);
-      printf("Copying color buffer\n");
-      glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); // disable updates to color buffer
-      glDepthMask(GL_TRUE); // enable updates to depth buffer
-      glEnable( GL_DEPTH_TEST ); 
-      glDepthFunc(GL_ALWAYS);
-      printf("Clearing depth buffer\n");
-      glClear(GL_DEPTH_BUFFER_BIT); // Just in case, clear it before the copy.
-      printf("Copying depth buffer\n");
-      //glCopyPixels(0, 0, Width, Height, GL_DEPTH);
-      glPopMatrix();
-      glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);  // enable updates to color buffer
-      reshape(Width, Height);
-      glEnable( GL_DEPTH_TEST ); 
-      glDepthFunc(GL_LESS);
-      printf("Buffers Copied.\n");
-      // screenbuffer is ready for dynamic data
+    // Apparently there is only ONE zbuffer shared by front & back buffers.
+    if (zbufdata)
+      free (zbufdata);  // NOTE: gotta free this when finished editing.
+    zbufdata = (float *) malloc(Width * Height * sizeof(float));
+    glReadBuffer(staticbuffer); // set pixel source
+    glReadPixels(0, 0, Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+  }
+  movingpiece = curpiece;
+  
+  // get fresh copy of static data
+  glReadBuffer(staticbuffer); // set pixel source
+  glDrawBuffer(screenbuffer); // set pixel destination
+  glDisable( GL_DEPTH_TEST ); // Speed up copying
+  glDisable(GL_LIGHTING);     // Speed up copying
+  glMatrixMode( GL_PROJECTION );
+  glLoadIdentity();
+  gluOrtho2D(0, Width, 0, Height);
+  glMatrixMode( GL_MODELVIEW );
+  glPushMatrix();
+  glLoadIdentity();
+  glRasterPos2i(0, 0);
+  glDepthMask(GL_FALSE); // disable updates to depth buffer
+  glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); // enable color buffer updates
+  glCopyPixels(0, 0, Width, Height, GL_COLOR);
+  glRasterPos2i(0, 0);
+  glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); // disable color updates
+  glDepthMask(GL_TRUE); // enable updates to depth buffer
+  glEnable( GL_DEPTH_TEST ); 
+  glDepthFunc(GL_ALWAYS);
+  glRasterPos2i(0, 0);
+  glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+  glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); // enable color buffer updates
+  glPopMatrix();
+  reshape(Width, Height);
+  glEnable( GL_DEPTH_TEST ); 
+  glDepthFunc(GL_LESS);
+  rendersetup();
+  // screenbuffer is ready for dynamic data
 #else
-      XORcurPiece(); // Erase the previous piece
-      if (movingpiece != curpiece)
-      {
-	  Select1Part(curpiece);
-	  glDrawBuffer(staticbuffer); 
-	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	  render();
-	  glutSwapBuffers();
-	  glDrawBuffer(screenbuffer); 
-	  UnSelect1Part(curpiece);
-      }
+  XORcurPiece(); // Erase the previous piece
+  if (movingpiece != curpiece)
+  {
+    Select1Part(curpiece);
+    glDrawBuffer(staticbuffer); 
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    render();
+    glutSwapBuffers();
+    glDrawBuffer(screenbuffer); 
+    UnSelect1Part(curpiece);
+  }
 #endif
 }
       
@@ -2495,6 +2494,7 @@ void DrawMovingPiece(void)
 #else      
   XORcurPiece();
 #endif
+  glFlush();
 }
 
 /***************************************************************/
@@ -2681,17 +2681,26 @@ void fnkeys(int key, int x, int y)
     // if (ldraw_commandline_opts.debug_level == 1)
       printf("Editing mode =  %d\n", editing);
 
-    curpiece = 0;
-    movingpiece = -1;
-    XORcurPiece();
-    Print1Part(curpiece, stdout);
-
     // Switch to continuous mode.
     editingprevmode = ldraw_commandline_opts.M;
     ldraw_commandline_opts.M = 'C';
     ldraw_commandline_opts.poll = 0; // Disable polling 
     curstep = 0; // Reset to first step
     dirtyWindow = 1;
+
+    curpiece = 0;
+    movingpiece = -1;
+    if (parsername == LDLITE_PARSER)
+    {
+      parsername = L3_PARSER;
+      list_made = 0; // Gotta reparse the file.
+      glutPostRedisplay();
+    }
+    else
+    {
+      XORcurPiece();
+      Print1Part(curpiece, stdout);
+    }
     return;
     break;
 #endif
@@ -2874,6 +2883,7 @@ void keyboard(unsigned char key, int x, int y)
       else 
 	EraseCurPiece();
       curpiece = Add1Part(curpiece);
+      // NOTE: This crashes SOLID_EDIT_MODE because the piece isn't moving.
       movingpiece = curpiece;
       DrawMovingPiece();
       Print1Part(curpiece, stdout);
@@ -2900,13 +2910,17 @@ void keyboard(unsigned char key, int x, int y)
       Print1Model(datfilename);
       return;
     case 'd':
-      CopyStaticBuffer();      
-      movingpiece = -1;
-      curpiece = Select1Part(curpiece);
+      CopyStaticBuffer(); 
+#ifdef SOLID_EDIT_MODE
+      // CopyStaticBuffer() selects current piece in SOLID_EDIT_MODE
+#else
+      Select1Part(curpiece);
+#endif
       Delete1Part(curpiece);
+      movingpiece = -1;
       curpiece--;
       if (curpiece < 0) curpiece = 0;
-      DrawMovingPiece();
+      XORcurPiece();
       Print1Part(curpiece, stdout);
       return;
     }
