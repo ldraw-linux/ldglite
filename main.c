@@ -1430,18 +1430,27 @@ void linequalitysetup()
     glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
     //glEnable( GL_POLYGON_SMOOTH ); 
     //glHint( GL_POLYGON_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
-#if 0
+#if 1
     if (lineWidth > 1.0)
     {
       // This does NOT seem to work as well as I thought it would.
       // Instead, just draw the points (unantialiased) BEFORE the lines.
       glEnable( GL_POINT_SMOOTH ); 
       glHint( GL_POINT_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
+      glEnable(GL_ALPHA_TEST);
+      glAlphaFunc(GL_GREATER,.5);
     }
 #endif
   }
   else
   {
+#if 1
+    if (lineWidth > 1.0)
+    {
+      glDisable( GL_POINT_SMOOTH ); 
+      glDisable(GL_ALPHA_TEST);
+    }
+#endif    
     glDisable( GL_LINE_SMOOTH ); 
     glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
     glDisable( GL_BLEND );
