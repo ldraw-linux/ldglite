@@ -638,6 +638,7 @@ void printModelMat(char *name)
 
 /***************************************************************/
 void parse_view(char *viewMatrix);
+void getCamera(float m[4][4], float v[3]);
 
 /***************************************************************/
 void printPOVMatrix()
@@ -711,6 +712,9 @@ void printPOVMatrix()
   m[0][2] = ldraw_commandline_opts.A.g / scale;
   m[1][2] = ldraw_commandline_opts.A.h / scale;
   m[2][2] = ldraw_commandline_opts.A.i / scale;
+
+  m[0][3] = ldraw_commandline_opts.O.x / scale;
+  m[1][3] = ldraw_commandline_opts.O.y / scale;
 
   // Restore LdrawOblique view matrix if needed.
   if (m_viewMatrix == LdrawOblique)
@@ -801,6 +805,17 @@ void printPOVMatrix()
 	   cc[0],cc[1],cc[2], cla[0],cla[1],cla[2], angle,
 	   filename, ldraw_commandline_opts.B);
   }
+
+  printModelMat("ModelM");
+  getCamera(m, up);
+
+  printf("%s(%g,%g,%g,%g, %g,%g,%g,%g %g,%g,%g,%g, %g,%g,%g,%g)\n", "Camera",
+	 m[0][0], m[0][1] , m[0][2], m[0][3],
+	 m[1][0], m[1][1] , m[1][2], m[1][3],
+	 m[2][0], m[2][1] , m[2][2], m[2][3],
+	 m[3][0], m[3][1] , m[3][2], m[3][3]);
+  printf("%s(%g,%g,%g)\n", "Offset", up[0], up[1], up[2]);
+
 
 }
 
@@ -6773,6 +6788,19 @@ void ParseParams(int *argc, char **argv)
 	}
 	break;
       }
+    }
+  }
+
+  // Tiled rendering does not work offscreen.  Just use one big bitmap.
+  if (OffScreenRendering && tiledRendering)
+  {
+    tiledRendering = 0;
+    x = TILE_IMAGE_WIDTH;
+    y = TILE_IMAGE_HEIGHT;
+    if ((x > 0) && (y > 0))
+    {
+      ldraw_commandline_opts.V_x = x;
+      ldraw_commandline_opts.V_y = y;
     }
   }
 
