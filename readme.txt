@@ -258,7 +258,7 @@ Command line options (see also the original ldlite docs for more):
 -J picks the perspective projection.
 -zN sets the near clipping plane.  (default = 10.  100 if GL_DEPTH_BITS < 24)
 -ZN sets the far clipping plane.  (default = 4000)
--caN sets the camera FOV angle in degrees.  (like l3p, except default = 45)
+-caN sets the camera FOV angle in degrees.  (like l3p, default = 67.38)
 -ccX,Y,Z sets the camera location.  (like l3p, except default = 0,0,1000)
 -coX,Y,Z sets the model origin for the camera to look at.  (default = 0,0,0)
 -cuX,Y,Z sets the camera up vector.  (default = 0,0,1)
