@@ -27,7 +27,7 @@ LIBS = libmui.a
 #GL_LIBS=-L/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries
 #GLUT_LIBS=-L/System/Library/Frameworks/GLUT.framework/Versions/A/Libraries
 #GL_LIBS=-framework OpenGL -framework GLUT -lglut -lobjc
-GL_LIBS=-framework OpenGL -framework GLUT -lobjc -lstdc++ $(OFFSCREEN_LIBS) 
+GL_LIBS=-framework OpenGL -framework GLUT -framework Carbon -lobjc -lstdc++ $(OFFSCREEN_LIBS) 
 
 CFLAGS=-g -I./osx -DUNIX -DMACOS_X -DUSING_CARBON -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 -DNEED_MIN_MAX $(PNG_FLAGS) $(TR_FLAGS) $(OFFSCREEN_FLAGS) $(GUI_FLAGS)
 CFLAGS+=-DNOT_WARPING -DVISIBLE_SPIN_CURSOR -DSAVE_DEPTH_ALL -DSAVE_COLOR_ALL -DMACOS_X_TEST2
