@@ -34,6 +34,16 @@ extern int use_quads;
 extern float lineWidth;
 extern int zSolid;
 
+// Ambient and diffusion properties for front and back faces.
+extern GLfloat full_mat[];
+extern GLfloat half_mat[];
+extern GLfloat no_mat[];
+extern GLfloat no_shininess[];
+extern GLfloat lo_shininess[];
+extern GLfloat mid_shininess[];
+extern GLfloat hi_shininess[];
+GLfloat cur_mat[] = { 0.0, 0.0, 0.0, 1.0 };;
+
 GLdouble model_mat[4*4];
 GLdouble proj_mat[4*4];
 GLint view_mat[4];
@@ -353,7 +363,10 @@ int znamelist_stack_index=0;
   zcolor_alias(431,"Mint-Green-Belville");
   zcolor_alias(462,"Orange");
   zcolor_alias(382,"Tan");
-  
+
+#ifdef USE_OPENGL
+  zcolor_alias(256,"Matte-Black"); // rubber for tires.
+#endif  
 }
 
 // Call this when a file finishes.
@@ -683,6 +696,30 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
     // Dithered colors
     *zcp = zcolor_table[(c & 0xf0)>>4].primary;
     *zcs = zcolor_table[c & 0xf].primary;
+#ifdef USE_OPENGL
+    // use colors borrowed from ldview
+    if ( c == 334) // Gold
+    {
+      zcp->r = 240; 
+      zcp->g = 176;
+      zcp->b = 51;
+    }
+    else if (( c == 383) // Chrome silver
+	     || (c == 494)) // Electrical Contacts
+    {
+      zcp->r = 180; //204; // I prefer my plastic chrome a bit darker with 
+      zcp->g = 180; //204; // bright but fuzzy  specular highlights.
+      zcp->b = 180; //204;
+    }
+    else
+    {
+      // No dithering, just average the numbers  
+      zcp->r = (unsigned char) (((int)zcp->r + (int)zcs->r) / 2);
+      zcp->g = (unsigned char) (((int)zcp->g + (int)zcs->g) / 2);
+      zcp->b = (unsigned char) (((int)zcp->b + (int)zcs->b) / 2);
+      zcs = zcp;
+    }
+#endif
   } else if ((c >= 0x4000000)&&(c<=0x7ffffff)) {
     // Numbers of 0x4000000 to 0x7ffffff are hard coded color values. 
     // Numbers of 0x4000000 to 0x7ffffff are hard coded color values. 
@@ -810,7 +847,7 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
     if (glCurLighting) glDisable(GL_LIGHTING);
   glCurLighting = 0;
   if (glCurColorIndex != c)
-    //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
+    //Glcolor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
     glColor3ub(zc.r, zc.g, zc.b);
   glCurColorIndex = c;
   if (lineWidth > 0.0)
@@ -889,14 +926,29 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
 	  c, zc.r, zc.g, zc.b, zs.r, zs.g, zs.b);
 #endif
 
-  if ((c > 32) && (c < 64))
-    {
+  if ((c > 32) && (c < 64)) // Translucent colors
+  {
     glEnable(GL_POLYGON_STIPPLE);
     glPolygonStipple(halftone);
     //glCallList(current_stipple+STIP_OFFSET);
     current_stipple++;
     current_stipple %= 8;
-    }   
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, hi_shininess);
+  }   
+  // Gold, Chrome silver, Electrical Contacts
+  else if ((c == 334) || (c == 383) || (c == 494))
+  {
+    //glColorMaterial(GL_FRONT_AND_BACK, GL_SPECULAR);
+    cur_mat[0] = zc.r/255.0;
+    cur_mat[1] = zc.g/255.0;
+    cur_mat[2] = zc.b/255.0;
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, cur_mat);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, cur_mat);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mid_shininess);
+    if ((c == 383) || (c == 494))
+      glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, hi_shininess);
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
+  }
   if (zShading)
     if (!glCurLighting) glEnable(GL_LIGHTING);
   glCurLighting = 1;
@@ -915,10 +967,20 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
   glVertex3f(vp2->x, -vp2->y, -vp2->z);
   glVertex3f(vp3->x, -vp3->y, -vp3->z);
   glEnd();
-  if ((c > 32) && (c < 64))
-    {
+  if ((c > 32) && (c < 64)) // Translucent colors
+  {
     glDisable(GL_POLYGON_STIPPLE);
-    }   
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, no_shininess);
+  }   
+  // Gold, Chrome silver, Electrical Contacts
+  else if ((c == 334) || (c == 383) || (c == 494))
+  {
+    //glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, full_mat);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, no_mat);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, no_shininess);
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
+  }
   //glFlush();
 }
 
@@ -1049,14 +1111,29 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
 #endif
 
   // opengl render it as a quad
-  if ((c > 32) && (c < 64))
-    {
+  if ((c > 32) && (c < 64)) // Translucent colors
+  {
     glEnable(GL_POLYGON_STIPPLE);
     glPolygonStipple(halftone);
     //glCallList(current_stipple+STIP_OFFSET);
     current_stipple++;
     current_stipple %= 8;
-    }   
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, hi_shininess);
+  }   
+  // Gold, Chrome silver, Electrical Contacts
+  else if ((c == 334) || (c == 383) || (c == 494))
+  {
+    //glColorMaterial(GL_FRONT_AND_BACK, GL_SPECULAR);
+    cur_mat[0] = zc.r/255.0;
+    cur_mat[1] = zc.g/255.0;
+    cur_mat[2] = zc.b/255.0;
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, cur_mat);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, cur_mat);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mid_shininess);
+    if ((c == 383) || (c == 494))
+      glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, hi_shininess);
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
+  }
   if (zShading)
     if (!glCurLighting) glEnable(GL_LIGHTING);
   glCurLighting = 1;
@@ -1116,10 +1193,20 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
     glVertex3f(vp4->x, -vp4->y, -vp4->z);
   }
   glEnd();
-  if ((c > 32) && (c < 64))
-    {
+  if ((c > 32) && (c < 64)) // Translucent colors
+  {
     glDisable(GL_POLYGON_STIPPLE);
-    }   
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, no_shininess);
+  }   
+  // Gold, Chrome silver, Electrical Contacts
+  else if ((c == 334) || (c == 383) || (c == 494))
+  {
+    //glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, full_mat);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, no_mat);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, no_shininess);
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
+  }
   //glFlush();
 
 #endif
