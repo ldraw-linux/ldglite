@@ -457,6 +457,7 @@ spewSortedFeedback(FILE * file, GLint size, GLfloat * buffer)
     default:
       /* XXX Left as an excersie to the reader. */
       //assert(1);
+      break;
     }
     item++;
   }
