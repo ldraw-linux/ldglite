@@ -30,6 +30,11 @@
 #ifndef WINDOWS
 // This stuff gets pulled in by glut.h for windows.
 #include "wstubs.h"
+#else
+// glut 3.7 no longer includes windows.h
+#if (GLUT_XLIB_IMPLEMENTATION >= 13)
+#include <windows.h>
+#endif
 #endif
 
 #include "dirscan.h"
@@ -50,6 +55,7 @@ extern char modelspath[256];
 extern char datfilepath[256];
 
 char datfilename[256];
+char title[256];
 
 char buf[10240];
 int use_uppercase = 0;
@@ -58,24 +64,29 @@ int ldraw_projection_type = 0;  // 1 = perspective, 0 = orthographic.
 int ldraw_image_type = 0;  // 0 = .BMP, 1 = .PNG.
 
 // [Views] swiped from ldraw.ini
+// Modified some views to be orthogonal.
 char Back[] = "-1,0,0,0,1,0,0,0,-1";
 char Left[] = "0,0,1,0,1,0,-1,0,0";
 char Right[] = "0,0,-1,0,1,0,1,0,0";
 char Above[] = "0,0,1,1,0,0,0,1,0";
 char Beneath[] = "0,0,1,-1,0,0,0,-1,0";
-char Oblique[] = "1,0,1,0.5,1,-0.5,-1,0,1";
+char LdrawOblique[] = "1,0,1,0.5,1,-0.5,-1,0,1";
+char Oblique[] = "0.707104,0,0.707104,0.353553,0.866025,-0.353553,-0.612372,0.5,0.612372";
 char Front[] = "1,0,0,0,1,0,0,0,1";
-char UpsideDown[] = "-1,0,1,-0.5,-1,-0.5,1,0,0";
-char Natural[] = "0.625,0,1.075,0.5375,1.25,-0.3125,-1.25,0,2.5";
-char *m_viewMatrix = Oblique;
+//char UpsideDown[] = "-1,0,1,-0.5,-1,-0.5,1,0,0";
+char UpsideDown[] = "0.707104,0,0.707104,-0.353553,-0.866025,0.353553,0.612372,-0.5,-0.612372";
+//char Natural[] = "0.625,0,1.075,0.5375,1.25,-0.3125,-1.25,0,2.5";
+char Natural[] = "0.5,0,0.866025,0.433013,0.866025,-0.25,-0.75,0.5,0.433013";
+char *m_viewMatrix = LdrawOblique;
 
 extern int glCurColorIndex;
+extern float z_line_offset; 
 
 extern ZIMAGE z;
 
 GLint Width = 640;
 GLint Height = 480;
-int main_window;
+int main_window = -1;
 
 double twirl_angle = 0.0;
 double twirl_increment = 10.0;
@@ -110,7 +121,7 @@ int drawAxis = 0;
 
 // Camera movement variables
 #define MOVE_SPEED 10.0
-#define PI 3.141569
+#define PI 3.1415927
 #define PI_180 (PI/180.0)
 float fCamX = 0.0;
 float fCamY = 0.0;
@@ -619,6 +630,8 @@ void write_bmp8(char *filename)
   free(data);
 }
 #endif
+
+void reshape(int width, int height);
 
 /***************************************************************/
 int platform_step_comment(char *comment_string)
@@ -1459,6 +1472,23 @@ void initCamera(void)
   fZRot = 0.0;
 }
 
+void rotate_about(float x, float y, float z, float degrees);
+
+/***************************************************************/
+void parse_view(char *viewMatrix)
+{
+      sscanf(viewMatrix,"%f,%f,%f,%f,%f,%f,%f,%f,%f",
+	     &(ldraw_commandline_opts.A.a),
+	     &(ldraw_commandline_opts.A.b),
+	     &(ldraw_commandline_opts.A.c),
+	     &(ldraw_commandline_opts.A.d),
+	     &(ldraw_commandline_opts.A.e),
+	     &(ldraw_commandline_opts.A.f),
+	     &(ldraw_commandline_opts.A.g),
+	     &(ldraw_commandline_opts.A.h),
+	     &(ldraw_commandline_opts.A.i));
+}
+
 /***************************************************************/
 void fnkeys(int key, int x, int y)
 {
@@ -1500,12 +1530,63 @@ void fnkeys(int key, int x, int y)
     if(fXRot > 360.0)
       fXRot -= 360.0;
     break;
+  case GLUT_KEY_HOME:
+    rotate_about(0.0, 1.0, 0.0, 45.0 );
+    break;
+  case GLUT_KEY_END:
+    rotate_about(1.0, 0.0, 0.0, 45.0 );
+    break;
+  case GLUT_KEY_F1:
+    rotate_about(1.0, 0.0, 0.0, 5.0 );
+    break;
+  case GLUT_KEY_F2:
+    rotate_about(0.0, 1.0, 0.0, 5.0 );
+    break;
+#if (GLUT_XLIB_IMPLEMENTATION >= 13)
+  case GLUT_KEY_F9:
+    glutLeaveGameMode();
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("Window %d -> %d\n", glutGetWindow(), main_window);
+    if ( glutGetWindow() != main_window )
+    {
+      if (main_window == -1)
+        main_window = glutCreateWindow(title);
+      else
+        glutSetWindow(main_window); 
+    }
+    registerGlutCallbacks();
+    init();
+    break;
+  case GLUT_KEY_F10:
+    //glutGameModeString("800x600:16@60") ;
+    //glutGameModeString("800x600:16") ;
+    glutGameModeString("640x480") ;
+    // if the width is different to -1
+    if (glutGameModeGet(GLUT_GAME_MODE_WIDTH) != -1)
+    {
+      glutEnterGameMode();		// enter full screen mode
+      registerGlutCallbacks();
+      init();
+    }
+    break;
+#endif
   default:
     return;
   }
 
-  printf("Cam = (%.2f, %.2f, %.2f)\n", fCamX, fCamY, fCamZ);
-  printf("Rot = (%.2f, %.2f, %.2f)\n", fXRot, fYRot, fZRot);
+  if (ldraw_commandline_opts.debug_level == 1)
+  {
+    printf("Cam = (%.2f, %.2f, %.2f)\n", fCamX, fCamY, fCamZ);
+    printf("Rot = (%.2f, %.2f, %.2f)\n", fXRot, fYRot, fZRot);
+  }
+
+  // The LdrawOblique matrix is a projection matrix.
+  // Substitute Oblique view matrix so we can rotate it.
+  if (m_viewMatrix == LdrawOblique)
+  {
+    m_viewMatrix = Oblique;
+    parse_view(m_viewMatrix);
+  }
 
   glutPostRedisplay();
 
@@ -1546,6 +1627,10 @@ void keyboard(unsigned char key, int x, int y)
         ldraw_commandline_opts.S *= (1.0 / 0.5);
 	//reshape(Width, Height);
 	break;
+    case '0':
+      m_viewMatrix = LdrawOblique;
+      newview = 1;
+      break;
     case '1':
       m_viewMatrix = Back;
       newview = 1;
@@ -1625,16 +1710,7 @@ void keyboard(unsigned char key, int x, int y)
 	return;
     }
     if (newview)
-      sscanf(m_viewMatrix,"%f,%f,%f,%f,%f,%f,%f,%f,%f",
-	     &(ldraw_commandline_opts.A.a),
-	     &(ldraw_commandline_opts.A.b),
-	     &(ldraw_commandline_opts.A.c),
-	     &(ldraw_commandline_opts.A.d),
-	     &(ldraw_commandline_opts.A.e),
-	     &(ldraw_commandline_opts.A.f),
-	     &(ldraw_commandline_opts.A.g),
-	     &(ldraw_commandline_opts.A.h),
-	     &(ldraw_commandline_opts.A.i));
+      parse_view(m_viewMatrix);
 
     glutPostRedisplay();
 }
@@ -1694,7 +1770,80 @@ void rotate_the_model(double y_angle, double x_angle)
 
 /***************************************************************/
 // Rotate by angle degrees about an arbitrary vector.
-void rotate_about(float x, float y, float z, float angle)
+// Code borrowed from push_rotation() and push_transform() in y.tab.c
+// This works but transform_multiply() from ldliteVR_main.c appears buggy.
+void rotate_about(float x, float y, float z, float degrees)
+{
+  // convert axis - degrees into rotation matrix
+  matrix3d *m;
+  matrix3d newm;
+  matrix3d *oldm; 
+  vector3d t = {0.0, 0.0, 0.0};
+  double a,b,c,s, veclen_inv, sin2a;
+
+  // convert axis and degrees into a quaternion
+  veclen_inv = 1.0/sqrt(x*x + y*y + z*z);
+  sin2a = sin((3.1415927*degrees)/360.0);
+  a = sin2a * x * veclen_inv;
+  b = sin2a * y * veclen_inv;
+  c = sin2a * z * veclen_inv;
+  s = cos((3.1415927*degrees)/360.0);
+
+  // convert quaternion into a rotation matrix.
+  m = (matrix3d *)malloc(sizeof(matrix3d));
+
+  m->a = (float)(1 - 2*b*b-2*c*c);
+  m->b = (float)(2*a*b - 2*s*c);
+  m->c = (float)(2*a*c + 2*s*b);
+  m->d = (float)(2*a*b+2*s*c);
+  m->e = (float)(1 - 2*a*a - 2*c*c);
+  m->f = (float)(2*b*c - 2*s*a);
+  m->g = (float)(2*a*c - 2*s*b);
+  m->h = (float)(2*b*c + 2*s*a);
+  m->i = (float)(1 - 2*a*a - 2*b*b);
+
+#if 0
+  // This applies the new rotation to the model before the view transform.
+  // Which feels wrong.  (not like orbiting the camera about the model)
+  oldm = &(ldraw_commandline_opts.A);
+#else
+  // This seems to apply the new rotation after the view transform,
+  // but also seems to warp the image.  Why???
+  // Actually It only seems to happen if I start with the oblique, natural,
+  // or upside-down transforms.  What's so strange about those transforms.
+  // Do they actually shear the model in a way we don't see until we rotate?
+  //
+  // Hmmm this is the same problem transform_multiply() suffers from...
+  // That's why transform_multiply works for twirl but not for mouse spin.
+  // Twirl angle is applied before the view transform, but spin is after.
+  // So what is up with those 3 view matrices, and is this the L3Lab problem.
+  oldm = m;
+  m = &(ldraw_commandline_opts.A);
+#endif
+
+  newm.a = oldm->a * m->a + oldm->b * m->d + oldm->c * m->g;
+  newm.b = oldm->a * m->b + oldm->b * m->e + oldm->c * m->h;
+  newm.c = oldm->a * m->c + oldm->b * m->f + oldm->c * m->i;
+  newm.d = oldm->d * m->a + oldm->e * m->d + oldm->f * m->g;
+  newm.e = oldm->d * m->b + oldm->e * m->e + oldm->f * m->h;
+  newm.f = oldm->d * m->c + oldm->e * m->f + oldm->f * m->i;
+  newm.g = oldm->g * m->a + oldm->h * m->d + oldm->i * m->g;
+  newm.h = oldm->g * m->b + oldm->h * m->e + oldm->i * m->h;
+  newm.i = oldm->g * m->c + oldm->h * m->f + oldm->i * m->i;
+
+#if 0
+  fprintf(stdout,"Transform old:\n");
+  print_transform(&t, &(ldraw_commandline_opts.A));
+  fprintf(stdout,"Transform current:\n");
+  print_transform(&t, &newm);
+#endif
+
+  ldraw_commandline_opts.A = newm;
+}
+
+/***************************************************************/
+// Rotate by angle degrees about an arbitrary vector.
+void old_rotate_about(float x, float y, float z, float angle)
 {
   extern  void normalize(float v[3]);
 
@@ -1787,6 +1936,13 @@ mouse(int button, int state, int x, int y)
   }
   else if (panning)
   {
+    // The LdrawOblique matrix is a projection matrix.
+    // Substitute Oblique view matrix so we can rotate it.
+    if (m_viewMatrix == LdrawOblique)
+    {
+      m_viewMatrix = Oblique;
+      parse_view(m_viewMatrix);
+    }
     glGetDoublev(GL_MODELVIEW_MATRIX, model);
     glGetDoublev(GL_PROJECTION_MATRIX, proj);
     glGetIntegerv(GL_VIEWPORT, view);
@@ -1832,7 +1988,8 @@ mouse(int button, int state, int x, int y)
     pan_y = -pan_y; //Beats me why.
     pan_z = max(fabs(pan_x), fabs(pan_y));
     angle = atan2(pan_z, depth);
-    angle *= -1.0;
+    //angle *= -1.0;
+    angle *= 5.0;
     angle *= (180.0/3.1415927);
     if (ldraw_commandline_opts.debug_level == 1)
       printf("rotating about(%0.2f, %0.2f) by angle %0.2f\n", pan_y, -pan_x, angle);
@@ -1928,7 +2085,6 @@ void dirmenu(int item)
   int         i, j, len1;
   const int   len3 = WORDLENGTH;
   char        myDir[len3+1];
-  char title[256];
   char filename[256];
 
   extern char modelspath[];
@@ -2007,7 +2163,6 @@ void filemenu(int item)
   int         i, j, len1;
   const int   len3 = WORDLENGTH;
   char        myDir[len3+1];
-  char title[256];
   char filename[256];
 
   extern char modelspath[];
@@ -2089,6 +2244,9 @@ void myGlutIdle( void )
   /* According to the GLUT specification, the current window is
      undefined during an idle callback.  So we need to explicitly change
      it if necessary */
+#if (GLUT_XLIB_IMPLEMENTATION >= 13)
+  if (ldraw_commandline_opts.V_x >= -1)
+#endif
   if ( glutGetWindow() != main_window )
     glutSetWindow(main_window);
 
@@ -2160,6 +2318,7 @@ void myGlutIdle( void )
 // Stolen from the constructor in ldliteCommandLineInfo.cpp
 void CldliteCommandLineInfo()
 {
+#if 0
   ldraw_commandline_opts.A.a=1.0;
   ldraw_commandline_opts.A.b=0.0;
   ldraw_commandline_opts.A.c=1.0;
@@ -2169,6 +2328,9 @@ void CldliteCommandLineInfo()
   ldraw_commandline_opts.A.g=-1.0;
   ldraw_commandline_opts.A.h=0.0;
   ldraw_commandline_opts.A.i=1.0;
+#else
+  parse_view(m_viewMatrix);
+#endif
   ldraw_commandline_opts.B=15;
   ldraw_commandline_opts.C=7;
   ldraw_commandline_opts.F=0;
@@ -2258,6 +2420,12 @@ void ParseParams(int *argc, char **argv)
       case 'c':
 	sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.C));
 	break;
+      case 'E':
+      case 'e':
+	sscanf(pszParam,"%c%d",&type,&z_line_offset);
+	if (z_line_offset > 1.0)
+	  z_line_offset = 1.0;
+	break;
       case 'F':
       case 'f':
 	{
@@ -2286,6 +2454,12 @@ void ParseParams(int *argc, char **argv)
       case 'i':
       case 'I':
 	sscanf(pszParam,"%c%d",&type,&ldraw_image_type);
+	// Turn off cropping (image size = window size) if negative.
+	if (ldraw_image_type < 0)
+	{
+	  ldraw_image_type *= -1;
+	  cropping = 0;
+	}
 	break;
       case 'J':
       case 'j':
@@ -2332,6 +2506,10 @@ void ParseParams(int *argc, char **argv)
       case 'v':
 	sscanf(pszParam,"%c%d",&type, &mode);
 	switch(mode) {
+	case -2:
+	  ldraw_commandline_opts.V_x=-2;
+	  ldraw_commandline_opts.V_y=-2;
+	  break;
 	case -1:
 	  ldraw_commandline_opts.V_x=-1;
 	  ldraw_commandline_opts.V_y=-1;
@@ -2415,10 +2593,22 @@ int setfilename(const char *newfile)
 
 
 /***************************************************************/
+int registerGlutCallbacks()
+{
+    // I think I have to reregister all of these again for gamemode.
+    glutDisplayFunc(display);
+    glutReshapeFunc(reshape);
+    glutKeyboardFunc(keyboard);
+    glutSpecialFunc(fnkeys);
+    glutMouseFunc(mouse);
+    glutMotionFunc(motion);
+    glutIdleFunc(myGlutIdle);
+}
+
+/***************************************************************/
 int 
 main(int argc, char **argv)
 {
-  char title[256];
   char filename[256];
   int opts, view, colors;
   int exitcode;
@@ -2465,28 +2655,45 @@ main(int argc, char **argv)
   output_file = fopen(output_file_name,"w+");
 #endif
 
-  //glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL);
-#ifdef USE_DOUBLE_BUFFER
-  glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
-#else
-  glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH);
-#endif
-  glutInitWindowSize(Width, Height);
-  glutInitWindowPosition(0, 0);
-
   strcpy(progname, argv[0]);
   concat_path(datfilepath, datfilename, filename);
   if (filename[0] == '.') // I hate the ./filename thing.
     sprintf(title, "%s - %s", progname, datfilename);
   else
     sprintf(title, "%s - %s", progname, filename);
-  main_window = glutCreateWindow(title);
 
-  if (ldraw_commandline_opts.V_x < 0)
+  //glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL);
+#ifdef USE_DOUBLE_BUFFER
+  glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
+#else
+  glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH);
+#endif
+
+#if (GLUT_XLIB_IMPLEMENTATION >= 13)
+  if (ldraw_commandline_opts.V_x < -1)
+  {
+    //glutGameModeString("800x600:16@60") ;
+    glutGameModeString("640x480@60") ;
+    // if the width is different to -1
+    if (glutGameModeGet(GLUT_GAME_MODE_WIDTH) != -1)
+    {
+      glutEnterGameMode();		// enter full screen mode
+    }
+  }
+  else
+#endif
+  {
+    glutInitWindowSize(Width, Height);
+    glutInitWindowPosition(0, 0);
+
+    main_window = glutCreateWindow(title);
+
+    if (ldraw_commandline_opts.V_x < 0)
     {
       ldraw_commandline_opts.V_x = Width;
       glutFullScreen();  // This shows no window decorations.
     }   
+  }
 
   str = (char *) glGetString(GL_VERSION);
   printf("GL_VERSION = %s\n", str);
@@ -2502,7 +2709,13 @@ main(int argc, char **argv)
   glutMotionFunc(motion);
   glutIdleFunc(myGlutIdle);
 
+#if (GLUT_XLIB_IMPLEMENTATION >= 13)
+// Rats, no menus in game mode.  Perhaps GLUI or PUI look good again.
+  if (ldraw_commandline_opts.V_x >= -1)
+#endif
+  {
   view = glutCreateMenu(menu);
+  glutAddMenuEntry("Ldraw Oblique   ", '0');
   glutAddMenuEntry("Back            ", '1');
   glutAddMenuEntry("Left            ", '2');
   glutAddMenuEntry("Right           ", '3');
@@ -2591,6 +2804,7 @@ main(int argc, char **argv)
   // Read in the current directories dat filenames.
   dirmenu(15);
   filemenu(15);
+  }
 
   init();
 
