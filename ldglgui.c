@@ -40,7 +40,7 @@
 #ifdef  TEST_MUI_GUI
 
 #include <stdio.h>
-#include <GL/glut.h>
+#include "glwinkit.h"
 
 #include "platform.h"
 #include "ldliteVR.h"

@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <GL/glut.h>
+#include "glwinkit.h"
 
 #include "platform.h"
 #include "ldliteVR.h"
