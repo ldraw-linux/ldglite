@@ -17,6 +17,12 @@ of the program.  On linux you can softlink l3glite to ldglite.  You can
 also force the program to use a specific parser with a -ld or -l3 command
 line option.
 
+As of version 0.9.1 if you call the program something with "ledit" in
+it such as ldgledit or l3gledit it will start up automatically in
+LEDIT emulation mode.  This can also be accomplished with the -le or -lE
+command line option.  Currently LEDIT emulation mode always uses the
+l3 parser.
+
 
                         LdGLite for Windows README
 
@@ -156,6 +162,8 @@ Command line options (see also the original ldlite docs for more):
 -p turns on polling mode.
 -ld forces the program to use the ldlite parser.
 -l3 forces the program to use the l3 parser.
+-le starts the program in LEDIT emulation mode.
+-lE starts the program in LEDIT emulation mode with solid moving pieces.
 -wN sets linewidth to N.
 -q quality lines (antialiased)
 -uX,Y saves a huge output image from window sized tiles.  (see notes below)
@@ -205,7 +213,9 @@ Esc quits.
 INSERT key toggles LEDIT emulation mode.  
 (use CTRL-INSERT if you want to render the moving part solid)
 
-LEDIT Hot Keys are defined in leditkeys.htm (copied from www.ldraw.org)
+An excellent description of the LEDIT Hot Keys can be found at:
+http://www.library.thinkquest.com/20551/keys.html
+
 
 				Notes
 
