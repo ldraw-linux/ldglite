@@ -2,21 +2,24 @@ CC=gcc
 
 # Comment these out to disable PNG output if no PNG lib is available.
 #
-PNG_FLAGS=-DUSE_PNG 
-PNG_LIBS=-L. -lpng -lz 
+PNG_FLAGS=-DUSE_PNG
+PNG_LIBS=-L. -lpng -lz
+
+TR_FLAGS=-DTILE_RENDER_OPTION
+TR_SRC=tr.c
 
 # NOTE: -mwindows makes it detach from the console.
 #       This is good for gui apps but bad if launched from dos
 #       because we lose stdin.  Perhaps I should make 2 versions
 #       or make it a makefile option.
 #
-CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS)
-#CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS) -mwindows
+CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS) $(TR_FLAGS)
+#CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS) $(TR_FLAGS) -mwindows
 
 AR = ar
 RANLIB = ranlib
 
-SRCS = ldliteVR_main.c platform.c dirscan.c ldglgui.c gleps.c camera.c f00QuatC.c quant.c stub.c y.tab.c lex.yy.c qbuf.c main.c L3Math.c L3Input.c L3View.c
+SRCS = ldliteVR_main.c platform.c dirscan.c ldglgui.c gleps.c camera.c f00QuatC.c quant.c stub.c y.tab.c lex.yy.c qbuf.c main.c L3Math.c L3Input.c L3View.c $(TR_SRC)
 OBJS = $(SRCS:.c=.o)
 
 all	: ldglite
