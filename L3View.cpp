@@ -268,7 +268,7 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 	for (LinePtr = PartPtr->FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
 	{
 #ifdef USE_OPENGL
-	        if (Skip1Line(!IsModel,LinePtr))
+	        if (Skip1Line(IsModel,LinePtr))
 		  continue;
 #endif
 		switch (LinePtr->Color)
@@ -299,7 +299,6 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			{
 			  // if (include_stack_ptr <= ldraw_commandline_opts.output_depth )
 			  {
-			    include_stack_ptr = IsModel;
 			    zStep(stepcount,1);
 			    stepcount++;
 			  }
@@ -334,8 +333,10 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 #endif
 			M4M4Mul(m1,m,LinePtr->v);
 #ifdef USE_OPENGL
-			// Use IsModel as a nesting level counter.
-			DrawPart(IsModel+1,LinePtr->PartPtr,Color,m1);
+			// implement nesting level counter.
+			include_stack_ptr++;
+			DrawPart(0,LinePtr->PartPtr,Color,m1);
+			include_stack_ptr--;	
 			// Do zStep() after the model, not toplevel parts.
 #else
 			DrawPart(0,LinePtr->PartPtr,Color,m1);
@@ -425,6 +426,7 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			break;
 		}
 	}
+
 }
 
 
@@ -492,6 +494,7 @@ int Draw1PartPtr(struct L3LineS *LinePtr, int Color)
 	vector3d       v3d[4];
 
 	InitViewMatrix();
+	include_stack_ptr = 1; // Start nesting level pointer at 1.
 
 	if (Color < 0) 
 	    Color = LinePtr->Color;
@@ -641,9 +644,8 @@ void DrawModel(void)
 
 	Init1LineCounter();
 
-	// Use IsModel arg as a nesting level pointer.  Start it at 0.
-	include_stack_ptr = 0;
-	DrawPart(include_stack_ptr,&Parts[0], 7, m_m);
+	include_stack_ptr = 0; // Start nesting level pointer at 0.
+	DrawPart(1,&Parts[0], 7, m_m);
 
 	//if (ldraw_commandline_opts.output != 1) zStep(INT_MAX, 0);
 	// if (include_stack_ptr <= ldraw_commandline_opts.output_depth )
