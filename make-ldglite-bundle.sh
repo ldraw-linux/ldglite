@@ -11,7 +11,7 @@ cat <<END > ldglite.app/Contents/Info.plist
   <dict>
     <key>CFBundleDevelopmentRegion</key>	<string>English</string>
     <key>CFBundleInfoDictionaryVersion</key>	<string>6.0</string>
-    <key>CFBundleExecutable</key>		<string>ldglite.command</string>
+    <key>CFBundleExecutable</key>		<string>ldglite</string>
     <key>CFBundlePackageType</key>		<string>APPL</string>
     <key>CFBundleSignature</key>		<string>LdGL</string>
     <key>CFBundleName</key>			<string>ldglite</string>
@@ -58,9 +58,10 @@ echo "APPLLdGL" > ldglite.app/Contents/PkgInfo
 
 cp ldglite ldglite.app/Contents/MacOS
 cp ldglite.icns ldglite.app/Contents/Resources
-cat <<END > ldglite.app/Contents/Contents/MacOS/ldglite.command
+cat <<DONE > ldglite.app/Contents/Contents/MacOS/ldgliteWrapper.command
 #!/bin/sh
+pwd
 ldglite -l3 -v4 $@
-END
-chmod 755 ldglite.app/Contents/MacOS/ldglite.command
+DONE
+chmod 755 ldglite.app/Contents/MacOS/ldgliteWrapper.command
 
