@@ -130,11 +130,12 @@ int Delete1Part(int partnum)
 }
 
 /*****************************************************************************/
-int Move1Part(int partnum, float m[4][4])
+int Move1Part(int partnum, float m[4][4], int premult)
 {
     float          m1[4][4];
     int            i = 0;
     struct L3LineS *LinePtr;
+    float x, y, z;
     
     if (SelectedLinePtr)
 	LinePtr = SelectedLinePtr;
@@ -153,7 +154,23 @@ int Move1Part(int partnum, float m[4][4])
     case 0:
 	break;
     case 1:
-	M4M4Mul(m1,LinePtr->v,m);
+        if (premult)
+	{
+	  M4M4Mul(m1,LinePtr->v,m);
+	}
+	else
+	{
+	  x = LinePtr->v[0][3];
+	  y = LinePtr->v[1][3];
+	  z = LinePtr->v[2][3];
+	  LinePtr->v[0][3] = 0; // Rotate around origin
+	  LinePtr->v[1][3] = 0;
+	  LinePtr->v[2][3] = 0;
+	  M4M4Mul(m1,m,LinePtr->v);
+	  m1[0][3] = x;
+	  m1[1][3] = y;
+	  m1[2][3] = z;
+	}
 	//LinePtr->v = m1;
         memcpy(LinePtr->v, m1, sizeof(LinePtr->v));
 	break;
@@ -750,30 +767,21 @@ int Comment1Part(int partnum, char *Comment)
 {
     int            i = 0;
     struct L3LineS *LinePtr;
-    struct L3LineS *PrevPtr;
-    struct L3LineS **LinePtrPtr;
     int            Len;
 
     if (SelectedLinePtr)
 	LinePtr = SelectedLinePtr;
-
-    PrevPtr = NULL;
+    else
     for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
     {
 	if (i == partnum)
 	    break;	    // Found the part
-	PrevPtr = LinePtr;
 	i++;
     }
 
     if (!LinePtr)
 	return 0; //partnum not found
     
-    if (PrevPtr)
-      LinePtrPtr = &(Parts[0].FirstLine);
-    else
-      LinePtrPtr = &PrevPtr;
-
     if (LinePtr->PartPtr)
     {
       //free(LinePtr->PartPtr);
@@ -798,6 +806,93 @@ int Comment1Part(int partnum, char *Comment)
       LinePtr->Comment = (char *) LinePtr->v;
       strcpy(LinePtr->Comment, Comment);
     }
+
+    return 1;
+}
+
+/*****************************************************************************/
+extern int editing;
+extern int curpiece;
+extern int movingpiece;
+// Note: should I reset these next 2 to defaults when exiting edit mode?
+extern int StartLineNo;
+extern int DrawToCurPiece;
+
+static int LineNoCounter = -1;
+/*****************************************************************************/
+int Init1LineCounter()
+{
+  LineNoCounter = 0;
+}
+
+/*****************************************************************************/
+int Skip1Line(int IsModel, struct L3LineS *LinePtr)
+{
+  if (!editing)
+    return 0;
+
+  if (!IsModel)
+    return 0;
+  
+  LineNoCounter++;
+
+  // This needs work.  I should count the lines myself.
+  // Make Init1LineCounter() fn and make a static counter in this module.
+  // Call Init1LineCounter() in DrawModel() in L3View.cpp.
+  // Use the static counter instead of LinePtr->LineNo.
+  if (LineNoCounter <= StartLineNo)
+  {
+    //printf("Skipping %d < %d\n", LinePtr->LineNo, StartLineNo);
+    return 1;
+  }
+
+  if (!DrawToCurPiece)
+    return 0;
+
+  // This needs work.  
+  // I need to redraw up to the current piece whenever I pick "goto piece".
+  if (LineNoCounter > curpiece)
+  {
+    //printf("Skipping %d > %d\n", LinePtr->LineNo, curpiece);
+    return 1;
+  }
+
+  return 0;
+}
+
+/*****************************************************************************/
+int Switch1Part(int partnum)
+{
+    int            i = 0;
+    struct L3LineS *LinePtr;
+    struct L3LineS *PrevPtr;
+    struct L3LineS *NextPtr;
+
+    if (SelectedLinePtr)
+	LinePtr = SelectedLinePtr;
+
+    PrevPtr = NULL;
+    for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+    {
+	if (i == partnum)
+	    break;	    // Found the part
+	PrevPtr = LinePtr;
+	i++;
+    }
+
+    if (!LinePtr)
+	return 0; //partnum not found
+
+    if (!LinePtr->NextLine)
+	return 0; // next part not found
+    
+    NextPtr = LinePtr->NextLine;
+    if (!PrevPtr)
+      Parts[0].FirstLine = NextPtr;
+    else
+      PrevPtr->NextLine = NextPtr;
+    LinePtr->NextLine = NextPtr->NextLine;
+    NextPtr->NextLine = LinePtr;
 
     return 1;
 }
