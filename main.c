@@ -1087,6 +1087,16 @@ GLubyte stips[8][4*32] = {
   },
 };
 
+// Ambient and diffusion properties for front and back faces.
+// Full ambient and diffusion for R, G, B, alpha ???
+GLfloat full_mat[] = { 1.0, 1.0, 1.0, 1.0 };
+GLfloat half_mat[] = { 0.5, 0.5, 0.5, 1.0 };
+GLfloat no_mat[] = { 0.0, 0.0, 0.0, 1.0 };
+GLfloat no_shininess[] = { 1.0 };
+GLfloat lo_shininess[] = { 5.0 };
+GLfloat mid_shininess[] = { 15.0 }; // Seems nice for plastic chrome and gold.
+GLfloat hi_shininess[] = { 50.0 }; // { 100.0 };
+
 /***************************************************************/
 /*  GLUT event handlers
 /***************************************************************/
@@ -1108,16 +1118,6 @@ void init(void)
     GLfloat lightcolor1[] =  { 0.75, 0.75, 0.75, 1.0 }; // bright light
     GLfloat lightcolor2[] =  { 0.5, 0.5, 0.5, 1.0 }; // Half light
     GLfloat lightcolor3[] =  { 0.25, 0.25, 0.25, 1.0 }; // dim light
-
-
-    // Ambient and diffusion properties for front and back faces.
-    // Full ambient and diffusion for R, G, B, alpha ???
-    GLfloat full_mat[] = { 1.0, 1.0, 1.0, 1.0 };
-    GLfloat half_mat[] = { 0.5, 0.5, 0.5, 1.0 };
-    GLfloat no_mat[] = { 0.0, 0.0, 0.0, 1.0 };
-    GLfloat no_shininess[] = { 1.0 };
-    GLfloat lo_shininess[] = { 5.0 };
-    GLfloat hi_shininess[] = { 100.0 };
 
     // glSelectBuffer(SELECT_BUFFER, select_buffer);
 
@@ -1345,17 +1345,15 @@ void reshape(int width, int height)
 #endif
 
 /***************************************************************/
-void display(void)
+/* render gets called both by "display" (in OpenGL render mode)
+   and by "outputEPS" (in OpenGL feedback mode). */
+void
+render(void)
 {
   int rc;
   int client_rect_right;
   int client_rect_bottom;
   int res;
-
-  if (panning)
-    glDrawBuffer(GL_BACK);  // Enable double buffer for spin mode.
-  else
-    glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
 
   if (zShading)
     glEnable(GL_LIGHTING);
@@ -1366,51 +1364,6 @@ void display(void)
 
   client_rect_right = Width;
   client_rect_bottom = Height;
-
-  
-  if (res = glutLayerGet(GLUT_NORMAL_DAMAGED))
-    dirtyWindow = 1;
-
-  //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-  // Non-continuous output stop after each step.
-  if (ldraw_commandline_opts.M == 'P')
-  {
-    // Do not increment step right after (or during) panning.
-    if (panning || dirtyWindow)
-    {
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    }
-    else
-    {
-      if (stepcount == curstep)
-      {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	curstep = 0; // Reset to first step
-      }
-      else
-      {
-#ifndef ALWAYS_REDRAW
-	// XOR erase the previous comment.
-	sprintf(buf,"Step %d of %d.  ",curstep+1, stepcount+1);
-	strcat(buf, "Click on drawing to continue.");
-	platform_write_step_comment(buf);
-
-	// Save the cropping extents from the previous step
-	// so I can restore them after zReset().
-	z_extent_x1 = z.extent_x1;
-	z_extent_x2 = z.extent_x2;
-	z_extent_y1 = z.extent_y1;
-	z_extent_y2 = z.extent_y2;
-#else
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-#endif
-	curstep++; // Move on to next step
-      }
-    }
-  }
-  else
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   glColor3f(1.0, 1.0, 1.0); // White.
 
@@ -1658,11 +1611,79 @@ void display(void)
       znamelist_pop();
     }
     zWire = 0;
+
   }
-  //if (ldraw_commandline_opts.output != 1) zStep(INT_MAX, 0);
-  zStep(stepcount,0);
 #endif
+    //if (ldraw_commandline_opts.output != 1) zStep(INT_MAX, 0);
+    zStep(stepcount,0);
   }
+
+  glPopMatrix();
+
+
+}
+
+/***************************************************************/
+void display(void)
+{
+  int rc;
+  int client_rect_right;
+  int client_rect_bottom;
+  int res;
+
+  if (panning)
+    glDrawBuffer(GL_BACK);  // Enable double buffer for spin mode.
+  else
+    glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
+
+  if (res = glutLayerGet(GLUT_NORMAL_DAMAGED))
+    dirtyWindow = 1;
+
+  //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+  // Non-continuous output stop after each step.
+  if (ldraw_commandline_opts.M == 'P')
+  {
+    // Do not increment step right after (or during) panning.
+    if (panning || dirtyWindow)
+    {
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+    else
+    {
+      if (stepcount == curstep)
+      {
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	curstep = 0; // Reset to first step
+      }
+      else
+      {
+#ifndef ALWAYS_REDRAW
+	// XOR erase the previous comment.
+	sprintf(buf,"Step %d of %d.  ",curstep+1, stepcount+1);
+	strcat(buf, "Click on drawing to continue.");
+	platform_write_step_comment(buf);
+
+	// Save the cropping extents from the previous step
+	// so I can restore them after zReset().
+	z_extent_x1 = z.extent_x1;
+	z_extent_x2 = z.extent_x2;
+	z_extent_y1 = z.extent_y1;
+	z_extent_y2 = z.extent_y2;
+#else
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+#endif
+	curstep++; // Move on to next step
+      }
+    }
+  }
+  else
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  render();
+
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
 
 #if 0
   glColor3f(1.0, 1.0, 1.0); // White.
@@ -1679,7 +1700,6 @@ void display(void)
   glColor3f( 0.3, 0.3, 0.3 );		/* grey  	*/
   DoRasterString( 5., 60., "My Volume = 345.6" );
 #endif
-
 
 #if 0
   // Try out some text strings so I can add a console someday.
@@ -1741,7 +1761,7 @@ GLUT_BITMAP_HELVETICA_18
   glFlush();
 
   glPopMatrix();
-  
+
   //  if (!selection)
   //    glutSwapBuffers();
 
@@ -1932,6 +1952,8 @@ void fnkeys(int key, int x, int y)
   */
 }
 
+void outputEPS(int size, int doSort, char *filename);
+
 /***************************************************************/
 void keyboard(unsigned char key, int x, int y)
 {
@@ -1941,6 +1963,24 @@ void keyboard(unsigned char key, int x, int y)
   glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
 
     switch(key) {
+    case 'e':
+      dirtyWindow = 1;
+      glutSetCursor(GLUT_CURSOR_WAIT);
+      outputEPS(512000, 1, "render.eps");
+      glutSetCursor(GLUT_CURSOR_INHERIT);
+      return;
+    case 'E':
+      dirtyWindow = 1;
+      glutSetCursor(GLUT_CURSOR_WAIT);
+      outputEPS(512000, 0, "render.eps");
+      glutSetCursor(GLUT_CURSOR_INHERIT);
+      return;
+    case 'b':
+      dirtyWindow = 1;
+      glutSetCursor(GLUT_CURSOR_WAIT);
+      outputEPS(512000, 0, NULL);
+      glutSetCursor(GLUT_CURSOR_INHERIT);
+      return;
 #define AUTOSCALE_OPTION 1
 #ifdef AUTOSCALE_OPTION
     case 'y':
@@ -2142,10 +2182,6 @@ void keyboard(unsigned char key, int x, int y)
 	  glLineWidth( 1.0 );
 	glEnable( GL_BLEND );
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	//glEnable(GL_POLYGON_SMOOTH);
-	//glBlendFunc(GL_SRC_ALPHA_SATURATE, GL_ONE);
-	//glEnable(GL_BLEND); 
       }
       else
       {
@@ -2812,6 +2848,44 @@ void filemenu(int item)
   }
 }
 
+/************************************************************************/
+extern int cached_file_stack_index;
+
+#if 0
+// I suspect I should probably call this fn (stolen from yylex())
+// every time polling says to reparse the DAT file.
+// For now I just reset cached_file_stack_index to 0 and ignore
+// any memory leaks that may happen.
+extern int include_stack_ptr;
+extern CACHED_STREAM cached_streams[MAX_CACHED_FILES];
+extern CACHED_STREAM *cached_file_stack[MAX_INCLUDE_DEPTH];
+
+/************************************************************************/
+void yy_init_cache() // This should go in lex.yy.c right before yylex()
+{
+  int i;
+
+  cached_file_stack_index = 0;
+
+  // NOTE: There is some stuff in here that got malloced and should be freed.
+  // (Specifically chs->tokens and chs->values)
+  include_stack_ptr = 0;
+  for (i=0; i<MAX_INCLUDE_DEPTH; i++) {
+    cached_file_stack[i] = NULL;
+  }
+  for (i=0; i<MAX_CACHED_FILES; i++) {
+    cached_streams[i].valid = CHS_UNUSED;
+    if (chs->tokens != NULL)
+      free(chs->tokens)
+    if (chs->values != NULL)
+      free(chs->values)
+  }
+  ldlite_profile.cached_files=0;
+  ldlite_profile.uncached_files=0;
+  ldlite_profile.cache_hits=0;
+}
+#endif
+
 /***************************************** myGlutIdle() ***********/
 void myGlutIdle( void )
 {
@@ -2874,7 +2948,14 @@ void myGlutIdle( void )
 #ifdef USE_L3_PARSER
       if (parsername == L3_PARSER)
 	list_made = 0; // Gotta reparse the file.
+      else 
 #endif
+      {
+	cached_file_stack_index=0;  // restart file cache.  Huge mem leak???
+	// yy_init_cache() // Fix the huge memory leak???
+      }
+      curstep = 0; // Reset to first step
+      dirtyWindow = 1;
       glutPostRedisplay();
     }
     last_file_time = datstat.st_mtime;
@@ -2942,18 +3023,13 @@ void ParseParams(int *argc, char **argv)
 
 
   // Initialize datfilepath to none so we can take commands from stdin.
+  strcpy(datfilename, " ");
 #if defined(UNIX)
   strcpy(datfilepath, "./");
-  strcpy(datfilename, "./");
-  
 #elif defined(MAC)
   strcpy(datfilepath, "");
-  strcpy(datfilename, "");
-  
 #elif defined(WINDOWS)
-  strcpy(datfilepath, "");
-  strcpy(datfilename, "");
-  
+  strcpy(datfilepath, "./");
 #else
 #error unspecified platform in ParseParams() definition
 #endif
@@ -2979,6 +3055,10 @@ void ParseParams(int *argc, char **argv)
       pszParam++; // skip over the dash char.
 
       switch(pszParam[0]) {
+      case '-':
+	if (!strcmp(datfilename,  " "))
+	  strcpy(datfilename, ""); // read from stdin if no filename.
+	break;
       case 'A':
       case 'a':
 	sscanf(pszParam,"%c%f,%f,%f,%f,%f,%f,%f,%f,%f",
@@ -3421,7 +3501,7 @@ main(int argc, char **argv)
 
   helpmenunum = glutCreateMenu(menu);
   glutAddMenuEntry(progname             , '\0');
-  glutAddMenuEntry("Version 0.7.3      ", '\0');
+  glutAddMenuEntry("Version 0.7.4      ", '\0');
 
   mainmenunum = glutCreateMenu(menu);
   glutAddSubMenu(  "File               ", filemenunum);
@@ -3433,6 +3513,9 @@ main(int argc, char **argv)
   glutAddSubMenu(  "BackGround Color   ", colors);
   glutAddMenuEntry("                   ", '\0');
   glutAddMenuEntry("Picture            ", 'P');
+  glutAddMenuEntry("EPS file (sorted)  ", 'e');
+  glutAddMenuEntry("EPS file (UNsorted)", 'E');
+  glutAddMenuEntry("Feedback Buffer    ", 'b');
   glutAddMenuEntry("                   ", '\0');
   glutAddSubMenu(  "Help               ", helpmenunum);
   glutAddMenuEntry("Quit               ", '\033');
