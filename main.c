@@ -62,6 +62,8 @@ extern char datfilepath[256];
 int parsername = UNKNOWN_PARSER;
 #endif
 
+int EPS_OUTPUT_FIGURED_OUT = 0;
+
 char datfilename[256];
 char title[256];
 
@@ -4533,8 +4535,8 @@ void keyboard(unsigned char key, int x, int y)
       return;
   }
 
-#define EPS_OUTPUT_FIGURED_OUT 1
-#ifdef EPS_OUTPUT_FIGURED_OUT
+  if (EPS_OUTPUT_FIGURED_OUT)
+  {
   // Allow eps output with ALT-e key combo someday...
   if (((glutModifiers & GLUT_ACTIVE_ALT) != 0) && (tolower(key) == 'e'))
   {
@@ -4565,7 +4567,7 @@ void keyboard(unsigned char key, int x, int y)
     glutSetCursor(GLUT_CURSOR_INHERIT);
     return;
   }
-#endif
+  }
 
     switch(key) {
 #define AUTOSCALE_OPTION 1
@@ -5743,9 +5745,14 @@ void ParseParams(int *argc, char **argv)
 	break;
       case 'E':
       case 'e':
-	sscanf(pszParam,"%c%f",&type,&z_line_offset);
-	if (z_line_offset > 1.0)
-	  z_line_offset = 1.0;
+	if ((toupper(pszParam[1]) == 'P') && (toupper(pszParam[2]) == 'S'))
+	    EPS_OUTPUT_FIGURED_OUT = 1;
+	else
+	{
+	  sscanf(pszParam,"%c%f",&type,&z_line_offset);
+	  if (z_line_offset > 1.0)
+	    z_line_offset = 1.0;
+	}
 	break;
       case 'F':
       case 'f':
@@ -6328,11 +6335,12 @@ main(int argc, char **argv)
   glutAddSubMenu(  "BackGround Color   ", colors);
   glutAddMenuEntry("                   ", '\0');
   glutAddMenuEntry("Bitmap             ", 'B');
-#ifdef EPS_OUTPUT_FIGURED_OUT
+  if (EPS_OUTPUT_FIGURED_OUT)
+  {
   glutAddMenuEntry("EPS file (sorted)  ", 4);
   glutAddMenuEntry("EPS file (UNsorted)", 5);
   glutAddMenuEntry("EPS debug          ", 6);
-#endif
+  }
   glutAddMenuEntry("                   ", '\0');
   glutAddSubMenu(  "Help               ", helpmenunum);
   glutAddMenuEntry("Quit               ", '\033');
