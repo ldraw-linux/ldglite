@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.1.2      ";
+char ldgliteVersion[] = "Version 1.1.3      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -5272,6 +5272,15 @@ int edit_mode_fnkeys(int key, int x, int y)
     return 1;
   }
 
+  // I dont think there are any modified LEDIT fn keys.
+  // But enterEditMode() above does check for modifiers.
+  if ((glutModifiers & GLUT_ACTIVE_ALT) ||
+      (glutModifiers & GLUT_ACTIVE_SHIFT) ||
+      (glutModifiers & GLUT_ACTIVE_CTRL))
+  {
+    return 0;
+  }
+
   // If we have a command going then work on that.
   if (i = strlen(ecommand))
   {
@@ -6494,7 +6503,7 @@ void fnkeys(int key, int x, int y)
       angle = 5.0;
   }
   else if (glutModifiers & GLUT_ACTIVE_SHIFT)
-    angle = 1.0;
+    angle = 0.0; //angle = 1.0;
   else 
     angle = 0.0;
 
@@ -7256,7 +7265,13 @@ mouse(int button, int state, int x, int y)
   }
 #endif
 
+#ifdef WINDOWS
+#else
   // Middle button is often used for PASTE in X Windows.
+  // But on Windows pushing mouse-wheel is middle but, bad choice for paste!)
+  // And the Windows glut-wheel patch does 10 pix middle drags for wheel turn.
+  // On XFree 4.x mouse-wheel forward = button 4, backwards = button 5.
+  // In glut.h GLUT_L,M,R = 0,1,2.  So if wheel = 4,5, what is 3?
   if (button == GLUT_MIDDLE_BUTTON) {
     printf("GLUT_MIDDLE_BUTTON ");
     if (state == GLUT_DOWN)
@@ -7268,6 +7283,7 @@ mouse(int button, int state, int x, int y)
     }
     return;
   }
+#endif
 
   if (button != GLUT_LEFT_BUTTON) {
     return;
@@ -7366,7 +7382,7 @@ mouse(int button, int state, int x, int y)
     if (ldraw_commandline_opts.debug_level == 1)
       printf("rotating about(%0.2f, %0.2f) by angle %0.2f\n", pan_y, -pan_x, angle);
 #ifdef USE_F00_CAMERA
-    if (glutModifiers & GLUT_ACTIVE_ALT)
+    if (glutModifiers & GLUT_ACTIVE_CTRL)
     {
     }
     else
@@ -7446,14 +7462,17 @@ motion(int x, int y)
     // Check for shift or ctrl mouse drag changes on the fly.
     //glutModifiers = glutGetModifiers(); // Glut doesn't like this here!
 #ifdef USE_F00_CAMERA
-    if (glutModifiers & GLUT_ACTIVE_ALT)
+    if (glutModifiers & GLUT_ACTIVE_CTRL)
       ldraw_commandline_opts.F = pan_visible; 
     else 
 #endif
-    if (glutModifiers & GLUT_ACTIVE_CTRL)
+    if (glutModifiers & GLUT_ACTIVE_ALT)
+    {
+      if (glutModifiers & GLUT_ACTIVE_SHIFT)
+	ldraw_commandline_opts.F = (TYPE_F_SHADED_MODE); 
+      else 
 	ldraw_commandline_opts.F = (TYPE_F_STUDLESS_MODE | TYPE_F_SHADED_MODE);
-    else if (glutModifiers & GLUT_ACTIVE_SHIFT)
-	ldraw_commandline_opts.F = (TYPE_F_BBOX_MODE | TYPE_F_SHADED_MODE);
+    }
     else 
       ldraw_commandline_opts.F = pan_visible; 
 
@@ -7532,7 +7551,7 @@ motion(int x, int y)
       if (ldraw_commandline_opts.debug_level == 1)
 	printf("ROTATING about(%0.2f, %0.2f) by angle %0.2f\n", pan_y, -pan_x, angle);
 #ifdef USE_F00_CAMERA
-      if (glutModifiers & GLUT_ACTIVE_ALT)
+      if (glutModifiers & GLUT_ACTIVE_CTRL)
       {
 	pan_x = x-(Width/2.0); // dx
 	pan_y = y-(Height/2.0); // dy
@@ -7542,9 +7561,11 @@ motion(int x, int y)
 	  {
 	    y_angle = angle * (pan_x / (fabs(pan_x) + fabs(pan_y)));
 	    x_angle = angle * (pan_y / (fabs(pan_x) + fabs(pan_y)));
+	    y_angle /= 10.0; // make smaller turns
+	    x_angle /= 10.0;
 	    turnCamera( (GLfloat)(x_angle), (GLfloat)y_angle, 0.0 );
 	  }
-	  else if (glutModifiers & GLUT_ACTIVE_CTRL)
+	  else if (glutModifiers & GLUT_ACTIVE_ALT)
 	  {
 #if 0	    
 	    if (pan_x != 0)
@@ -7553,6 +7574,7 @@ motion(int x, int y)
 	    if (pan_x != 0)
 	    {
 	      y_angle = angle * (pan_x / (fabs(pan_x) + fabs(pan_y)));
+	      y_angle /= 10.0; // make smaller turns
 	      turnCamera( 0.0, (GLfloat)y_angle, 0.0 );
 	    }
 #endif
@@ -7835,7 +7857,7 @@ void ParseParams(int *argc, char **argv)
 
   char type;
   int mode;
-
+  int camera_globe_set = 0;
 
   // Initialize datfilepath to none so we can take commands from stdin.
   strcpy(datfilename, " ");
@@ -7956,6 +7978,7 @@ void ParseParams(int *argc, char **argv)
 	  camera_latitude = v[0][0];
 	  camera_longitude = v[0][1];
 	  camera_distance  = v[0][2];
+	  camera_globe_set = 1;
 	}
 	else
 	  n = sscanf(pszParam,"%c%i",&type,&(ldraw_commandline_opts.C));
@@ -8340,9 +8363,7 @@ void ParseParams(int *argc, char **argv)
     }
   }
 
-  if ((camera_longitude != 0.0) ||
-      (camera_latitude != 0.0) ||
-      (camera_distance > 0.0))
+  if (camera_globe_set)
   {				 
     float v[4][4];
     double distance;
