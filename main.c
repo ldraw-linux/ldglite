@@ -5770,6 +5770,19 @@ mouse(int button, int state, int x, int y)
   }
 #endif
 
+  // Middle button is often used for PASTE in X Windows.
+  if (button == GLUT_MIDDLE_BUTTON) {
+    printf("GLUT_MIDDLE_BUTTON ");
+    if (state == GLUT_DOWN)
+      printf("GLUT_DOWN\n");
+    else
+    {
+      printf("GLUT_UP\n");
+      keyboard(22, x, y); // Ctrl-V = PASTE.
+    }
+    return;
+  }
+
   if (button != GLUT_LEFT_BUTTON) {
     return;
   }
