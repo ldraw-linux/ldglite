@@ -4896,6 +4896,8 @@ void keyboard(unsigned char key, int x, int y)
       return;
 #ifdef USE_L3_PARSER
     case 'r': // Reader (parser)
+      if (editing) 
+	return; // Do not switch parsers while editing.  Bad idea!
       if (parsername == LDLITE_PARSER)
       {
 	parsername = L3_PARSER;
