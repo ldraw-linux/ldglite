@@ -72,57 +72,65 @@ int ScanDirectory(char *dir, char *pattern, int firstfile,
   char          *file;
 #endif
     
+#define DEBUG 1;
+
+#ifdef DEBUG
+    printf("searching %s for %s at %d\n", dir, pattern, firstfile);
+#endif
+
   for(i = 0; i < MAX_DIR_ENTRIES; i++)
     strcpy(filelist[i], "");
 
-  // Verzeichnisnamen: Laenge und Vollstaendigkeit feststellen
-  lenDir = strlen(dir);
-  if(lenDir) {
-    if( dir[lenDir-1] != '/' )
-      dir[lenDir-1] = '/';
-  }
+  concat_path(dir, pattern, wildcard);
 
-  // den Suchstring festlegen, Initialisierung
-  sprintf(wildcard, "%s%s", dir, pattern); // dir enthaelt bereits "/"
+#ifdef DEBUG
+    printf("wildcard = %s [%s]\n", dir, wildcard);
+#endif
+
+#if 1
+  printf("finding files [%s] from %d \n", wildcard, firstfile);
+#endif
 
   // -----------------------
   // nun wird's OS-abhaengig
 #ifdef _WIN32
 
   searchPath = FindFirstFile( (LPCTSTR)wildcard, &dataStruct);
+  if( searchPath == INVALID_HANDLE_VALUE ) 
+  {
+    printf("INVALID_HANDLE_VALUE\n");
+    return 0;
+  }
 
-  // Dateinamen festhalten
-  if( searchPath != INVALID_HANDLE_VALUE ) {
-    // Skip files before our current window.
-    for ( filecount = 1; filecount <= firstfile; filecount++ )
-    { 
-      if (FindNextFile(searchPath, &dataStruct) == 0)
-      {
-	FindClose(searchPath);
-	return 0;
-      }
+  // Skip files before our current window.
+  for ( filecount = 0; filecount < firstfile; )
+  { 
+    concat_path(dir, dataStruct.cFileName, filelist[filecount]);
+    if (isDir(filelist[filecount]))
+      strcpy(filelist[filecount], "");
+    else
+      filecount++;
+    if (FindNextFile(searchPath, &dataStruct) == 0)
+    {
+      FindClose(searchPath);
+      return 0;
     }
-    filecount = 0;
-    strcpy(filelist[filecount], dir);
-    strcat(filelist[filecount], dataStruct.cFileName);
+  }
+  filecount = 0;
+  while( filecount < MAX_DIR_ENTRIES )
+  {  
+    concat_path(dir, dataStruct.cFileName, filelist[filecount]);
 #ifdef DEBUG
     printf("finding %s - %s\n", dir, dataStruct.cFileName);
 #endif
-    filecount++;
-    // auf zu den naechsten
-    while(    filecount < MAX_DIR_ENTRIES // Grenzen beachten
-           && FindNextFile(searchPath, &dataStruct) ) { // liefert BOOL
-      strcpy(filelist[filecount], dir);
-      strcat(filelist[filecount], dataStruct.cFileName);
-#ifdef DEBUG
-      printf("finding %s - %s\n", dir, dataStruct.cFileName);
-#endif
+    if (isDir(filelist[filecount]))
+      strcpy(filelist[filecount], "");
+    else
       filecount++;
-    }
-    FindClose(searchPath);
+    if (FindNextFile(searchPath, &dataStruct) == 0)
+      break;
   }
-  else
-    printf("INVALID_HANDLE_VALUE\n");
+  FindClose(searchPath);
 
 #ifdef DEBUG
   printf("found %d files\n", filecount);
@@ -152,9 +160,137 @@ int ScanDirectory(char *dir, char *pattern, int firstfile,
 	        test++;
       }
       if( test == 3 ) { // Dateiendung stimmt ueberein
-	      strcpy(filelist[filecount], dir);
-	      strcat(filelist[filecount], dataStruct->d_name);
-	      filecount++;
+	concat_path(dir, dataStruct->d_name, filelist[filecount]);
+	filecount++;
+      }
+    }
+    closedir(searchPath);
+  }
+#endif 
+
+  return filecount;
+}
+
+//---------------------------------------------------------------------
+// ein Verzeichnis unter auslesen
+int ScanFolder(char *dir, char *pattern, int firstfile,
+                   char  filelist[MAX_DIR_ENTRIES][NAMELENGTH])
+{
+  char  wildcard[NAMELENGTH];
+  int   lenDir;
+  int   filecount;
+  int   i;
+#ifdef _WIN32
+  HANDLE            searchPath = NULL;
+  // LPCTSTR == const char *
+  WIN32_FIND_DATA   dataStruct;
+#else // Unix
+  DIR           *searchPath = NULL;
+  struct dirent *dataStruct;
+  int            test, lenf, lenp;
+  char          *file;
+#endif
+    
+  for(i = 0; i < MAX_DIR_ENTRIES; i++)
+    strcpy(filelist[i], "");
+
+  concat_path(dir, pattern, wildcard);
+
+#ifdef DEBUG
+  printf("wildcard = %s [%s]\n", dir, wildcard);
+#endif
+
+#if 1
+  printf("finding folders [%s] from %d \n", wildcard, firstfile);
+#endif
+
+  // -----------------------
+  // nun wird's OS-abhaengig
+#ifdef _WIN32
+
+  searchPath = FindFirstFile( (LPCTSTR)wildcard, &dataStruct);
+  if( searchPath == INVALID_HANDLE_VALUE ) 
+  {
+    printf("INVALID_HANDLE_VALUE\n");
+    return 0;
+  }
+
+  // Skip files before our current window.
+  for (filecount = 0; filecount < firstfile; )
+  {
+    concat_path(dir, dataStruct.cFileName, filelist[filecount]);
+    if (isDir(filelist[filecount]))
+    {
+#if 1
+      printf("skipping dir %d %s - %s\n", filecount, dir, dataStruct.cFileName);
+#endif
+      filecount++;
+    }
+    else
+    {
+#if 1
+      printf("skipping %d %s - %s\n", filecount, dir, dataStruct.cFileName);
+#endif
+      strcpy(filelist[filecount], "");
+    }
+    if (FindNextFile(searchPath, &dataStruct) == 0)
+    {
+      FindClose(searchPath);
+      return 0;
+    }
+  }
+
+  filecount = 0;
+  while( filecount < MAX_DIR_ENTRIES )
+  {
+    concat_path(dir, dataStruct.cFileName, filelist[filecount]);
+#if 1
+    printf("checking %s - %s\n", dir, dataStruct.cFileName);
+#endif
+    if (isDir(filelist[filecount]))
+    {
+      filecount++;
+#if 1
+      printf("found dir %s - %s\n", dir, dataStruct.cFileName);
+#endif
+    }
+    else
+      strcpy(filelist[filecount], "");
+    if (FindNextFile(searchPath, &dataStruct) == 0)
+      break;
+  }
+  FindClose(searchPath);
+
+#if 1
+  printf("found %d folders\n", filecount);
+#endif
+
+#else // Unix
+  // Verzeichnis oeffnen
+  if( (searchPath = opendir(dir)) ) { 
+    // Skip files before our current window.
+    for ( filecount = 0; filecount < firstfile; filecount++ )
+    { 
+      if (!dataStruct = readdir(searchPath);)
+      {
+	closedir(searchPath);
+	return(0);
+      }
+    }
+    filecount = 0;
+    while(    filecount < MAX_DIR_ENTRIES // Grenzen beachten
+	   && (dataStruct = readdir(searchPath)) ) {
+      file = dataStruct->d_name;
+      lenf = strlen(file);      
+      lenp = strlen(pattern);
+      test = 0;
+      for(i = 1; i < 4; i++) {
+	      if( file[lenf-i] == pattern[lenp-i] )
+	        test++;
+      }
+      if( test == 3 ) { // Dateiendung stimmt ueberein
+	concat_path(dir, dataStruct->d_name, filelist[filecount]);
+	filecount++;
       }
     }
     closedir(searchPath);
