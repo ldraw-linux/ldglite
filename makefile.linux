@@ -10,24 +10,31 @@ PNG_LIBS= -lpng -lz
 TR_FLAGS=-DTILE_RENDER_OPTION
 TR_SRC=tr.c
 
+# UnComment this to build in support for Mesa Offscreen rendering
+#OFFSCREEN_FLAGS=-DOSMESA_OPTION
+
+# Mesa Offscreen lib is longer required in the current version of Mesa?
+# I guess it must be built into the normal Mesa lib now...
+# OFFSCREEN_LIBS= -lOSMesa
+
 # Comment these out to disable the test GUI made with MUI.
 #
 #GUI_FLAGS=-DTEST_MUI_GUI
 #GUI_SRC=ldglgui.c
 #GUI_LIBS=-lmui
 
-CFLAGS=-g -DUNIX -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS) $(TR_FLAGS) $(GUI_FLAGS)
+CFLAGS=-g -DUNIX -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS) $(TR_FLAGS) $(OFFSCREEN_FLAGS) $(GUI_FLAGS)
 
 ## This is lame.  I don't know how to do both .c and .cpp for the OBJS line
 ## so I pretend L3*.cpp is L3*.c and make rules for them later.
 #
-SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c y.tab.c lex.yy.c qbuf.c main.c L3Edit.c L3Math.c L3Input.c L3View.c $(TR_SRC) $(GUI_SRC)
+SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c y.tab.c lex.yy.c qbuf.c main.c ldglpr.c L3Edit.c L3Math.c L3Input.c L3View.c $(TR_SRC) $(GUI_SRC)
 OBJS = $(SRCS:.c=.o)
 
 all	: ldglite
 
 ldglite:   $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o ldglite -L/usr/X11R6/lib $(PNG_LIBS) $(GUI_LIBS) -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
+	$(CC) $(CFLAGS) $(OBJS) -o ldglite -L/usr/X11R6/lib $(PNG_LIBS) $(OFFSCREEN_LIBS) $(GUI_LIBS) -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
 	rm -rf l3glite
 	ln -s ldglite l3glite
 	rm -rf l3gledit
