@@ -305,7 +305,7 @@ void initializeMenus(void)
 
   helpmenunum = glutCreateMenu(menu);
   glutAddMenuEntry(progname             , '\0');
-  glutAddMenuEntry("Version 0.9.7      ", '\0');
+  glutAddMenuEntry("Version 0.9.8      ", '\0');
 
   mainmenunum = glutCreateMenu(menu);
   glutAddSubMenu(  "File               ", filemenunum);

@@ -357,6 +357,19 @@ static int partlisttotal = 0;
 static int partlistmax = 0;
 
 /***************************************************************/
+static char *pluglistbuf = NULL;
+static int pluglookup = 0;
+static char **pluglistptr = NULL;
+static char **plugliststr = NULL;
+static int pluglistsize = 0;
+static int pluglisttotal = 0;
+static int pluglistmax = 0;
+
+#include "plugins.h"
+
+plugstruct **plugins;
+
+/***************************************************************/
 char *pastelist = NULL;
 
 /***************************************************************/
@@ -1119,6 +1132,28 @@ int edit_mode_gui()
     i++;
     if (i < partlistsize)
       strcpy(eline[3], partlistptr[i]);
+    else
+      strcpy(eline[3], "");
+
+    strcpy(eline[0], eprompt[0]);
+    strcat(eline[0], &(ecommand[1]));
+  }
+  else if (pluglookup)
+  {
+    int i = pluglookup - 2; // Subtract 2 to start list with first plug red.
+
+    if ((i < pluglistsize) && (i >= 0))
+      strcpy(eline[1], pluglistptr[i]);
+    else
+      strcpy(eline[1], "");
+    i++;
+    if (i < pluglistsize)
+      strcpy(eline[2], pluglistptr[i]);
+    else
+      strcpy(eline[2], "");
+    i++;
+    if (i < pluglistsize)
+      strcpy(eline[3], pluglistptr[i]);
     else
       strcpy(eline[3], "");
 
@@ -3906,11 +3941,10 @@ char *loadpartlist(void)
 {
   char filename[256];
   FILE *fp;
-  long filesize, n, nparsed;
+  long filesize;
   char *buffer;
   unsigned char *s;
   int i;
-  unsigned char c;
   char seps[] = "\r\n"; 
   
   partlookup = 0;
@@ -4033,6 +4067,250 @@ int limitpartlist(char *str)
   }
   else
     resetpartlist();
+}
+
+/***************************************************************/
+/***************************************************************/
+int resetpluglist()
+{
+  memcpy(pluglistptr, plugliststr, sizeof (char *) *pluglisttotal);
+  pluglistsize = pluglisttotal;
+  pluglookup = 1;
+}
+
+/***************************************************************/
+#  include <dirent.h>
+#  include <sys/stat.h>
+#  include <unistd.h>
+  
+/***************************************************************/
+char *loadpluglist(void)
+{
+  char plugpath[512];
+  char filename[512];
+	  
+  DIR			*dirp;
+  struct dirent		*dir;
+  struct stat		statbuf;
+  int			i = 0;
+  int			n = 0;
+
+  long filesize;
+  char *buffer;
+  unsigned char *s;
+  char seps[] = "\r\n"; 
+
+#ifdef WINDOWS
+  char plugext[] = ".dll"; 
+#else
+  char plugext[] = ".so"; 
+#endif
+  
+  pluglookup = 0;
+
+  if (pluglistbuf)
+  {
+    resetpluglist();
+    return(pluglistbuf);
+  }
+
+  // allocate enough memory to read the entire file.
+  filesize = 2000;
+  buffer = (char*) malloc (filesize);
+  if (!buffer) 
+    return(NULL);
+
+  concat_path(progpath, "plugins", plugpath);
+  strcpy(buffer, "");
+  
+  if ((dirp = opendir(plugpath)) == NULL) 
+    return(NULL);
+
+  while ((dir = readdir(dirp)) != NULL) {
+    if (dir->d_name[0] == '.')
+      continue;
+    stat(dir->d_name,&statbuf);
+    if ((statbuf.st_mode & S_IFMT) == S_IFDIR) // Skip directories
+      continue;
+    
+    strcpy(filename, dir->d_name);
+    filename[strlen("plugin")] = 0;
+
+    if (stricmp(filename, "plugin"))
+      continue;
+    
+    strcpy(filename, (dir->d_name + strlen("plugin")));
+    if ((i = strlen(filename)) < (strlen(plugext)+1))
+      continue;
+    
+    i -= strlen(plugext);
+    if (stricmp(filename+i, plugext))
+      continue;
+		
+    filename[i] = 0;
+    if ((strlen(buffer) + strlen(filename) + 2) > filesize)
+    {
+      filesize += 1000;
+      filesize = realloc(buffer, filesize * sizeof(char));
+    }
+    strcat(buffer, filename);
+    strcat(buffer, "\n");
+    n++;
+  }
+
+  pluglistmax = n;
+  plugliststr = (char **) calloc(sizeof (char *), pluglistmax);
+
+  // Save a pointer to each line
+  for (i = 0, s = strtok( buffer, seps );
+       s != NULL;
+       s = strtok( NULL, seps ), i++ )
+  {
+    if (i >= pluglistmax)
+    {
+      pluglistmax += 1000;
+      plugliststr = realloc(plugliststr, pluglistmax * sizeof(char *));
+    }
+    plugliststr[i] = s;
+  }
+  printf("Found %d plugins\n", i);
+
+  if (i == 0)
+  {
+    free(buffer);
+    buffer = NULL;
+    return(NULL);
+  }
+
+  pluglisttotal = i;
+  pluglistptr = (char **) calloc(sizeof(char *), pluglisttotal);
+  resetpluglist();
+
+  pluglistbuf = buffer;
+
+  plugins = (plugstruct **) calloc(sizeof(plugstruct *), pluglisttotal);
+  for (i = 0; i < pluglisttotal; i++)
+  {
+    strcpy(plugpath, "plugins");
+    concat_path(plugpath, "plugin", filename);
+    strcat(filename, plugliststr[i]);
+    strcat(filename, plugext);
+    plugins[i] = pluginfo(filename);
+  }
+
+  return(pluglistbuf);
+}
+
+/***************************************************************/
+int runplugin(int n)
+{
+  int i;
+  char pline[4][100];
+  char *partname;
+
+  unsigned char CompleteText[8192] = "";
+  unsigned char SelText[200] = "";
+  unsigned long SelStart = 0;
+  unsigned long SelLength = 0;
+  unsigned long CursoRow = 0;
+  unsigned long CursorColum = 0;
+
+  strcpy(&(ecommand[1]), pluglistptr[pluglookup - 1]);
+  printf("selected plugin %s\n",&(ecommand[1]));
+
+  for (i = 0; i < pluglisttotal; i++)
+  {
+    if (plugliststr[i] == pluglistptr[pluglookup - 1])
+      break;
+  }
+
+  if (i >= pluglisttotal)
+    return -1;
+
+  if (plugins[i] == NULL)
+    return -1;
+
+  if (!strncmp(plugins[i]->plugtype, "2", 1))
+  {
+    // Requires a selection to work.
+    // Gotta ask for a number of lines to select.
+    Print3Parts(curpiece, pline[1], pline[2], pline[3]);
+
+    // Plugintype can be one of the following values
+    // 0 = Plugin can be called always
+    // 1 = Plugin can only be called if no text is selected
+    // 2 = Plugin can only be called if a portion of text is selected
+
+    if ( !strncmp(pluglistptr[pluglookup - 1], "BezierCurves", 12))
+    {
+      strcpy(CompleteText, pline[1]);
+      strcat(CompleteText, "\n");
+      strcat(CompleteText, pline[2]);
+      strcat(CompleteText, "\n");
+      strcpy(SelText, CompleteText);
+      SelLength = strlen(SelText);
+    }
+    else
+    {
+      strcpy(CompleteText, pline[1]);
+      strcpy(SelText, CompleteText);
+      strcat(CompleteText, "\n");
+      SelLength = strlen(SelText);
+    }
+      
+  }
+
+  partname = plugin(plugins[i], CompleteText, SelText, &SelStart, &SelLength, 
+		    &CursoRow, &CursorColum);
+
+  if (partname)
+  {
+#ifdef WINDOWS
+    // Sneak the new stuff in via the CUTnPASTE buffer.
+    HWND GetHwndFocus();
+    HWND hwnd;
+
+    hwnd = GetHwndFocus();
+
+    pastelist = strdup(partname);
+    //SendKeyToCurrentApp( 'V' );
+    PostMessage(hwnd, WM_KEYDOWN, 'V', 0x8001);
+#else
+    // We have some memory troubles on return from the plugin.  Yech!
+    // Might be a busted opengl context.  SaveDepthBuffer() chokes.
+    InsertNewPiece();
+
+    CopyStaticBuffer();
+    movingpiece = curpiece;
+    if (strrchr(partname, '.') == NULL)
+      strcat(partname, use_uppercase ? ".DAT" : ".dat");
+    Swap1Part(curpiece, partname);
+    DrawMovingPiece();
+    if (ldraw_commandline_opts.debug_level == 1)
+      Print1Part(curpiece, stdout);
+#endif
+  }
+}
+
+/***************************************************************/
+int limitpluglist(char *str)
+{
+  int i, j, n;
+
+  j = 0;
+  for (n = 0; n < pluglisttotal; n++)
+    if (stristr(plugliststr[n], str))
+    {
+      pluglistptr[j++] = plugliststr[n];
+    }
+
+  if (j > 0)
+  {
+    pluglistsize = j;
+    pluglookup = 1;
+  }
+  else
+    resetpluglist();
 }
 
 /***************************************************************/
@@ -4184,6 +4462,42 @@ int edit_mode_fnkeys(int key, int x, int y)
 	partlookup += 1;
 	if (partlookup > partlistsize)
 	  partlookup = partlistsize;
+	edit_mode_gui(); // Redisplay the GUI
+	break;
+      default:
+	if (ldraw_commandline_opts.debug_level == 1)
+	  printf("fnkey = %d = '%c'\n",key,key);
+	edit_mode_gui(); // Redisplay the GUI
+	break;
+      }
+    return 1;
+    }
+
+    if (pluglookup)
+    {
+      switch(key) {
+      case GLUT_KEY_PAGE_UP:
+	pluglookup -= 10;
+	if (pluglookup < 1)
+	  pluglookup = 1;
+	edit_mode_gui(); // Redisplay the GUI
+	break;
+      case GLUT_KEY_PAGE_DOWN:
+	pluglookup += 10;
+	if (pluglookup > pluglistsize)
+	  pluglookup = pluglistsize;
+	edit_mode_gui(); // Redisplay the GUI
+	break;
+      case GLUT_KEY_UP:
+	pluglookup -= 1;
+	if (pluglookup < 1)
+	  pluglookup = 1;
+	edit_mode_gui(); // Redisplay the GUI
+	break;
+      case GLUT_KEY_DOWN:
+	pluglookup += 1;
+	if (pluglookup > pluglistsize)
+	  pluglookup = pluglistsize;
 	edit_mode_gui(); // Redisplay the GUI
 	break;
       default:
@@ -4375,6 +4689,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       // Abort the command
       ecommand[0] = 0;
       partlookup = 0;
+      pluglookup = 0;
       clear_edit_mode_gui();
       edit_mode_gui();
       return 1;
@@ -4588,7 +4903,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	sprintf(eprompt[0], "Plugins: ");
 	ecommand[0] = 'g'; // EDIT_PLUGIN_ID
 	ecommand[1] = 0;
-	edit_mode_gui();
+	loadpluglist();
+	edit_mode_gui(); // Redisplay the GUI
 	return 1;
       }
       return 1;
@@ -5127,8 +5443,15 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	HiLightCurPiece(i);
 	return 1;
       case 'g':
-	// Plugins.  Gotta figure out which plugin.
+	ecommand[0] = 0; // wipe the command char
 	clear_edit_mode_gui();
+	if (pluglookup)
+	{
+	  // Use the plug from the lookup list. 
+	  runplugin(pluglookup);
+	  pluglookup = 0;
+	}
+	edit_mode_gui();
 	break;
       case 2:
       case 3:
@@ -5162,6 +5485,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	ecommand[i-1] = 0;
       if (partlookup)
 	limitpartlist(&(ecommand[1]));
+      if (pluglookup)
+	limitpluglist(&(ecommand[1]));
       edit_mode_gui(); // Redisplay the GUI
       break;
     case '?': // Part lookup?
@@ -5202,6 +5527,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       ecommand[i+1] = 0;
       if (partlookup)
 	limitpartlist(&(ecommand[1]));
+      if (pluglookup)
+	limitpluglist(&(ecommand[1]));
       edit_mode_gui(); // Redisplay the GUI
       break;
     }
@@ -7626,27 +7953,10 @@ main(int argc, char **argv)
 #endif
 
   // Get the path to the program to find the plugins directory
-#ifdef WINDOWS
-  GetModuleFileName(NULL, progname, sizeof(progname));
-  printf("progpath = <%s>\n", dirname(progpath));
-#else
-  // getexecname() on Solaris??
-  strcpy(progpath, dirname(argv[0]));
-  printf("progpath = <%s>\n",progpath);
-  if (progpath[0] == '.')
-  {
-    strcpy(progname, progpath);
-    getcwd(progpath, sizeof(progpath));
-    concat_path(progpath, progname, filename);
-    if (filename[strlen(filename)-1] == '.')
-      concat_path(filename, "", progpath); // add an extra separator at the end
-    else
-      strcpy(progpath, dirname(filename)); 
-    printf("PROGPATH = <%s>\n",progpath);
-    strcpy(filename, progpath);
-    concat_path(filename, "plugins", progpath); // find plugins directory.
-  }
-#endif
+  if (GetExecName(argv[0], progname, 256) == 0)
+    strcpy(progpath, dirname(progname));
+  else
+    strcpy(progpath, "");
 
   strcpy(progname, basename(argv[0]));
   // SetTitle(0);
