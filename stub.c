@@ -316,8 +316,11 @@ void render_line(vector3d *vp1, vector3d *vp2, int c)
   if (hardcolor && qualityLines)
   {
     // Drawing a printed poly.  Use thin antialiased lines.
+    // I imagine this is because only EDGE lines should ever be drawn wide.
+    // And EDGE lines should never be hardcolored.
+    // NOTE:  Probably should do something about skipping GL_POINTS below.
     glLineWidth( 1.0 );
-    printf("Edging color %d\n", c);
+    // printf("Edging color %d\n", c);
   }
 #endif
 
