@@ -3785,6 +3785,26 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       case 'G':
 	// Goto piece command
 	sscanf(&(ecommand[1]),"%d", &i);
+	if (DrawToCurPiece)
+	{
+	  if (i > curpiece+1)
+	  {
+#if 1
+	    int j;
+	    //rendersetup();
+	    UnLightCurPiece();
+	    for (j=curpiece+1; j<i; j++)
+	      Draw1Part(j, -1);
+	    HiLightNewPiece(i);
+#else
+	    dirtyWindow = 1;
+	    glutPostRedisplay();
+	    Print1Part(curpiece, stdout) == 0;
+	    clear_edit_mode_gui();
+#endif
+	    break;
+	  }
+	}
 	HiLightCurPiece(i);
 	break;
       case 'c':
@@ -5935,7 +5955,7 @@ main(int argc, char **argv)
 
   helpmenunum = glutCreateMenu(menu);
   glutAddMenuEntry(progname             , '\0');
-  glutAddMenuEntry("Version 0.9.A      ", '\0');
+  glutAddMenuEntry("Version 0.9.1      ", '\0');
 
   mainmenunum = glutCreateMenu(menu);
   glutAddSubMenu(  "File               ", filemenunum);
