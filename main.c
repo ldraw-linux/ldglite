@@ -282,7 +282,8 @@ GLdouble pan_start_y = 0.0;
 GLdouble pan_end_x = 0.0;
 GLdouble pan_end_y = 0.0;
 int pan_start_F;
-int pan_visible = TYPE_F_BBOX_MODE | TYPE_F_NO_POLYGONS; // BBoxWire spin mode.
+//int pan_visible = TYPE_F_BBOX_MODE | TYPE_F_NO_POLYGONS; // BBoxWire spin mode.
+int pan_visible = TYPE_F_BBOX_MODE | TYPE_F_SHADED_MODE; //BBoxShaded spin mode.
 int glutModifiers;
 int z_extent_x1;
 int z_extent_x2;
@@ -2659,6 +2660,9 @@ void RestoreDepthBuffer(void)
   }
   else
   {
+      glDisable(GL_LIGHTING);     // Speed up copying
+      glDepthFunc(GL_ALWAYS);
+      glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
     gluOrtho2D(0, Width, 0, Height);
@@ -2676,6 +2680,9 @@ void RestoreDepthBuffer(void)
     //glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
     glDrawPixels(Width,Height,GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
 #endif
+    glPopMatrix();
+      glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
+      glDepthFunc(GL_LESS);
     rendersetup();
   }
 }
@@ -2892,62 +2899,8 @@ void CopyStaticBuffer(void)
       rendersetup();
       return;
     }
-
-    // get fresh copy of static data
-    glReadBuffer(staticbuffer); // set pixel source
-    glDrawBuffer(screenbuffer); // set pixel destination
-    glDisable( GL_DEPTH_TEST ); // Speed up copying
-    glDisable(GL_LIGHTING);     // Speed up copying
-    glMatrixMode( GL_PROJECTION );
-    glLoadIdentity();
-    gluOrtho2D(0, Width, 0, Height);
-    glMatrixMode( GL_MODELVIEW );
-    glPushMatrix();
-    glLoadIdentity();
-    glRasterPos2i(0, 0);
-    glDepthMask(GL_FALSE); // disable updates to depth buffer
-    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
-    if ((buffer_swap_mode == SWAP_TYPE_COPY) ||
-	(buffer_swap_mode == SWAP_TYPE_NODAMAGE))
-      glutSwapBuffers(); // Found GL_WIN_swap_hint extension
-    else
-      glCopyPixels(0, 0, Width, Height, GL_COLOR);
-#ifdef DEPTH_BUFFER_MASK
-    // Enable depth test, but disable depth writes while moving the piece
-    // This would work well if the moving piece were depth sorted.
-    // As is, the moving piece is drawn in random depth order and looks bad.
-    // This could work with the half depth buffer trick using a split
-    // depth range.  
-    // The moving piece gets half the depth range with GL_GREATER...
-    glDepthMask(GL_FALSE); // disable updates to depth buffer
-#else
-    //NOTE: This would be a lot faster if we got a bounding rect.
-    glRasterPos2i(0, 0);
-    glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
-    glDepthMask(GL_TRUE); // enable updates to depth buffer
-    glEnable( GL_DEPTH_TEST ); 
-    glDepthFunc(GL_ALWAYS);
-    glRasterPos2i(0, 0);
-    if (!goodZ) // Don't bother with z restore if we just rendered.
-    {
-#ifdef SAVE_DEPTH_BOX
-      // Gotta figure out the src,dst stuff.  glTranslate()?
-      glRasterPos2i(sc[0], sc[1]);
-      if (ldraw_commandline_opts.debug_level == 1)
-	printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
-      glDrawPixels(sc[2],sc[3],GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
-#else
-      //glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
-      glDrawPixels(Width,Height,GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
-#endif
-    }
-    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
-#endif
-    glPopMatrix();
-    reshape(Width, Height);
-    glEnable( GL_DEPTH_TEST ); 
-    glDepthFunc(GL_LESS);
-    rendersetup();
+    RestoreDepthBuffer();
+    CopyColorBuffer(staticbuffer, screenbuffer);
     // screenbuffer is ready for dynamic data
   }
   else
@@ -3078,7 +3031,7 @@ void display(void)
     glDrawBuffer(screenbuffer); 
     if (res = glutLayerGet(GLUT_NORMAL_DAMAGED)) // Expose event?
     {
-      printf("DAMAGED window during editing\n");
+      printf("EXPOSED window during editing\n");
       dirtyWindow = 1;
     }
 
