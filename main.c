@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.0.5      ";
+char ldgliteVersion[] = "Version 1.0.6      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -658,8 +658,7 @@ void pasteCommand(int x, int y)
 //#define WINTIMER 1
 //#define SAVE_COLOR_ALL 1
 //#define SAVE_DEPTH_ALL 1
-//#define MESA_XOR_TEST 1
-//#define MESA_XOR_TEST2 1
+#define MESA_XOR_TEST 1
 //---------------MESA TESTING BLOCK----------------------
 
 //---------------OSX MAC TESTING BLOCK----------------------
@@ -3588,10 +3587,8 @@ int XORcurPiece()
   {
     // Gotta fix Mesa to render to back buffer.  
     // Its 2x faster for normal drawing.  10x faster for XOR and BLEND.
-#ifndef MESA_XOR_TEST2
     if (!panning) // Panning already draws in the BACK buffer.
       CopyColorBuffer(screenbuffer, staticbuffer);
-#endif
     // NOTE: we must CopyBuffer way up here *before* we mess with rendersetup.
     // NOTE: Copybuffer at 1280x1024 on WinGeneric takes .5 to .8 seconds (slow)
     // NOTE: CopyBuffer seems to lose the block under the cursor in the
@@ -3692,9 +3689,12 @@ int XORcurPiece()
   if (buffer_swap_mode == SWAP_TYPE_NODAMAGE) // Mesa
   {
     //CopyColorBuffer(renderbuffer, screenbuffer); 
-    glutSwapBuffers(); // Copy the BACK buffer with XOR part to FRONT.
-    retval = Draw1Part(curpiece, 15);  // Erase it in the BACK buffer.
-    glDrawBuffer(screenbuffer); // Switch to FRONT buffer for LEDIT menu.
+    if (!panning)
+    {
+      glutSwapBuffers(); // Copy the BACK buffer with XOR part to FRONT.
+      retval = Draw1Part(curpiece, 15);  // Erase it in the BACK buffer.
+      glDrawBuffer(screenbuffer); // Switch to FRONT buffer for LEDIT menu.
+    }
   }
 #endif
 
@@ -4017,9 +4017,13 @@ void display(void)
   {
     renderbuffer = screenbuffer;
     glDrawBuffer(screenbuffer); 
-#ifdef MESA_XOR_TEST2
-    renderbuffer = staticbuffer;
-    glDrawBuffer(staticbuffer); 
+#ifdef MESA_XOR_TEST
+    if (buffer_swap_mode == SWAP_TYPE_NODAMAGE) // Mesa
+    {
+      // Draw into back buffer in editing mode for XOR speed on moving part.
+      renderbuffer = staticbuffer;
+      glDrawBuffer(staticbuffer); 
+    }
 #endif
     if (res = exposeEvent()) // Expose event?
     {
@@ -4034,6 +4038,10 @@ void display(void)
 	glDrawBuffer(staticbuffer); 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	render();
+#ifdef MESA_XOR_TEST
+	// Delay swap until after XOR moving part for Mesa.
+	if (buffer_swap_mode != SWAP_TYPE_NODAMAGE) // Mesa
+#endif
 	glutSwapBuffers();
 	glDrawBuffer(renderbuffer); 
       }
@@ -4048,7 +4056,7 @@ void display(void)
 	    render();
 	    SaveDepthBuffer();
 	    CopyStaticBuffer(1);
-	  }	  
+	  }
 	  else 
 	  {
 	    glDrawBuffer(renderbuffer); 
@@ -4082,15 +4090,19 @@ void display(void)
 	rendersetup();
 	XORcurPiece();
       }
+#ifdef MESA_XOR_TEST
+      if (buffer_swap_mode == SWAP_TYPE_NODAMAGE) // Mesa
+      {
+	renderbuffer = screenbuffer;
+	glDrawBuffer(screenbuffer); 
+	// Solid moving part must be drawn in GL_FRONT if not panning.
+	if (!SOLID_EDIT_MODE || (movingpiece != curpiece) || panning)
+	  glutSwapBuffers();
+      }
+#endif
       if (!panning)
       {
-#ifdef MESA_XOR_TEST2
-	glDrawBuffer(staticbuffer); 
 	edit_mode_gui();
-	glutSwapBuffers();
-#else
-	edit_mode_gui();
-#endif
       }
     }
 
@@ -4302,6 +4314,19 @@ void EraseCurPiece(void)
 {
   if ((SOLID_EDIT_MODE) && (movingpiece == curpiece))
   {
+#ifdef MESA_XOR_TEST
+    if (buffer_swap_mode == SWAP_TYPE_NODAMAGE)
+    {
+      rendersetup();
+      // Make sure the old piece is drawn in back buffer, not just the front.
+      glDrawBuffer(staticbuffer);
+      glDepthFunc(GL_EQUAL); // Tricky!  We already drew it in the front buf.
+      DrawCurPart(-1); //Draw1Part(curpiece, -1);
+      glDepthFunc(GL_LESS);
+      glFlush(); // Force drawing now.
+      glDrawBuffer(renderbuffer);
+    }
+#endif
     UnSelect1Part(curpiece);
     movingpiece = -1;
   }
@@ -8305,9 +8330,6 @@ int getDisplayProperties()
     {
       // Assume Microsoft software opengl which blits rather than page flips.
       buffer_swap_mode = SWAP_TYPE_COPY;
-#ifdef SIMULATE_MESA      
-      buffer_swap_mode = SWAP_TYPE_NODAMAGE;
-#endif
     }
   }
 
@@ -8342,6 +8364,16 @@ int getDisplayProperties()
     // But it may use the Apple software driver when has <= 8MB VRAM.
     projection_znear = 100.0; 
   }
+
+#ifdef SIMULATE_MESA      
+  buffer_swap_mode = SWAP_TYPE_NODAMAGE;
+  if (NVIDIA_XOR_HACK)
+  {
+    NVIDIA_XOR_HACK = 0;
+    if (SOLID_EDIT_MODE == NVIDIA_XOR_HACK)
+      SOLID_EDIT_MODE = 0;
+  }
+#endif
 
 #ifdef GENERIC_MS_TEST
   buffer_swap_mode = SWAP_TYPE_COPY;
