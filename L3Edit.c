@@ -272,7 +272,7 @@ int Translate1Part(int partnum, float m[4][4])
     case 0:
 	break;
     case 1:
-	M4M4Mul(m1,LinePtr->v,m);
+        //M4M4Mul(m1,LinePtr->v,m);
 	LinePtr->v[0][3] += m[0][3];
 	LinePtr->v[1][3] += m[1][3];
 	LinePtr->v[2][3] += m[2][3];
@@ -288,6 +288,72 @@ int Translate1Part(int partnum, float m[4][4])
 	    LinePtr->v[i][2] += m[2][3];
 	    if (i >= 3) // type five line only has 4 points.
 		break;
+	}
+	break;
+    default:
+	break;
+    }
+    
+    return 1;
+}
+
+/*****************************************************************************/
+int Locate1Part(int partnum, float m[4][4], int moveonly)
+{
+    float          m1[4][4];
+    int            i = 0;
+    struct L3LineS *LinePtr;
+    
+    if (SelectedLinePtr)
+	LinePtr = SelectedLinePtr;
+
+    else for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+    {
+	if (i == partnum)
+	    break;
+	i++;
+    }
+    if (!LinePtr)
+	return 0; //partnum not found
+
+    switch (LinePtr->LineType)
+    {
+    case 0:
+	break;
+    case 1:
+        if (moveonly)
+	{
+	  LinePtr->v[0][3] = m[0][3];
+	  LinePtr->v[1][3] = m[1][3];
+	  LinePtr->v[2][3] = m[2][3];
+	}
+	else
+	  memcpy(LinePtr->v, m, sizeof(LinePtr->v));
+	break;
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+        if (moveonly)
+	{
+	  m[0][3] -= LinePtr->v[0][0];
+	  m[1][3] -= LinePtr->v[0][1];
+	  m[2][3] -= LinePtr->v[0][2];
+	  for (i=0; i<LinePtr->LineType; i++)
+	  {
+	    LinePtr->v[i][0] += m[0][3];
+	    LinePtr->v[i][1] += m[1][3];
+	    LinePtr->v[i][2] += m[2][3];
+	    if (i >= 3) // type five line only has 4 points.
+	      break;
+	  }
+	}
+	else
+	{
+	  // This should work 
+	  //unless LinePtr->v[i] has bad numbers for linetypes 2,3.
+	  M4M4Mul(m1,LinePtr->v,m);
+	  memcpy(LinePtr->v, m1, sizeof(LinePtr->v));
 	}
 	break;
     default:
@@ -1134,8 +1200,10 @@ int Make1Primitive(int partnum, char *str)
       {
 	if (i > 4)
 	{
-	  j++;
 	  i = 2;
+	  j++;
+	  if (j > 3) // Maximum of 4 points in a primitive.
+	    break;
 	}
 	sscanf(token, "%f", &Data.v[j][i-2]);
       }
