@@ -3145,7 +3145,8 @@ void TranslateCurPiece(float m[4][4])
   Translate1Part(curpiece, m);
   movingpiece = curpiece;
   DrawMovingPiece();
-  Print1Part(curpiece, stdout);
+  if (ldraw_commandline_opts.debug_level == 1)
+      Print1Part(curpiece, stdout);
   edit_mode_gui();
 }
 
@@ -3177,7 +3178,8 @@ void HiLightNewPiece(int piecenum)
       glDepthMask(GL_TRUE); // enable updates to depth buffer
       dirtyWindow = 1;
       glutPostRedisplay();
-      Print1Part(curpiece, stdout) == 0;
+      if (ldraw_commandline_opts.debug_level == 1)
+	  Print1Part(curpiece, stdout);
       edit_mode_gui();
       return;
     }
@@ -3191,7 +3193,8 @@ void HiLightNewPiece(int piecenum)
     }
   }
   XORcurPiece();
-  Print1Part(curpiece, stdout);
+  if (ldraw_commandline_opts.debug_level == 1)
+      Print1Part(curpiece, stdout);
   edit_mode_gui();
 }
 
@@ -3244,7 +3247,8 @@ void InsertNewPiece(void)
   }
   movingpiece = curpiece;
   DrawMovingPiece();
-  Print1Part(curpiece, stdout);
+  if (ldraw_commandline_opts.debug_level == 1)
+      Print1Part(curpiece, stdout);
   edit_mode_gui();
 #else
   UnLightCurPiece();
@@ -3269,7 +3273,8 @@ void DelCurPiece(void)
   curpiece--;
   if (curpiece < 0) curpiece = 0;
   XORcurPiece();
-  Print1Part(curpiece, stdout);
+  if (ldraw_commandline_opts.debug_level == 1)
+      Print1Part(curpiece, stdout);
   edit_mode_gui();
 }
 
@@ -3399,7 +3404,8 @@ int edit_mode_fnkeys(int key, int x, int y)
     else
     {
       XORcurPiece();
-      Print1Part(curpiece, stdout);
+      if (ldraw_commandline_opts.debug_level == 1)
+	  Print1Part(curpiece, stdout);
       edit_mode_gui();
     }
     return 1;
@@ -3410,7 +3416,8 @@ int edit_mode_fnkeys(int key, int x, int y)
   {
     switch(key) {
     default:
-      printf("fnkey = %d = '%c'\n",key,key);
+      if (ldraw_commandline_opts.debug_level == 1)
+	  printf("fnkey = %d = '%c'\n",key,key);
       edit_mode_gui(); // Redisplay the GUI
       break;
     }
@@ -3716,7 +3723,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	glDepthMask(GL_TRUE); // enable updates to depth buffer
 	dirtyWindow = 1;
 	glutPostRedisplay();
-	Print1Part(curpiece, stdout) == 0;
+	if (ldraw_commandline_opts.debug_level == 1)
+	    Print1Part(curpiece, stdout);
 	clear_edit_mode_gui();
 	return 1;
       case '2':
@@ -3883,7 +3891,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 #else
 	    dirtyWindow = 1;
 	    glutPostRedisplay();
-	    Print1Part(curpiece, stdout) == 0;
+	    if (ldraw_commandline_opts.debug_level == 1)
+		Print1Part(curpiece, stdout);
 	    clear_edit_mode_gui();
 #endif
 	    break;
@@ -3897,7 +3906,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	movingpiece = curpiece;
 	Color1Part(curpiece, color);
 	DrawMovingPiece();
-	Print1Part(curpiece, stdout);
+	if (ldraw_commandline_opts.debug_level == 1)
+	    Print1Part(curpiece, stdout);
 	edit_mode_gui();
 	break;
       case 'p':
@@ -3909,7 +3919,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	  strcat(partname, use_uppercase ? ".DAT" : ".dat");
 	Swap1Part(curpiece, partname);
 	DrawMovingPiece();
-	Print1Part(curpiece, stdout);
+	if (ldraw_commandline_opts.debug_level == 1)
+	    Print1Part(curpiece, stdout);
 	edit_mode_gui();
 	break;
       case 'x':
@@ -3965,7 +3976,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	movingpiece = curpiece;
 	Move1Part(curpiece, m, 0);
 	DrawMovingPiece();
-	Print1Part(curpiece, stdout);
+	if (ldraw_commandline_opts.debug_level == 1)
+	    Print1Part(curpiece, stdout);
 	edit_mode_gui();
 	break;
       case 'Y':
@@ -3981,7 +3993,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	movingpiece = curpiece;
 	Move1Part(curpiece, m, 0);
 	DrawMovingPiece();
-	Print1Part(curpiece, stdout);
+	if (ldraw_commandline_opts.debug_level == 1)
+	    Print1Part(curpiece, stdout);
 	edit_mode_gui();
 	break;
       case 'Z':
@@ -3997,7 +4010,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	movingpiece = curpiece;
 	Move1Part(curpiece, m, 0);
 	DrawMovingPiece();
-	Print1Part(curpiece, stdout);
+	if (ldraw_commandline_opts.debug_level == 1)
+	    Print1Part(curpiece, stdout);
 	edit_mode_gui();
 	break;
       case '1':
@@ -4023,7 +4037,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	glDepthMask(GL_TRUE); // enable updates to depth buffer
 	dirtyWindow = 1;
 	glutPostRedisplay();
-	Print1Part(curpiece, stdout) == 0;
+	if (ldraw_commandline_opts.debug_level == 1)
+	    Print1Part(curpiece, stdout);
 	clear_edit_mode_gui();
 	break;
       case 2:
@@ -4083,7 +4098,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     movingpiece = curpiece;
     Move1Part(curpiece, m, 1);
     DrawMovingPiece();
-    Print1Part(curpiece, stdout);
+    if (ldraw_commandline_opts.debug_level == 1)
+	Print1Part(curpiece, stdout);
     edit_mode_gui();
     return 1;
   case 'i':
@@ -4420,7 +4436,7 @@ void keyboard(unsigned char key, int x, int y)
 	dirtyWindow = 1; //reshape(Width, Height);
 	break;
     case '-': // Half Size (scale dn)
-        printf("key = %d = '%c' (%08x)\n",key,key, glutModifiers);
+        //printf("key = %d = '%c' (%08x)\n",key,key, glutModifiers);
 	if ((glutModifiers & GLUT_ACTIVE_ALT) != 0)
 	  ldraw_commandline_opts.S *= 0.9;
 	else
@@ -4428,7 +4444,7 @@ void keyboard(unsigned char key, int x, int y)
 	dirtyWindow = 1; //reshape(Width, Height);
 	break;
     case '+': // Double Size (scale up)
-        printf("key = %d = '%c' (%08x)\n",key,key, glutModifiers);
+        //printf("key = %d = '%c' (%08x)\n",key,key, glutModifiers);
 	if ((glutModifiers & GLUT_ACTIVE_ALT) != 0)
 	  ldraw_commandline_opts.S *= (1.0 / 0.9);
 	else
