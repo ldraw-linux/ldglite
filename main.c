@@ -3515,6 +3515,11 @@ int edit_mode_fnkeys(int key, int x, int y)
 #define EDIT_LINE_ID    'l'
 #define EDIT_COMMENT_ID 'C'
 
+#define LINETYPE_2_ID	2
+#define LINETYPE_3_ID	3
+#define LINETYPE_4_ID	4
+#define LINETYPE_5_ID	5
+
 /***************************************************************/
 int edit_mode_keyboard(unsigned char key, int x, int y)
 {
@@ -3678,7 +3683,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       case 'l':
 	clear_edit_mode_gui();
 	sprintf(eprompt[0], "Line Type: ");
-	sprintf(eprompt[1], "Piece Comment Step");
+	sprintf(eprompt[1], "Piece Comment Step 2 3 4 5");
 	ecommand[0] = tolower(key); // FILE_LOAD_ID == toupper('l');
 	edit_mode_gui();
 	return 1;
@@ -3691,12 +3696,14 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       switch(key) {
       case 'p':
 	sprintf(eprompt[0], "New Part: ");
+	eprompt[1][0] = 0;
 	ecommand[0] = 'p';
 	ecommand[1] = 0;
 	edit_mode_gui();
 	return 1;
       case 'c':
 	sprintf(eprompt[0], "Comment: ");
+	eprompt[1][0] = 0;
 	ecommand[0] = 'C';
 	ecommand[1] = 0;
 	edit_mode_gui();
@@ -3710,6 +3717,16 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	glutPostRedisplay();
 	Print1Part(curpiece, stdout) == 0;
 	clear_edit_mode_gui();
+	return 1;
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+	sprintf(eprompt[0], "Enter Type %c Primitive : ", key);
+	eprompt[1][0] = 0;
+	ecommand[0] = key - '0';
+	ecommand[1] = 0;
+	edit_mode_gui();
 	return 1;
       }
       return 1;
@@ -4007,6 +4024,18 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	glutPostRedisplay();
 	Print1Part(curpiece, stdout) == 0;
 	clear_edit_mode_gui();
+	break;
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+	strcpy(partname, &(ecommand[1]));
+	// Need a new fn to build a make a new primitive:
+	// Make1Primitive(curpiece, partname);
+	// Should I make them enter linetype and color or just points?
+	// Color could default to 24 for linetypes 2,5 and 16 for 3,4.
+	printf("Type %d line = %s\n", (int)c, partname);
+	edit_mode_gui();
 	break;
       default:
 	edit_mode_gui();
@@ -5997,7 +6026,7 @@ main(int argc, char **argv)
 
   helpmenunum = glutCreateMenu(menu);
   glutAddMenuEntry(progname             , '\0');
-  glutAddMenuEntry("Version 0.9.1b     ", '\0');
+  glutAddMenuEntry("Version 0.9.1c     ", '\0');
 
   mainmenunum = glutCreateMenu(menu);
   glutAddSubMenu(  "File               ", filemenunum);
