@@ -34,9 +34,11 @@
 
 #ifdef USING_SLUT
 #  include "slut.h" // A sleazy implementation of GLUT on SDL.
-#elifdef USING_FREEGLUT
-#  include <GL/freeglut.h> // Free implementation of GLUT.
 #else
-#  include <GL/glut.h> // The original GLUT.
+#  ifdef USING_FREEGLUT
+#    include <GL/freeglut.h> // Free implementation of GLUT.
+#  else
+#    include <GL/glut.h> // The original GLUT.
+#  endif
 #endif
 
