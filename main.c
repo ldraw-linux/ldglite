@@ -77,6 +77,8 @@ int use_uppercase = 0;
 int use_png_alpha = 1;
 
 int ldraw_projection_type = 0;  // 1 = perspective, 0 = orthographic.
+double projection_znear = -1.0;
+double projection_zfar = -1.0;
 int ldraw_image_type = IMAGE_TYPE_BMP8;
 
 // [Views] swiped from ldraw.ini
@@ -1633,7 +1635,7 @@ void init(void)
 /***************************************************************/
 void reshape(int width, int height)
 {
-    GLdouble left, right, top, bottom, aspect;
+    GLdouble left, right, top, bottom, aspect, znear, zfar, fov;
 
 #if 0
     if (editing)
@@ -1677,26 +1679,31 @@ void reshape(int width, int height)
     //glFrustum(-3.0, 3.0, -3.0, 3.0, 64, 256);
  
 #define WIDE_ANGLE_VIEW 1
+#if WIDE_ANGLE_VIEW
+    fov = 45.0;
+    znear = 1.0;
+    zfar = 2000.0;
+#else
+    fov = 20.0;
+    znear = 100.0;
+    zfar = 4000.0;
+#endif
+    if (projection_znear != -1.0)
+      znear = projection_znear;
+    if (projection_zfar != -1.0)
+      zfar = projection_zfar;
+
+    // try to get better resolution in depth buffer.  Move near, far.
     if (ldraw_projection_type)
     {
       // fov, aspect, near, far
-      // try to get better resolution in depth buffer.  Move near, far.
-#if WIDE_ANGLE_VIEW
-      gluPerspective(45.0, aspect, 1.0, 2000.0);
-#else
-      gluPerspective(20.0, aspect, 100.0, 4000.0);
-#endif
+      gluPerspective(fov, aspect, znear, zfar);
       //glDepthRange(0.0, 1.0); // I do NOT understand this fn.
-
     }
     else
     {
       // left, right, bottom, top, near, far
-#if WIDE_ANGLE_VIEW
-      glOrtho(left, right, bottom, top, 1.0, 2000.0);
-#else
-      glOrtho(left, right, bottom, top, 100.0, 4000.0);
-#endif
+      glOrtho(left, right, bottom, top, znear, zfar);
     }
 
     glMatrixMode(GL_MODELVIEW);
@@ -2078,7 +2085,7 @@ void TiledDisplay(void)
    png_text text_ptr[1];
 #endif
 
-   GLdouble left, right, top, bottom, aspect;
+   GLdouble left, right, top, bottom, aspect, znear, zfar, fov;
    GLdouble width, height;
 
    width = TILE_IMAGE_WIDTH;
@@ -2127,25 +2134,31 @@ void TiledDisplay(void)
    trImageSize(tr, TILE_IMAGE_WIDTH, TILE_IMAGE_HEIGHT);
    trRowOrder(tr, TR_TOP_TO_BOTTOM);
 
+#if WIDE_ANGLE_VIEW
+   fov = 45.0;
+   znear = 1.0;
+   zfar = 2000.0;
+#else
+   fov = 20.0;
+   znear = 100.0;
+   zfar = 4000.0;
+#endif
+    if (projection_znear != -1.0)
+      znear = projection_znear;
+    if (projection_zfar != -1.0)
+      zfar = projection_zfar;
+
+   // try to get better resolution in depth buffer.  Move near, far.
    if (ldraw_projection_type)
    {
      // fov, aspect, near, far
-     // try to get better resolution in depth buffer.  Move near, far.
-#if WIDE_ANGLE_VIEW
-     trPerspective(tr, 45.0, aspect, 1.0, 2000.0);
-#else
-     trPerspective(tr, 20.0, aspect, 100.0, 4000.0);
-#endif
+     trPerspective(tr, 45.0, aspect, znear, zfar);
      //glDepthRange(0.0, 1.0); // I do NOT understand this fn.
    }
    else
    {
      // left, right, bottom, top, near, far
-#if WIDE_ANGLE_VIEW
-     trOrtho(tr, left, right, bottom, top, 1.0, 2000.0);
-#else
-     trOrtho(tr, left, right, bottom, top, 100.0, 4000.0);
-#endif
+     trOrtho(tr, left, right, bottom, top, znear, zfar);
    }
 
    /*************************************************************/
@@ -4500,6 +4513,7 @@ void keyboard(unsigned char key, int x, int y)
       return;
   }
 
+#define EPS_OUTPUT_FIGURED_OUT 1
 #ifdef EPS_OUTPUT_FIGURED_OUT
   // Allow eps output with ALT-e key combo someday...
   if (((glutModifiers & GLUT_ACTIVE_ALT) != 0) && (tolower(key) == 'e'))
@@ -5880,9 +5894,19 @@ void ParseParams(int *argc, char **argv)
       case 'Z':
       case 'z':
 	{
+#if 0
 	  double g;
 	  sscanf(pszParam,"%c%g",&type,&g);
 	  ldraw_commandline_opts.Z = (int) (Z_SCALE_FACTOR * g + 0.5);
+#else
+	  float g;
+	  sscanf(pszParam,"%c%f",&type,&g);
+	  if (pszParam[0] == 'z')
+	    projection_znear = g;
+	  else // (pszParam[0] == 'Z')
+	    projection_zfar = g;
+	  printf("ZClip = (%g, %g)\n", projection_znear, projection_zfar);
+#endif
 	}
 	break;
       }
