@@ -594,8 +594,12 @@ int Draw1PartPtr(struct L3LineS *LinePtr, int Color)
 		v3d[i].y=r[1];
 		v3d[i].z=r[2];
 	    }
-	    if (zWire)
+	    //if (zWire)
+	    if ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) ||
+		(ldraw_commandline_opts.F & TYPE_F_XOR_MODE))
 	    {
+		// This would render invisibly in TYPE_F_XOR_MODE 
+		// since it contains no edges.
 		render_line(&v3d[0],&v3d[1],Color);
 		render_line(&v3d[1],&v3d[2],Color);
 		render_line(&v3d[2],&v3d[0],Color);
@@ -611,8 +615,12 @@ int Draw1PartPtr(struct L3LineS *LinePtr, int Color)
 		v3d[i].y=r[1];
 		v3d[i].z=r[2];
 	    }
-	    if (zWire)
+	    //if (zWire)
+	    if ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) ||
+		(ldraw_commandline_opts.F & TYPE_F_XOR_MODE))
 	    {
+		// This would render invisibly in TYPE_F_XOR_MODE
+		// since it contains no edges.
 		render_line(&v3d[0],&v3d[1],Color);
 		render_line(&v3d[1],&v3d[2],Color);
 		render_line(&v3d[2],&v3d[3],Color);
