@@ -1,6 +1,23 @@
                                 LdGLite
                (a platform independent version of LdLite)
 
+Contents of readme.txt:
+  Introduction
+  LdGLite for Windows README
+  LdGLite for linux README
+  Extra Stuff
+    Command line options
+    Hot Keys
+    LEDIT extensions
+    LEDIT emulation quirks
+  Notes 
+    Producing image files
+    Tiled rendering
+    Off screen background rendering
+
+
+			     Introduction
+
 LdLite is an LDRAW file viewer for Windows.  You can use it to view
 DAT and MPD files containing models made with everyone's favorite 
 construction bricks.
