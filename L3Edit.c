@@ -1552,6 +1552,7 @@ int Hose1Part(int partnum, int steps)
       {0.0,0.0,0.0,1.0}
     };
     float          m1[4][4];
+    float          m2[4][4];
     float          v[4] = {0, -50, 0, 1}; // Velocity in y of intermediate control points.
     float          v1[4] = {0, -5, 0, 1}; // Offset in y of intermediate control points.
     float          r[4];
@@ -1560,7 +1561,8 @@ int Hose1Part(int partnum, int steps)
     int            n, Color, CurColor;
     struct L3LineS *LinePtr;
     struct L3LineS *PrevPtr;
-    struct L3LineS *NextPtr;
+    struct L3LineS *NextPtr = NULL;
+    struct L3LineS *PinPtr = NULL;
     struct L3LineS *FirstPtr;
     struct L3LineS *LastPtr;
     struct L3PartS *PartPtr;
@@ -1578,25 +1580,28 @@ int Hose1Part(int partnum, int steps)
     }
 
     if (SelectedLinePtr)
+    {
       LinePtr = SelectedLinePtr;
+      UnSelect1Part(SelectedLinePtr->LineNo);
+    } 
     else
     for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
     {
-	if (i == partnum)
-	    break;	    // Found the part
-	i++;
+      if (i == partnum)
+	break;	    // Found the part
+      i++;
     }
 
     LastPtr = LinePtr;
     if (!LastPtr)
-	return -1; //partnum not found
+      return -1; //partnum not found
     if (LastPtr->LineType != 1)
       return i;
 
     for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
     {
-	if (LinePtr->NextLine == LastPtr)
-	    break;	    // Found the part
+      if (LinePtr->NextLine == LastPtr)
+	break;	    // Found the part
     }
 
     FirstPtr = LinePtr; 
@@ -1675,7 +1680,8 @@ int Hose1Part(int partnum, int steps)
 
       steps -=2;  // Subtract the end ribs from the total.
       v1[1] = -4; // Offset in y of intermediate control points.
-      v[1] *= 2; // Double the velocity to clear technic pins.
+      //v[1] *= 2; // Double the velocity to clear technic pins.
+      v[1] -= 30; // Increase the velocity to clear any technic pins.
     }
     else if (stricmp(SubPartDatName, "stud3a.dat") == 0)
     {
@@ -1690,65 +1696,68 @@ int Hose1Part(int partnum, int steps)
     else
     {
       // Default to the names of the ribbed hose parts.
-      /*
-	Consider automatically locating the technic pin ends on these parts.
-	6048.DAT      Arm Piece with Pin and 2 Fingers
-	6217.DAT      Arm Piece with Pin and 3 Fingers
-	30526.dat     Brick  1 x  2 with 2 Pins
-	2458.DAT      Brick  1 x  2 with Pin
-	4729.DAT      Brick  2 x  2 no Studs with Pin
-	4730.DAT      Brick  2 x  2 with Pin
-	6232.DAT      Brick  2 x  2 with Pin and Axlehole
-	30000.DAT     Brick  2 x  2 with Pins and Axlehole
-	30592.DAT     Brick  2 x  2 with Vertical Pin and  1 x  2 Side Plates
-	6249.DAT      Brick  2 x  4 with Pins
-	2476.DAT      Plate  2 x  2 with Pin
-	30157.DAT     Plate  2 x  4 with Pins
-	3749.DAT      Technic Axle Pin
-	50.DAT        Technic Friction Pin with Towball
-	3673.DAT      Technic Pin
-	32136.DAT     Technic Pin  3L Double
-	4274.DAT      Technic Pin 1/2
-	32002.DAT     Technic Pin 3/4
-	6558.DAT      Technic Pin Long with Friction
-	32054.DAT     Technic Pin Long with Stop Bush
-	4459.DAT      Technic Pin with Friction
-	2780.dat      Technic Pin with Friction and Slots
-
-	p/connect.dat  Technic Pin with Base Collar
-	p/connect2.dat Technic Pin
-	p/connect3.dat Technic Pin 1/2 with Base Collar
-	p/connect4.dat Technic Pin 1/2
-       */
       firstparttext = strdup("79.dat");
       FixDatName(firstparttext);
       parttext = strdup("80.dat");
       FixDatName(parttext);
 
       v1[1] = -3; // Move the end ribs up 3 to fit on the studs
+      //v[1] *= 2; // Double the velocity to clear technic pins.
+      // Doubling is preferred, but leads to crimped hoses in some cases.
+      // I really should be able to tell what velocity and length to use.
+      // Look at the cross products of:
+      //   unit vectors multiplied by m1 and m2
+      // Also examine the  distance of the ends of the velocity vectors
+      // to avoid crimped hoses caused by long velocity vectors.
+      v[1] -= 30; // Increase the velocity to clear any technic pins.
+
+      // Automatically locate technic pin ends, otherwise use a topstud.
+      for (NextPtr = PartPtr->FirstLine; NextPtr; NextPtr = NextPtr->NextLine)
+      {
+	PartPtr = NextPtr->PartPtr;
+	if (PartPtr && !strncmp(PartPtr->DatName, "connect", 7))
+	{
+	  M4M4Mul(m1,LinePtr->v,NextPtr->v);
+	  break;
+	}
+      }
+      PartPtr = LastPtr->PartPtr;
+      for (PinPtr = PartPtr->FirstLine; PinPtr; PinPtr = PinPtr->NextLine)
+      {
+	PartPtr = PinPtr->PartPtr;
+	if (PartPtr && !strncmp(PartPtr->DatName, "connect", 7))
+	{
+	  M4M4Mul(m2,LastPtr->v,PinPtr->v);
+	  break;
+	}
+      }
     }
 
     // Get the 4 control points from the part locations.
-    memcpy(m1, LinePtr->v, sizeof(LinePtr->v));
+    if (!NextPtr)
+      memcpy(m1, LinePtr->v, sizeof(LinePtr->v));
     M4V4Mul(r,m1,v1);
     m[0][0] = r[0];
     m[0][1] = r[1];
     m[0][2] = r[2];
     m[0][3] = 0;
-    memcpy(m1, LinePtr->v, sizeof(LinePtr->v));
+    if (!NextPtr)
+      memcpy(m1, LinePtr->v, sizeof(LinePtr->v));
     M4V4Mul(r,m1,v);
     m[1][0] = r[0];
     m[1][1] = r[1];
     m[1][2] = r[2];
     m[1][3] = 0;
-    memcpy(m1, LastPtr->v, sizeof(LastPtr->v));
-    M4V4Mul(r,m1,v);
+    if (!PinPtr)
+      memcpy(m2, LastPtr->v, sizeof(LastPtr->v));
+    M4V4Mul(r,m2,v);
     m[2][0] = r[0];
     m[2][1] = r[1];
     m[2][2] = r[2];
     m[2][3] = 0;
-    memcpy(m1, LastPtr->v, sizeof(LastPtr->v));
-    M4V4Mul(r,m1,v1);
+    if (!PinPtr)
+      memcpy(m2, LastPtr->v, sizeof(LastPtr->v));
+    M4V4Mul(r,m2,v1);
     m[3][0] = r[0];
     m[3][1] = r[1];
     m[3][2] = r[2];
