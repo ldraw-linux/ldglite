@@ -1,0 +1,491 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif\r\n"
+    "#include ""res\\ldlite.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#include ""afxprint.rc""       // printing/print preview resources\r\n"
+    "#endif\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON    DISCARDABLE     "res\\ldlite.ico"
+IDR_LDLITETYPE          ICON    DISCARDABLE     "res\\ldliteDoc.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MAINFRAME MENU PRELOAD DISCARDABLE 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&Open...\tCtrl+O",            ID_FILE_OPEN
+        MENUITEM "Save &As...",                 ID_FILE_SAVE_AS
+        MENUITEM SEPARATOR
+        MENUITEM "&Print...\tCtrl+P",           ID_FILE_PRINT
+        MENUITEM "Print Pre&view",              ID_FILE_PRINT_PREVIEW
+        MENUITEM "P&rint Setup...",             ID_FILE_PRINT_SETUP
+        MENUITEM SEPARATOR
+        MENUITEM "Recent File",                 ID_FILE_MRU_FILE1, GRAYED
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",                       ID_APP_EXIT
+    END
+    POPUP "Options"
+    BEGIN
+        MENUITEM "&View",                       ID_MENU_SCALE
+        MENUITEM "&Options",                    ID_MENU_OPTIONS
+        MENUITEM SEPARATOR
+        MENUITEM "S&hading",                    ID_MENU_SHADING
+        MENUITEM "&Wireframe",                  IDR_WIRE
+        MENUITEM SEPARATOR
+        MENUITEM "Show &every detail being drawn", ID_DRAW_ALL
+        MENUITEM "Show &parts being drawn",     ID_DRAW_PARTS
+        MENUITEM "Show &model being drawn",     ID_DRAW_MODEL
+        MENUITEM SEPARATOR
+        MENUITEM "&Pause between steps",        IDR_PAUSE
+        MENUITEM SEPARATOR
+        MENUITEM "Set path for &LDRAW parts",   ID_SET_PATH
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About LDLITE...",            ID_APP_ABOUT
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_MAINFRAME ACCELERATORS PRELOAD MOVEABLE PURE 
+BEGIN
+    "N",            ID_FILE_NEW,            VIRTKEY, CONTROL
+    "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL
+    "S",            ID_FILE_SAVE,           VIRTKEY, CONTROL
+    "P",            ID_FILE_PRINT,          VIRTKEY, CONTROL
+    "Z",            ID_EDIT_UNDO,           VIRTKEY, CONTROL
+    "X",            ID_EDIT_CUT,            VIRTKEY, CONTROL
+    "C",            ID_EDIT_COPY,           VIRTKEY, CONTROL
+    "V",            ID_EDIT_PASTE,          VIRTKEY, CONTROL
+    VK_BACK,        ID_EDIT_UNDO,           VIRTKEY, ALT
+    VK_DELETE,      ID_EDIT_CUT,            VIRTKEY, SHIFT
+    VK_INSERT,      ID_EDIT_COPY,           VIRTKEY, CONTROL
+    VK_INSERT,      ID_EDIT_PASTE,          VIRTKEY, SHIFT
+    VK_F6,          ID_NEXT_PANE,           VIRTKEY 
+    VK_F6,          ID_PREV_PANE,           VIRTKEY, SHIFT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOG DISCARDABLE  0, 0, 296, 162
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About LDLITE"
+FONT 8, "MS Sans Serif"
+BEGIN
+    ICON            IDR_MAINFRAME,IDC_STATIC,7,7,21,20
+    LTEXT           "LDLITE Version 1.6",IDC_STATIC,40,10,119,8,SS_NOPREFIX
+    LTEXT           "Copyright (C) 1999, Paul J. Gyugyi",IDC_STATIC,40,25,
+                    249,8
+    DEFPUSHBUTTON   "OK",IDOK,257,7,32,14,WS_GROUP
+    LTEXT           "Design Credits: Paul Gyugyi, Steve Bliss, Lars Hassing, Leonardo Zide, Jeremy H. Sproat. LDLITE is a clone (a superset, actually) of LDRAW by James Jessman. Source and binaries are at: <http://www.gyugyi.com/l3g0/ldlite/>",
+                    IDC_STATIC,7,49,282,49
+    LTEXT           "LDLITE comes with ABSOLUTELY NO WARRANTY;  This is free software (GPL), and you are welcome to redistribute it under certain conditions; for details see the file COPYING distributed with this program.",
+                    IDC_STATIC,7,105,282,33
+END
+
+IDD_SCALE_DIALOG DIALOG DISCARDABLE  0, 0, 186, 90
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Set View"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,24,60,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,111,60,50,14
+    LTEXT           "Zoom/Scale",IDC_STATIC,7,12,40,8
+    EDITTEXT        IDC_EDIT1,53,6,44,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Viewpoint",IDC_STATIC,7,35,32,8
+    COMBOBOX        IDC_COMBO1,53,31,126,71,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Spin1",IDC_SCALESPIN1,"msctls_updown32",UDS_ARROWKEYS,
+                    100,7,11,13
+    CONTROL         "Spin1",IDC_SCALESPIN2,"msctls_updown32",UDS_ARROWKEYS,
+                    113,7,11,13
+END
+
+IDD_OPTIONS_DIALOG DIALOG DISCARDABLE  0, 0, 198, 245
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Options"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "View M&atrix",IDC_STATIC,7,7,41,8
+    EDITTEXT        IDC_View_Edit,7,18,184,14,ES_AUTOHSCROLL
+    LTEXT           "Predefined:",IDC_STATIC,7,40,37,8
+    COMBOBOX        IDC_PREDEFINED,49,38,142,105,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "&Background Color",IDC_STATIC,7,54,68,8
+    COMBOBOX        IDC_BGCOLOR_LIST,7,66,81,103,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Default Piece &Color",IDC_STATIC,95,54,68,8
+    COMBOBOX        IDC_PIECECOLOR_LIST,95,66,95,103,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Drawing &Mode",IDC_STATIC,7,84,81,84
+    CONTROL         "Single Step",IDC_STEP_RADIO,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,13,94,52,10
+    CONTROL         "Continuous",IDC_CONT_RADIO,"Button",BS_AUTORADIOBUTTON,
+                    13,106,51,10
+    CONTROL         "Save Steps",IDC_SAVE_RADIO,"Button",BS_AUTORADIOBUTTON,
+                    13,118,53,10
+    CONTROL         "&Poll for changes",IDC_POLL_CHECK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,13,130,67,10
+    CONTROL         "Ro&tate Model After Drawing",IDC_ROTATE_CHECK,"Button",
+                    BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,13,142,67,19
+    LTEXT           "&Scale",IDC_STATIC,95,88,19,8
+    EDITTEXT        IDC_SCALE_EDIT,95,102,26,14,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Spin1",IDC_SCALE_SMALLDELTA,"msctls_updown32",
+                    UDS_ARROWKEYS,122,102,11,14
+    CONTROL         "Spin2",IDC_SCALE_BIGDELTA,"msctls_updown32",
+                    UDS_ARROWKEYS,132,102,11,14
+    LTEXT           "Distance (&Z)",IDC_STATIC,146,88,40,8
+    EDITTEXT        IDC_DISTANCE_EDIT,146,102,23,14,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "Spin3",IDC_DISTANCE_SMALLDELTA,"msctls_updown32",
+                    UDS_ARROWKEYS,170,102,11,14
+    CONTROL         "Spin4",IDC_DISTANCE_BIGDELTA,"msctls_updown32",
+                    UDS_ARROWKEYS,180,102,11,14
+    GROUPBOX        "Debugging",IDC_STATIC,95,128,95,40
+    CONTROL         "Debu&g messages",IDC_DEBUG_CHECK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,103,138,73,10
+    CONTROL         "&Log to file",IDC_LOG_CHECK,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,103,151,62,10
+    GROUPBOX        "&Video Mode",IDC_STATIC,7,173,82,44
+    LTEXT           "X",IDC_STATIC,13,184,25,8
+    EDITTEXT        IDC_VIDEOX_EDIT,13,195,30,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Y",IDC_STATIC,45,184,25,8
+    EDITTEXT        IDC_VIDEOY_EDIT,45,195,30,14,ES_AUTOHSCROLL | ES_NUMBER
+    GROUPBOX        "&Offset",IDC_STATIC,95,173,96,44
+    LTEXT           "X",IDC_STATIC,101,184,25,8
+    EDITTEXT        IDC_OFFSETX_EDIT,101,195,38,14,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    LTEXT           "Y",IDC_STATIC,143,184,25,8
+    EDITTEXT        IDC_OFFSETY_EDIT,143,195,42,14,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    DEFPUSHBUTTON   "OK",IDOK,35,224,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,115,224,50,14
+END
+
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,1
+ PRODUCTVERSION 1,0,0,1
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "Comments", "\0"
+            VALUE "CompanyName", "Gyugyi Cybernetics\0"
+            VALUE "FileDescription", "LDLITE MFC Application\0"
+            VALUE "FileVersion", "1, 0, 0, 1\0"
+            VALUE "InternalName", "LDLITE\0"
+            VALUE "LegalCopyright", "Copyright (C) 1998, Paul J. Gyugyi\0"
+            VALUE "LegalTrademarks", "\0"
+            VALUE "OriginalFilename", "ldlite.EXE\0"
+            VALUE "PrivateBuild", "\0"
+            VALUE "ProductName", "LDLITE\0"
+            VALUE "ProductVersion", "1,6,0,0\0"
+            VALUE "SpecialBuild", "\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 289
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 155
+    END
+
+    IDD_SCALE_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 83
+    END
+
+    IDD_OPTIONS_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 191
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 238
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE PRELOAD DISCARDABLE 
+BEGIN
+    IDR_MAINFRAME           "ldlite\n\nldlite\nLDraw file (*.dat)\n.dat\nldlite.Document\nldlite Document"
+END
+
+STRINGTABLE PRELOAD DISCARDABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "ldlite"
+    AFX_IDS_IDLEMESSAGE     "Ready"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_INDICATOR_EXT        "EXT"
+    ID_INDICATOR_CAPS       "CAP"
+    ID_INDICATOR_NUM        "NUM"
+    ID_INDICATOR_SCRL       "SCRL"
+    ID_INDICATOR_OVR        "OVR"
+    ID_INDICATOR_REC        "REC"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_FILE_NEW             "Create a new document\nNew"
+    ID_FILE_OPEN            "Open an existing document\nOpen"
+    ID_FILE_CLOSE           "Close the active document\nClose"
+    ID_FILE_SAVE            "Save the active document\nSave"
+    ID_FILE_SAVE_AS         "Save the active document with a new name\nSave As"
+    ID_FILE_PAGE_SETUP      "Change the printing options\nPage Setup"
+    ID_FILE_PRINT_SETUP     "Change the printer and printing options\nPrint Setup"
+    ID_FILE_PRINT           "Print the active document\nPrint"
+    ID_FILE_PRINT_PREVIEW   "Display full pages\nPrint Preview"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_APP_ABOUT            "Display program information, version number and copyright\nAbout"
+    ID_APP_EXIT             "Quit the application; prompts to save documents\nExit"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_FILE_MRU_FILE1       "Open this document"
+    ID_FILE_MRU_FILE2       "Open this document"
+    ID_FILE_MRU_FILE3       "Open this document"
+    ID_FILE_MRU_FILE4       "Open this document"
+    ID_FILE_MRU_FILE5       "Open this document"
+    ID_FILE_MRU_FILE6       "Open this document"
+    ID_FILE_MRU_FILE7       "Open this document"
+    ID_FILE_MRU_FILE8       "Open this document"
+    ID_FILE_MRU_FILE9       "Open this document"
+    ID_FILE_MRU_FILE10      "Open this document"
+    ID_FILE_MRU_FILE11      "Open this document"
+    ID_FILE_MRU_FILE12      "Open this document"
+    ID_FILE_MRU_FILE13      "Open this document"
+    ID_FILE_MRU_FILE14      "Open this document"
+    ID_FILE_MRU_FILE15      "Open this document"
+    ID_FILE_MRU_FILE16      "Open this document"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_NEXT_PANE            "Switch to the next window pane\nNext Pane"
+    ID_PREV_PANE            "Switch back to the previous window pane\nPrevious Pane"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_WINDOW_SPLIT         "Split the active window into panes\nSplit"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_EDIT_CLEAR           "Erase the selection\nErase"
+    ID_EDIT_CLEAR_ALL       "Erase everything\nErase All"
+    ID_EDIT_COPY            "Copy the selection and put it on the Clipboard\nCopy"
+    ID_EDIT_CUT             "Cut the selection and put it on the Clipboard\nCut"
+    ID_EDIT_FIND            "Find the specified text\nFind"
+    ID_EDIT_PASTE           "Insert Clipboard contents\nPaste"
+    ID_EDIT_REPEAT          "Repeat the last action\nRepeat"
+    ID_EDIT_REPLACE         "Replace specific text with different text\nReplace"
+    ID_EDIT_SELECT_ALL      "Select the entire document\nSelect All"
+    ID_EDIT_UNDO            "Undo the last action\nUndo"
+    ID_EDIT_REDO            "Redo the previously undone action\nRedo"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_VIEW_TOOLBAR         "Show or hide the toolbar\nToggle ToolBar"
+    ID_VIEW_STATUS_BAR      "Show or hide the status bar\nToggle StatusBar"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    AFX_IDS_SCSIZE          "Change the window size"
+    AFX_IDS_SCMOVE          "Change the window position"
+    AFX_IDS_SCMINIMIZE      "Reduce the window to an icon"
+    AFX_IDS_SCMAXIMIZE      "Enlarge the window to full size"
+    AFX_IDS_SCNEXTWINDOW    "Switch to the next document window"
+    AFX_IDS_SCPREVWINDOW    "Switch to the previous document window"
+    AFX_IDS_SCCLOSE         "Close the active window and prompts to save the documents"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    AFX_IDS_SCRESTORE       "Restore the window to normal size"
+    AFX_IDS_SCTASKLIST      "Activate Task List"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    AFX_IDS_PREVIEW_CLOSE   "Close print preview mode\nCancel Preview"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_MENUITEM32771        "Toggle shading on model."
+    ID_SHOW_PARTS           "Enable screen updates whenever a primiitive is drawn"
+    ID_DRAW_ALL             "Draw every detail to the screen (LDraw-style)"
+    ID_DRAW_PARTS           "Update the screen only when a part is fully drawn. (faster)"
+    ID_DRAW_MODEL           "Update the screen only after full model has been drawn."
+    ID_MENU_ZOOM            "Set Scale Factor"
+    IDR_COLOR               "Change color of brick"
+    IDR_CLOCKWISE           "Rotate the model"
+    IDR_PAUSE               "Controls whether LDLite waits for input at STEP lines."
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDR_WIRE                "Toggle wireframe display"
+    ID_DRAW_STEPS           "Update screen after each STEP"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_INDICATOR_TYPE0      "LDLITE Copyright 1999 Paul Gyugyi. Distributed by Gyugyi Cybernetics"
+    ID_INDICATOR_STEP       "Step ######"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif
+#include "res\ldlite.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#include "afxprint.rc"       // printing/print preview resources
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
