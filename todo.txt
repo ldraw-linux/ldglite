@@ -1,5 +1,17 @@
 ----------------------------------------------------------------------
 
+Add a parts.lst lookup.  This could use the current 4 line display to
+show a search string and 3 lines from parts.lst.  Start the lookup on
+'?' key.  End lookup with ESC or ENTER.  Show one red line and use the
+code that displays the selected part to display the part on the red
+line.  (We should already be in Part Lookup mode with a selected part
+when the search is started.)  Read the entire parts.lst file into
+memory the first time the '?' key is pressed.  Allow searching (like
+ldlist) in the part list.  PGUP and PGDN should do something, as
+should the UP and DOWN arrows.
+
+----------------------------------------------------------------------
+
 Add cmdline arg that prints cmdline usage message.  (-h -? --help)
 Use the same help message in scrolling window in MUI GUI.
 
