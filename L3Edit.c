@@ -132,7 +132,7 @@ int Delete1Part(int partnum)
 /*****************************************************************************/
 int Move1Part(int partnum, float m[4][4], int premult)
 {
-    float          m1[4][4];
+    float          r[4], m1[4][4];
     int            i = 0;
     struct L3LineS *LinePtr;
     float x, y, z;
@@ -160,14 +160,14 @@ int Move1Part(int partnum, float m[4][4], int premult)
 	}
 	else
 	{
-	  x = LinePtr->v[0][3];
+          x = LinePtr->v[0][3]; // Save the original origin
 	  y = LinePtr->v[1][3];
 	  z = LinePtr->v[2][3];
-	  LinePtr->v[0][3] = 0; // Rotate around origin
+	  LinePtr->v[0][3] = 0; // Rotate around origin (0,0,0)
 	  LinePtr->v[1][3] = 0;
 	  LinePtr->v[2][3] = 0;
 	  M4M4Mul(m1,m,LinePtr->v);
-	  m1[0][3] = x;
+	  m1[0][3] = x;         // Restory the original origin
 	  m1[1][3] = y;
 	  m1[2][3] = z;
 	}
@@ -178,6 +178,26 @@ int Move1Part(int partnum, float m[4][4], int premult)
     case 3:
     case 4:
     case 5:
+	for (i=0; i<LinePtr->LineType; i++)
+	{
+	    if (premult)
+	    {
+		M4V3Mul(r,m,LinePtr->v[i]);
+		LinePtr->v[i][0]=r[0];
+		LinePtr->v[i][1]=r[1];
+		LinePtr->v[i][2]=r[2];
+	    }
+	    else
+	    {
+		M4V3Mul(r,m,LinePtr->v[i]);
+		LinePtr->v[i][0]=r[0];
+		LinePtr->v[i][1]=r[1];
+		LinePtr->v[i][2]=r[2];
+	    }
+	    if (i >= 3) // type five line only has 4 points.
+		break;
+	}
+	break;
     default:
 	break;
     }
@@ -217,6 +237,10 @@ int Rotate1Part(int partnum, float m[4][4])
     case 3:
     case 4:
     case 5:
+	// This should work unless LinePtr->v[i] has bad numbers for linetypes 2,3.
+	M4M4Mul(m1,LinePtr->v,m);
+        memcpy(LinePtr->v, m1, sizeof(LinePtr->v));
+	break;
     default:
 	break;
     }
@@ -257,6 +281,15 @@ int Translate1Part(int partnum, float m[4][4])
     case 3:
     case 4:
     case 5:
+	for (i=0; i<LinePtr->LineType; i++)
+	{
+	    LinePtr->v[i][0] += m[0][3];
+	    LinePtr->v[i][1] += m[1][3];
+	    LinePtr->v[i][2] += m[2][3];
+	    if (i >= 3) // type five line only has 4 points.
+		break;
+	}
+	break;
     default:
 	break;
     }
@@ -293,6 +326,8 @@ int Color1Part(int partnum, int Color)
     case 3:
     case 4:
     case 5:
+	LinePtr->Color = Color;
+	break;
     default:
 	break;
     }
@@ -939,11 +974,14 @@ void GetPartBox(struct L3LineS *LinePtr, int sc[4])
   vector3d       bb3d[8];
   float m[4][4];
   struct L3PartS *PartPtr = LinePtr->PartPtr;
+  int            numpoints = 8;
+  struct L3PartS FakePart;
 
   GLdouble s0x, s0y, s0z;
   GLdouble s1x, s1y, s1z;
   GLdouble s2x, s2y, s2z;
 
+#if 0
   // NOTE:  Must eventually add support for primitives.
   //if (LinePtr->LineType == 0)
   if (LinePtr->LineType != 1)
@@ -954,9 +992,43 @@ void GetPartBox(struct L3LineS *LinePtr, int sc[4])
     sc[3] = 1;
     return;
   }
+#else
+  if (LinePtr->LineType == 0)
+  {
+    sc[0] = 0;
+    sc[1] = 0;
+    sc[2] = 1;
+    sc[3] = 1;
+    return;
+  }
+  else if (LinePtr->LineType != 1)
+  {
+    //sc[0] = 0;
+    //sc[1] = 0;
+    //sc[2] = Width;
+    //sc[3] = Height;
+    //return;
+
+    PartPtr = &FakePart;
+    numpoints = LinePtr->LineType;
+    if (numpoints > 4)
+	numpoints = 4;
+    for (i = 0; i < numpoints; i++)
+    {
+	M4V3Mul(r,m_m,LinePtr->v[i]);
+	bb3d[0].x=r[0];
+	bb3d[0].y=r[1];
+	bb3d[0].z=r[2];
+    }
+  }
+  else
+#endif
    
+  {
+  numpoints = 8;
   M4M4Mul(m,m_m,LinePtr->v); // Adjust center point of part by view matrix.
   MakePartBox(PartPtr, m, bb3d);
+  }
 
   // Gotta convert to screen coords first for opengl.
   s2x = s1y = 0.0;

@@ -118,6 +118,7 @@ static int list_made = 0;
 #define INVISIBLE_MODE 	0x0010
 #define STUDONLY_MODE 	0x0020
 #define STUDLINE_MODE 	0x0040
+#define XOR_MODE 	0x0080
 
 #define USE_DOUBLE_BUFFER
 #define USE_OPENGL_STENCIL
@@ -2565,10 +2566,12 @@ int XORcurPiece()
     glDisable( GL_DEPTH_TEST ); // don't test for depth -- just put in front
   glEnable( GL_COLOR_LOGIC_OP ); 
   glLogicOp(GL_XOR);
+  ldraw_commandline_opts.F |= XOR_MODE;
   glColor3f(1.0, 1.0, 1.0); // white
   glCurColorIndex = -2;
   retval = Draw1Part(curpiece, 15);
   glLogicOp(GL_COPY);
+  ldraw_commandline_opts.F &= ~(XOR_MODE);
   if (movingpiece == curpiece)
   {
     z_line_offset -= 1.0;
@@ -2795,6 +2798,7 @@ void DrawTNTPiece(void)
 
 #if 1
   glLogicOp(GL_XOR);
+  ldraw_commandline_opts.F |= XOR_MODE;
 
   glDepthFunc(GL_LESS);
   glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
@@ -2806,6 +2810,7 @@ void DrawTNTPiece(void)
   DrawCurPart(15);
 
   glLogicOp(GL_COPY);
+  ldraw_commandline_opts.F &= ~(XOR_MODE);
   glDepthFunc(GL_LESS);     // New value always wins.
   glDisable( GL_COLOR_LOGIC_OP ); 
 

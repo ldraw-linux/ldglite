@@ -70,6 +70,7 @@ extern int Init1LineCounter(void);
 #define INVISIBLE_MODE 	0x0010
 #define STUDONLY_MODE 	0x0020
 #define STUDLINE_MODE 	0x0040
+#define XOR_MODE 	0x0080
 
 //************************************************************************
 void MakePartBox(struct L3PartS *PartPtr,float m[4][4], vector3d bb3d[8])
@@ -468,6 +469,10 @@ int Draw1PartPtr(struct L3LineS *LinePtr, int Color)
 	int CurColor = 7;
 	int SaveColor = LinePtr->Color;
 
+	int            i;
+	float          r[4];
+	vector3d       v3d[4];
+
 	InitViewMatrix();
 
 	if (Color < 0) 
@@ -497,10 +502,68 @@ int Draw1PartPtr(struct L3LineS *LinePtr, int Color)
 	    M4M4Mul(m1,m_m,LinePtr->v);
 	    DrawPart(0,LinePtr->PartPtr,Color,m1);
 	    break;
-	case 2:
-	case 3:
-	case 4:
-	case 5:
+		case 2:
+			for (i=0; i<LinePtr->LineType; i++)
+			{
+				M4V3Mul(r,m_m,LinePtr->v[i]);
+				v3d[i].x=r[0];
+				v3d[i].y=r[1];
+				v3d[i].z=r[2];
+			}
+			render_line(&v3d[0],&v3d[1],Color);
+			break;
+		case 3:
+			for (i=0; i<LinePtr->LineType; i++)
+			{
+				M4V3Mul(r,m_m,LinePtr->v[i]);
+				v3d[i].x=r[0];
+				v3d[i].y=r[1];
+				v3d[i].z=r[2];
+			}
+		        if (zWire)
+			{
+			    render_line(&v3d[0],&v3d[1],Color);
+			    render_line(&v3d[1],&v3d[2],Color);
+			    render_line(&v3d[2],&v3d[0],Color);
+			    break;
+			}
+			render_triangle(&v3d[0],&v3d[1],&v3d[2],Color);
+			break;
+		case 4:
+			for (i=0; i<LinePtr->LineType; i++)
+			{
+				M4V3Mul(r,m_m,LinePtr->v[i]);
+				v3d[i].x=r[0];
+				v3d[i].y=r[1];
+				v3d[i].z=r[2];
+			}
+		        if (zWire)
+			{
+			    render_line(&v3d[0],&v3d[1],Color);
+			    render_line(&v3d[1],&v3d[2],Color);
+			    render_line(&v3d[2],&v3d[3],Color);
+			    render_line(&v3d[3],&v3d[0],Color);
+			    break;
+			}
+			render_quad(&v3d[0],&v3d[1],&v3d[2],&v3d[3],Color);
+			break;
+		case 5:
+			for (i=0; i<4; i++)
+			{
+				M4V3Mul(r,m_m,LinePtr->v[i]);
+				v3d[i].x=r[0];
+				v3d[i].y=r[1];
+				v3d[i].z=r[2];
+			}
+			if (ldraw_commandline_opts.F & XOR_MODE)
+			{
+			    render_line(&v3d[0],&v3d[1],Color);
+			    render_line(&v3d[0],&v3d[2],Color);
+			    render_line(&v3d[1],&v3d[3],Color);
+			    break;
+			}
+			render_five(&v3d[0],&v3d[1],&v3d[2],&v3d[3],Color);
+			break;
 	default:
 	    break;
 	}
@@ -525,43 +588,9 @@ int Draw1Part(int partnum, int Color)
 	{
 	    if (i == partnum)
 	    {
-	        SaveColor = LinePtr->Color;
-		if (Color < 0) 
-		  Color = LinePtr->Color;
-		else
-		  LinePtr->Color = Color;
-		switch (Color)
-		{
-		case 16:
-			Color = CurColor;
-			break;
-		case 24:
-			if (0 <= CurColor  &&  CurColor <= 15)
-				Color = edge_color(CurColor);
-			else
-				Color = 0;
-			break;
-		default:
-			break;
-		}
-		
-		switch (LinePtr->LineType)
-		{
-		case 0:
-			break;
-		case 1:
-			M4M4Mul(m1,m_m,LinePtr->v);
-			DrawPart(0,LinePtr->PartPtr,Color,m1);
-			break;
-		case 2:
-		case 3:
-		case 4:
-		case 5:
-		default:
-			break;
-		}
-
-		LinePtr->Color = SaveColor;
+		ldraw_commandline_opts.F |= XOR_MODE;
+		Draw1PartPtr(LinePtr, Color);
+		ldraw_commandline_opts.F &= ~(XOR_MODE);
 		return 1;
 	    }
 	    i++;
