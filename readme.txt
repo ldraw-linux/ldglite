@@ -279,17 +279,26 @@ Command line options (see also the original ldlite docs for more):
 
 Hot Keys (especially useful in fullscreen gamemode):
 NOTE:  A few keys were changed in 0.9.0 to accomodate LEDIT emulation mode.
+The arrow key combinations were redefined in 0.9.6.  CTRL key moves camera.
 
 F10 enters fullscreen gamemode.  (May be faster on some video cards)
 F9 exits fullscreen gamemode.
+
 Right Mouse button displays the popup menu.
 Left Mouse Drag will rotate the model.
 Shift Mouse Drag rotates the model in solid bounding box mode.
 Ctrl Mouse Drag rotates the model in solid studless mode.
-Arrow keys turn the viewpoint camera 5 degrees left, right, up, down.
-Alt Arrow keys roll the camera left, right, up, down.
-Ctrl Arrow keys move the camera left, right, up, down.
+
+Arrows keys move the current part in LEDIT mode, the model in LDRAW mode.
+Shifted Arrow keys spin the model by 1 degree.
+Alt and Arrow keys spin the model by 5 degrees.
+Shift, Alt, and Arrows spin the model by 45 degrees.
+
+Ctrl Arrow keys move the camera position left, right, up, down.
+Ctrl Shift Arrow keys turn the camera 5 degrees left, right, up, down.
+Ctrl Alt Arrow keys roll the camera left, right, up, down.
 PGUP and PGDN move the camera in and out (only visible in perspective mode)
+
 0-9 keys pick one of the preset viewpoints.
 + scales the model up to double size. (ALT +  zooms in 10%)
 - shrinks the model by half.  (ALT -  zooms out 10%)
