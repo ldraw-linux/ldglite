@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.0.11     ";
+char ldgliteVersion[] = "Version 1.0.12     ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -982,7 +982,7 @@ void parse_view(char *viewMatrix);
 void getCamera(float m[4][4], float v[3]);
 
 /***************************************************************/
-void printPOVMatrix()
+void printPOVMatrix(FILE *f)
 {
   float m[4][4] = {
     {1.0,0.0,0.0,0.0},
@@ -1014,7 +1014,7 @@ void printPOVMatrix()
   bc[0] = zcolor_table_default[i].primary.r / 255.0;
   bc[1] = zcolor_table_default[i].primary.b / 255.0;
   bc[2] = zcolor_table_default[i].primary.g / 255.0;
-  printf("\nbackground { color rgb <%g,%g,%g>}\n", bc[0], bc[1], bc[2]);
+ fprintf(f,"\nbackground { color rgb <%g,%g,%g>}\n", bc[0], bc[1], bc[2]);
 
   if (1) //(ldraw_projection_type)
   {
@@ -1030,11 +1030,11 @@ void printPOVMatrix()
     pct = 100.0 * ((1.0/ldraw_commandline_opts.S) - 1.0);
   }
 
-  printf("\ncamera {\n");
-  printf("\t#declare PCT = %g; // Percentage further away\n",pct);
-  printf("\t#declare STEREO = 0; // Normal view\n");
-  printf("\t//#declare STEREO =  degrees(atan2(1,12))/2; // Left view\n");
-  printf("\t//#declare STEREO = -degrees(atan2(1,12))/2; // Right view\n");
+ fprintf(f,"\ncamera {\n");
+ fprintf(f,"\t#declare PCT = %g; // Percentage further away\n",pct);
+ fprintf(f,"\t#declare STEREO = 0; // Normal view\n");
+ fprintf(f,"\t//#declare STEREO =  degrees(atan2(1,12))/2; // Left view\n");
+ fprintf(f,"\t//#declare STEREO = -degrees(atan2(1,12))/2; // Right view\n");
 
   // The LdrawOblique matrix is a projection matrix NOT supported by POV.
   // Substitute Oblique view matrix.
@@ -1088,18 +1088,18 @@ void printPOVMatrix()
   dist[3] *= scale; // Undo scaling so angle is calculated correctly.
 
 #if 0
-  printf("\tlocation <%g,%g,%g>\n",cc[0],cc[1],cc[2]);
+ fprintf(f,"\tlocation <%g,%g,%g>\n",cc[0],cc[1],cc[2]);
 #else
-  printf("\tlocation <%g,%g,%g> +PCT/100.0*<%g,%g,%g>\n",
+ fprintf(f,"\tlocation <%g,%g,%g> +PCT/100.0*<%g,%g,%g>\n",
 	 cc[0],cc[1],cc[2], dist[0],dist[1],dist[2]);
   // NOTE: what is the axis to rotate about for l3p STEREO?
   // Is it the perpendicular bisector at the look_from point?
   // figure it out and switch to vaxis_rotate() for location.
 #endif
   //printf("\tsky      -y\n");
-  printf("\tsky <%g,%g,%g>\n",sky[0],sky[1],sky[2]);
-  printf("\tright    -4/3*x\n");
-  printf("\tlook_at <%g,%g,%g>\n",cla[0],cla[1],cla[2]);
+ fprintf(f,"\tsky <%g,%g,%g>\n",sky[0],sky[1],sky[2]);
+ fprintf(f,"\tright    -4/3*x\n");
+ fprintf(f,"\tlook_at <%g,%g,%g>\n",cla[0],cla[1],cla[2]);
 
   if (ldraw_projection_type)
   {
@@ -1113,10 +1113,10 @@ void printPOVMatrix()
     angle /= PI_180;
   }
 
-  printf("\tangle %g\n", angle);
-  printf("\trotate   <0,1e-5,0> // Prevent gap between adjecent quads\n");
-  printf(projectionstr);
-  printf("}\n\n");
+ fprintf(f,"\tangle %g\n", angle);
+ fprintf(f,"\trotate   <0,1e-5,0> // Prevent gap between adjecent quads\n");
+ fprintf(f,projectionstr);
+ fprintf(f,"}\n\n");
 
 #if 0
   // Give the ldglite lighting model a shot.
@@ -1130,7 +1130,7 @@ void printPOVMatrix()
     lpp[i] *= 100.0; // Move far away
     lp[i] = lightcolor0[i];
   }
-  printf("light_source {\n\t<%g,%g,%g>\n\tcolor rgb <%g,%g,%g>\n}\n\n",
+ fprintf(f,"light_source {\n\t<%g,%g,%g>\n\tcolor rgb <%g,%g,%g>\n}\n\n",
 	 lpp[0],lpp[1],lpp[2], lp[0],lp[1],lp[2]);
 #endif
 
@@ -1142,7 +1142,7 @@ void printPOVMatrix()
     if (filename[0] == '.') // I hate the ./filename thing.
       strcpy(filename, datfilename);
 
-    printf("l3p -cc%g,%g,%g -cla%g,%g,%g -ca%g %s -b%d\n\n", 
+   fprintf(f,"l3p -cc%g,%g,%g -cla%g,%g,%g -ca%g %s -b%d\n\n", 
 	   cc[0],cc[1],cc[2], cla[0],cla[1],cla[2], angle,
 	   filename, ldraw_commandline_opts.B);
   }
@@ -1150,18 +1150,18 @@ void printPOVMatrix()
   printModelMat("ModelM");
   getCamera(m, up);
 
-  printf("%s(%g,%g,%g,%g, %g,%g,%g,%g %g,%g,%g,%g, %g,%g,%g,%g)\n", "Camera",
+ fprintf(f,"%s(%g,%g,%g,%g, %g,%g,%g,%g %g,%g,%g,%g, %g,%g,%g,%g)\n", "Camera",
 	 m[0][0], m[0][1] , m[0][2], m[0][3],
 	 m[1][0], m[1][1] , m[1][2], m[1][3],
 	 m[2][0], m[2][1] , m[2][2], m[2][3],
 	 m[3][0], m[3][1] , m[3][2], m[3][3]);
-  printf("%s(%g,%g,%g)\n", "Offset", up[0], up[1], up[2]);
+ fprintf(f,"%s(%g,%g,%g)\n", "Offset", up[0], up[1], up[2]);
 
 
 }
 
 /***************************************************************/
-void printLdrawMatrix()
+void printLdrawMatrix(FILE *f)
 {
   char matrix_string[256];
   char filename[256];
@@ -1174,7 +1174,7 @@ void printLdrawMatrix()
   s = matrix_string;
   if(ldraw_commandline_opts.B != 15)
   {
-    sprintf(s,"-b% ", ldraw_commandline_opts.S);
+    sprintf(s,"-b%d ", ldraw_commandline_opts.S);
     s = matrix_string + strlen(matrix_string);
   }
   if (lineWidth > 1.0)
@@ -1215,9 +1215,7 @@ void printLdrawMatrix()
 	  ldraw_commandline_opts.A.h,
 	  ldraw_commandline_opts.A.i);
 
-  printf("%s %s %s\n",progname, matrix_string, filename);
-
-  printPOVMatrix();
+ fprintf(f,"%s %s %s\n",progname, matrix_string, filename);
 }
 
 /***************************************************************/
@@ -6552,7 +6550,8 @@ void fnkeys(int key, int x, int y)
 #endif
 #endif
   case GLUT_KEY_F12:
-    printLdrawMatrix();
+    printLdrawMatrix(stdout);
+    printPOVMatrix(stdout);
     return;
   default:
     return;
