@@ -353,6 +353,111 @@ void reshape(int width, int height);
 void rendersetup(void);
 
 /***************************************************************/
+char *pastelist = NULL;
+
+/***************************************************************/
+char *strrpbrk(const char *szString, const char *szChars)
+{
+  const char  *p;
+  char        *p0, *p1;
+
+  for (p = szChars, p0 = p1 = NULL; p && *p; ++p)
+  {
+    p1 = strrchr(szString, *p);
+    if (p1 && p1 > p0)
+      p0 = p1;
+  }
+  return p0;
+}
+
+#ifdef WINDOWS
+/***************************************************************/
+void pasteCommand(int i)
+{
+  char *str;
+  char *dst = &ecommand[i];
+  char *whitespace = " \t\r\n";
+  char *seps = "\r\n"; // Newline separator chars for DOS, MAC & UNIX.
+  char *token;
+  char *s;
+  char *p;
+	  
+  if (pastelist)
+  {
+    str = pastelist;
+    pastelist = NULL;
+  }
+  else if(OpenClipboard(NULL))
+  {
+    str = strdup((char*)GetClipboardData(CF_TEXT));
+    printf("got <%s> from clipboard\n", str);
+    CloseClipboard(); 
+  }
+  else 
+    return;
+    
+  // For partname or filename, do not allow space or tab chars.
+  for (token = strtok( str, seps );
+       token != NULL;
+       token = strtok( NULL, seps ))
+  {
+    printf("got token <%s> from clipboard\n", token);
+    
+    // token is one line of text.
+    if ((ecommand[0] == 'p') || 
+	(ecommand[0] == 'L') || (ecommand[0] == 'S'))
+    {
+      // NOTE: Should skip leading white space, trailing white space.
+      // Search for first '.' char and grab filename/path around it.
+      // Should also allow paste of a full LDRAW type 1 line.
+      // Actually should allow paste of many LDRAW lines/files.
+      // n = sscanf(token,
+      //     "%d %d %f %f %f %f %f %f %f %f %f %f %f %f %s",...)
+      // if ((n == 15) && (d == 1))
+      //     it's a type 1 LDRAW line.  Keep all info.
+      
+      // Look for '.' and remove trailing, leading whitespace.
+      // If no '.' found, focus on the first word.
+      p = strchr(token, '.');
+      if (p == NULL)
+	p = token;
+      
+      // Eliminate trailing whitespace
+      s = strpbrk(p, whitespace);
+      if (s)
+	*s = 0;
+      printf("got trailing <%s> from clipboard\n", token);
+      
+      
+      // Eliminate leading whitespace
+      *p = 0;
+      s = strrpbrk(token, whitespace);
+      if (s)
+	token = s+1;
+      *p = '.';
+      
+      printf("got leading <%s> from clipboard\n", token);
+    }
+    
+    if (token && strlen(token))
+    {
+      if (ecommand[i] == 0)
+      {
+	dst = &ecommand[i];
+	strcat(dst, token);
+      }
+    }
+  }
+  
+  free(str);
+  
+  printf("ecommand = <%s>\n", ecommand);
+  
+  edit_mode_gui(); // Redisplay the GUI
+}
+#endif
+
+/***************************************************************/
 void CopyColorBuffer(int srcbuffer, int destbuffer)
 {
   int savedirty;
@@ -4618,31 +4723,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 
     case 22: // Paste on Windows (CTRL-V)
 #ifdef WINDOWS
-      {
-	char *str;
-	char *dst = &ecommand[i];
-	if(OpenClipboard(NULL))
-	{
-	  str = (char*)GetClipboardData(CF_TEXT);
-
-	  // For partname or filename, do not allow space or tab chars.
-	  if ((ecommand[0] == 'p') || 
-	      (ecommand[0] == 'L') || (ecommand[0] == 'S'))
-	  {
-	    if (dst = strchr(str, ' ')) 
-	      *dst = 0;
-	    if (dst = strchr(str, 9)) 
-	      *dst = 0;
-	  }
-	  dst = &ecommand[i];
-	  strcat(dst, str);
-
-	  printf("ecommand = <%s>\n", ecommand);
-	  
-	  edit_mode_gui(); // Redisplay the GUI
-	}
-	CloseClipboard(); 
-      }
+      pasteCommand(i);
+      edit_mode_keyboard('\n', x, y);
 #endif
       break;
     case 8: // Backspace
@@ -4761,6 +4843,12 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
   case 'd':
   case 127: // Delete
     DelCurPiece();
+    return 1;
+  case 22:
+    edit_mode_keyboard('i', x, y);
+    edit_mode_keyboard('p', x, y);
+    pasteCommand(1);
+    edit_mode_keyboard('\n', x, y);
     return 1;
   }
 
@@ -5015,6 +5103,9 @@ void keyboard(unsigned char key, int x, int y)
   char partname[256];
 
   glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
+
+  if (pastelist)
+    key = 22;
 
   //if (ldraw_commandline_opts.debug_level == 1)
     printf("key(%c) = (%d, %d)\n", key, key, glutModifiers);
@@ -6960,12 +7051,16 @@ void SendKeyToCurrentApp( int key )
 WNDPROC  wpOrigMsgProc;
 
 /***************************************************************/
+// Intercept LDList and Windows Explorer style Drag and Drop events.
+/***************************************************************/
 LRESULT APIENTRY 
 MsgSubClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
   COPYDATASTRUCT *cds;
+  int iRet;
 
-  // Intercept WM_COPYDATA and convert string to WM_KEYDOWN, WM_KEYUPs.
+  // Intercept LDList style WM_COPYDATA messages 
+  // and convert string to WM_KEYDOWN, WM_KEYUPs.
   if (uMsg == WM_COPYDATA)
   {
     struct {
@@ -6984,16 +7079,20 @@ MsgSubClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
       CopyRecord = cds->lpData;
       printf("Copyrecord = %d, %d, %s\n",
 	     CopyRecord->X, CopyRecord->Y, CopyRecord->s);
+
+      pastelist = strdup(CopyRecord->s);
     }
+    else
+      return CallWindowProc(wpOrigMsgProc, hwnd, uMsg, wParam, lParam);
   }
-    // convert string to WM_KEYDOWN, WM_KEYUPs.
+  // Intercept Windows Explorer style Drag and Drop messages.
   else if (uMsg == WM_DROPFILES)
   {
     UINT  uNumFiles;
     TCHAR szNextFile [MAX_PATH];
     HDROP hdrop = (HDROP) wParam;
     UINT uFile;
-    int iRet;
+    int n = 0;
 
     printf("WM_DROPFILES\n");
 
@@ -7006,7 +7105,17 @@ MsgSubClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
       if ( DragQueryFile ( hdrop, uFile, szNextFile, MAX_PATH ) > 0 )
       {
 	printf("WM_DROPFILE <%s>\n", szNextFile);
+	n += strlen(szNextFile) + 1;
       }
+    }
+
+    pastelist = (char *) calloc(sizeof (char), n);
+    for ( uFile = 0; uFile < uNumFiles; uFile++ )
+    {
+      if (uFile > 0)
+	strcat(pastelist, "\n");
+      if ( DragQueryFile ( hdrop, uFile, szNextFile, MAX_PATH ) > 0 )
+	strcat(pastelist, szNextFile);
     }
 
     // Free up memory.
@@ -7016,17 +7125,19 @@ MsgSubClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     //GetKeyState(VK_SHIFT) & 0x80000000;
     //GetKeyState(VK_CONTROL) & 0x80000000;
+  }
+  else
+    return CallWindowProc(wpOrigMsgProc, hwnd, uMsg, wParam, lParam);
 
 #if 1
-    //iRet = PostMessage(hwnd, WM_KEYDOWN, VK_CONTROL, 0x8001);
-    iRet = PostMessage(hwnd, WM_KEYDOWN, 'V', 0x8001);
-    iRet = PostMessage(hwnd, WM_KEYUP, 'V', 0xc001);
-    //iRet = PostMessage(hwnd, WM_KEYUP, VK_CONTROL, 0xc001);
+  //iRet = PostMessage(hwnd, WM_KEYDOWN, VK_CONTROL, 0x8001);
+  iRet = PostMessage(hwnd, WM_KEYDOWN, 'V', 0x8001);
+  //iRet = PostMessage(hwnd, WM_KEYUP, 'V', 0xc001);
+  //iRet = PostMessage(hwnd, WM_KEYUP, VK_CONTROL, 0xc001);
 #else
-    iRet = PostMessage(hwnd, WM_KEYDOWN, VK_ESCAPE, 0x8001);
-    iRet = PostMessage(hwnd, WM_KEYUP, VK_ESCAPE, 0xc001);
+  iRet = PostMessage(hwnd, WM_KEYDOWN, VK_ESCAPE, 0x8001);
+  iRet = PostMessage(hwnd, WM_KEYUP, VK_ESCAPE, 0xc001);
 #endif
-  }
 
   // Call the original glut window proc.  
   // It should just ignore the msg types we intercept here anyhow.
