@@ -820,7 +820,8 @@ int Print1Model(char *filename)
     struct L3LineS *LinePtr;
     
     printf("Write DAT %s\n", filename);
-    f = fopen(filename, "w+");
+    //f = fopen(filename, "w+");
+    f = fopen(filename, "w");
     if (!f)
     {
 	printf("Could not open %s\n", filename);
