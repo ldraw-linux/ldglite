@@ -165,7 +165,8 @@ void write_bmp(char *filename)
     height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
     //width = ((width + 31)/32) * 32; // round to a multiple of 32.
     width = ((width + 3)/4) * 4; // round to a multiple of 4.
-    printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
     if ((width <= 0) || (height <= 0)) return;
   }
   
@@ -298,7 +299,8 @@ void write_png(char *filename)
     width = min((z.extent_x2 - xoff), (Width - xoff));
     height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
     width = ((width + 3)/4) * 4; // round to a multiple of 4.
-    printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
     if ((width <= 0) || (height <= 0)) return;
   }
   
@@ -575,7 +577,8 @@ void write_bmp8(char *filename)
     height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
     //width = ((width + 31)/32) * 32; // round to a multiple of 32.
     width = ((width + 3)/4) * 4; // round to a multiple of 4.
-    printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
     if ((width <= 0) || (height <= 0)) return;
   }
   
@@ -606,6 +609,8 @@ void write_bmp8(char *filename)
 /***************************************************************/
 int platform_step_comment(char *comment_string)
 {
+  printf("%s\n", comment_string);
+
   //glMatrixMode( GL_MODELVIEW );
   //glPushMatrix();
   //glLoadIdentity();
@@ -629,7 +634,8 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
   if (step == INT_MAX) {
     // end of top-level dat file reached
     //platform_step_comment(buf)
-    printf("Finished\n");
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("Finished\n");
   } 
   else 	if (step >= 0) {
     //platform_step_comment(buf)
@@ -677,8 +683,9 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
 //        think that will work here since OpenGL does the screen transform.
 //*************************************************************************
 
-  printf("EXTENTS: (%d, %d) -> (%d, %d)\n", zp->extent_x1, zp->extent_y1, 
-         zp->extent_x2, zp->extent_y2);
+  if (ldraw_commandline_opts.debug_level == 1)
+    printf("EXTENTS: (%d, %d) -> (%d, %d)\n", zp->extent_x1, zp->extent_y1, 
+	   zp->extent_x2, zp->extent_y2);
 
 #ifdef USE_PNG
       if (ldraw_image_type == 1)
@@ -694,7 +701,8 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
   }
   if (pause && (ldraw_commandline_opts.M == 'P')&&(step!=INT_MAX))  {
     if (step >= 0) {
-      printf("STEP %d level %d pause %d\n", step+1, level, pause);
+      if (ldraw_commandline_opts.debug_level == 1)
+	printf("STEP %d level %d pause %d\n", step+1, level, pause);
     }
   }
 }
@@ -702,7 +710,8 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
 /***************************************************************/
 void platform_zDraw(ZIMAGE *zp,void *zDC)
 {
-  printf("zdraw\n");
+  if (ldraw_commandline_opts.debug_level == 1)
+    printf("zdraw\n");
 }
 
 /***************************************************************/
@@ -1258,7 +1267,8 @@ void display(void)
     // printf("LoadModel: %d",ttt);
     list_made = 1;
   }
-  printf("DrawModel %s\n", datfilename);
+  if (ldraw_commandline_opts.debug_level == 1)
+    printf("DrawModel %s\n", datfilename);
   DrawModel();
 #else
 #ifdef ONE_BIG_DISPLAY_LIST
@@ -1281,7 +1291,8 @@ void display(void)
   if (mpd_subfile_name != NULL) 
   {
     // set file name to first subfile
-    printf("Draw MPD %s\n", mpd_subfile_name);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("Draw MPD %s\n", mpd_subfile_name);
 
     zcolor_init();
 
@@ -1361,8 +1372,7 @@ GLUT_BITMAP_HELVETICA_18
 
   if (ldraw_commandline_opts.M == 'P')
   {
-    printf("stepcount = %d of %d\n", curstep, stepcount);
-    sprintf(buf,"Step %d of %d.  ",curstep, stepcount);
+    sprintf(buf,"Step %d of %d.  ",curstep+1, stepcount+1);
     // Non-continuous output stop after each step.
     if (stepcount == curstep)
     {
@@ -1756,7 +1766,6 @@ void menu(int item)
 {
   if  (item == 1)
   {
-    printf("Updating MainMenu %d\n",mainmenunum);
     glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
     if (strcmp(filepattern, "*"))
     {
@@ -1844,11 +1853,9 @@ void dirmenu(int item)
     if (ldraw_commandline_opts.debug_level == 1)
       printf ("Found %d folders starting at %d in %s\n", FolderCount,minfilenum, myDir);
 
-    printf("Updating DirMenu %d\n",dirmenunum);
     glutSetMenu(dirmenunum);
     for(j = 1; j <= MAX_DIR_ENTRIES; j++) 
       glutChangeToMenuEntry(j, basename(FolderList[j-1]), j);
-    printf("Setting MainMenu %d\n",mainmenunum);
     glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
   }
   else 
@@ -1925,11 +1932,9 @@ void filemenu(int item)
     if (ldraw_commandline_opts.debug_level == 1)
       printf ("Found %d files starting at %d in %s\n", DateiCount,minfilenum, myDir);
 
-    printf("Updating FileMenu %d\n",filemenunum);
     glutSetMenu(filemenunum);
     for(j = 1; j <= MAX_DIR_ENTRIES; j++) 
       glutChangeToMenuEntry(j, basename(DateiListe[j-1]), j);
-    printf("Setting MainMenu %d\n",mainmenunum);
     glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
   }
   else 

@@ -221,7 +221,8 @@ void DrawModel(void)
 	  }
 	}
 
-	printf("SetViewMatrix(%s);\n", matrix_string);
+	if (ldraw_commandline_opts.debug_level == 1)
+	  printf("SetViewMatrix(%s);\n", matrix_string);
 	SetViewMatrix(matrix_string);
 	DrawPart(1,&Parts[0], 7, m_m);
 
@@ -232,7 +233,8 @@ void DrawModel(void)
 	  fclose(output_file);
 	  output_file = NULL;
 	}
-	printf("Done\n");
+	if (ldraw_commandline_opts.debug_level == 1)
+	  printf("Done\n");
 #else
 	if (!nParts) return;
 	SetViewMatrix("1 0 1  .5 1 -.5  -1 0 1");
