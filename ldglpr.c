@@ -57,6 +57,12 @@ OSMesaContext ctx;
 HGLRC hGLRC;
 HBITMAP m_dibSection;           // memory DIB for offscreen rendering
 #endif
+#ifdef AGL_OFFSCREEN_OPTION
+#include "agl.h"
+void *OSbuffer = NULL;
+AGLContext ctx;
+// NOTE:  Apple currently lists aglSetOffScreen() as unsupported by Carbon.
+#endif
 
 char *pix;
 
@@ -837,13 +843,15 @@ int SetOffScreenRendering()
 {
 #ifdef OSMESA_OPTION
   return 1;
-#else
+#endif
 #ifdef WIN_DIB_OPTION
   return 1;
-#else
+#endif
+#ifdef AGL_OFFSCREEN_OPTION
+  return 1;
+#endif
+
   return 0;
-#endif
-#endif
 }
 
 /***************************************************************/
@@ -861,6 +869,9 @@ int OffScreenDisplay()
    DrawScene();
 
    //platform_step_filename(curstep, filename);
+#endif
+#ifdef AGL_OFFSCREEN_OPTION
+   DrawScene();
 #endif
    return 0;
 }
@@ -933,17 +944,33 @@ int winOffScreenStart()
 
 #ifdef AGL_OFFSCREEN_OPTION
 //************************************************************************
-static AGLContext setupAGL(void * baseaddr,GLsizei rowbytes,GLsizei pixelsize)
+static AGLContext setupAGL(void)
 {
   AGLPixelFormat fmt;
   AGLContext     ctx;
   GLboolean      ok;
-  GLint          attrib[] = { AGL_RGBA, AGL_PIXEL_SIZE, 0,
+  GLsizei        rowbytes;
+  // AGL_ALL_RENDERERS, AGL_FULLSCREEN, AGL_DOUBLEBUFFER, AGL_ACCELERATED, 
+  // AGL_DEPTH_SIZE, 32,
+  // Found a note on google groups that DEPTH_SIZE does not work with OFFSCREEN
+  GLint          attrib[] = { AGL_RGBA, AGL_PIXEL_SIZE, 32, 
+			      AGL_DEPTH_SIZE, 32,
 			      AGL_OFFSCREEN, AGL_NONE };
   
-  /* Set the pixel size attribute */
-  attrib[2] = pixelsize;
-  
+  /* Allocate the image buffer */
+#if 0
+  // NOTE: Who allocates the depth buffer?  
+  OSbuffer = malloc( Width * Height * 4 * sizeof(GLubyte) );
+#else
+  // Try including the depth buffer.  By the way, who allocates depth for OSMesa?
+  OSbuffer = malloc( Width * Height * 8 * sizeof(GLubyte) );
+#endif
+
+  if (!OSbuffer) {
+    printf("Alloc image buffer failed!\n");
+    return NULL;
+  }
+
   /* Choose an rgb pixel format */
   fmt = aglChoosePixelFormat(NULL, 0, attrib);
   if ( fmt == NULL )
@@ -955,7 +982,10 @@ static AGLContext setupAGL(void * baseaddr,GLsizei rowbytes,GLsizei pixelsize)
     return NULL;
   
   /* Attach the off screen area to the context */
-  ok = aglSetOffScreen(ctx, Width, Height, rowbytes, baseaddr);
+  // NOTE:  Should the depth buffer bytes be included in rowbytes?
+  //        Or is this why google groups suggest depth fails for OffScreen?
+  rowbytes = Width * 4 * sizeof(GLubyte);
+  ok = aglSetOffScreen(ctx, Width, Height, rowbytes, OSbuffer);
   if( !ok )
     return NULL;
   
@@ -968,6 +998,14 @@ static AGLContext setupAGL(void * baseaddr,GLsizei rowbytes,GLsizei pixelsize)
   aglDestroyPixelFormat( fmt );
   
   return ctx;
+}
+
+/***************************************************************/
+void CleanupAGL( AGLContext ctx )
+{
+  aglSetCurrentContext( NULL );
+  aglSetDrawable( ctx, NULL );
+  aglDestroyContext( ctx );
 }
 #endif
 
@@ -1004,6 +1042,13 @@ int OffScreenRender()
       exit (0);
     }
 #endif
+#ifdef AGL_OFFSCREEN_OPTION
+    ctx = setupAGL();
+    if (ctx == NULL) {
+      printf("setupAGL failed!\n");
+      exit(0);
+    }
+#endif
 
     getDisplayProperties();
 
@@ -1033,5 +1078,12 @@ int OffScreenRender()
     wglDeleteContext(hGLRC);
 
 #endif
+#ifdef AGL_OFFSCREEN_OPTION
+   /* free the image buffer */
+   free( OSbuffer );
+
+   CleanupAGL( ctx );
+#endif
+
     return 0;
   }
