@@ -26,15 +26,9 @@
 #include <GL/glut.h>
 #include "platform.h"
 
-#ifdef USE_L3_PARSER
-// The L3 parser fixes bowtie quads once during parsing.
-// and (I hope) turns concave quads into 2 triangles?
-// So I don't need my slow 3 triangle hack.
-#define USE_QUADS 1
-#endif
-
 extern int curstep;
 extern int cropping;
+extern int use_quads;
 
 GLdouble model_mat[4*4];
 GLdouble proj_mat[4*4];
@@ -1043,53 +1037,56 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
     glColor3ub(zc.r, zc.g, zc.b);
   glCurColorIndex = c;
   // LDRAW has the y value reversed, so negate the y.
-#if USE_QUADS
-  glBegin(GL_QUADS);
-  if (zShading)
+  if (use_quads)
   {
-    getnormal(vp1, vp2, vp3, surf_norm);
-    glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
-  }
-  glVertex3f(vp1->x, -vp1->y, -vp1->z);
-  glVertex3f(vp2->x, -vp2->y, -vp2->z);
-  glVertex3f(vp3->x, -vp3->y, -vp3->z);
-  glVertex3f(vp4->x, -vp4->y, -vp4->z);
-#else
-  // Lame attempt to fix concave and bowtie quads gives bad shading.
-  // Gonna have to do some real math.
-  // Either find the convex hull or 
-  // Calculate turn direction with dot product of sequential cross products.
-  glBegin(GL_TRIANGLES);
-  if (zShading)
-  {
-    getnormal(vp1, vp2, vp3, surf_norm);
-#if 0
-    if (surf_norm[2] > 0.0) // Cheap hack: Always orient the normal toward eye
-      glNormal3f(-surf_norm[0], surf_norm[1], surf_norm[2]);
-    else
-#endif
+    glBegin(GL_QUADS);
+    if (zShading)
+    {
+      getnormal(vp1, vp2, vp3, surf_norm);
       glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+    }
+    glVertex3f(vp1->x, -vp1->y, -vp1->z);
+    glVertex3f(vp2->x, -vp2->y, -vp2->z);
+    glVertex3f(vp3->x, -vp3->y, -vp3->z);
+    glVertex3f(vp4->x, -vp4->y, -vp4->z);
   }
-  glVertex3f(vp1->x, -vp1->y, -vp1->z);
-  glVertex3f(vp2->x, -vp2->y, -vp2->z);
-  glVertex3f(vp4->x, -vp4->y, -vp4->z);
-  if (zShading)
+  else
   {
-    getnormal(vp2, vp3, vp4, surf_norm);
-    glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
-  }
-  glVertex3f(vp2->x, -vp2->y, -vp2->z);
-  glVertex3f(vp3->x, -vp3->y, -vp3->z);
-  glVertex3f(vp4->x, -vp4->y, -vp4->z);
-  if (zShading)
-  {
-    getnormal(vp1, vp3, vp4, surf_norm);
-    glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
-  }
-  glVertex3f(vp1->x, -vp1->y, -vp1->z);
-  glVertex3f(vp3->x, -vp3->y, -vp3->z);
-  glVertex3f(vp4->x, -vp4->y, -vp4->z);
+    // Lame attempt to fix concave and bowtie quads gives bad shading.
+    // Gonna have to do some real math.
+    // Either find the convex hull or 
+    // Calculate turn direction with dot product of sequential cross products.
+    glBegin(GL_TRIANGLES);
+    if (zShading)
+    {
+      getnormal(vp1, vp2, vp3, surf_norm);
+#if 0
+      if (surf_norm[2] > 0.0)// Cheap hack: Always orient the normal toward eye
+	glNormal3f(-surf_norm[0], surf_norm[1], surf_norm[2]);
+      else
 #endif
+	glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+    }
+    glVertex3f(vp1->x, -vp1->y, -vp1->z);
+    glVertex3f(vp2->x, -vp2->y, -vp2->z);
+    glVertex3f(vp4->x, -vp4->y, -vp4->z);
+    if (zShading)
+    {
+      getnormal(vp2, vp3, vp4, surf_norm);
+      glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+    }
+    glVertex3f(vp2->x, -vp2->y, -vp2->z);
+    glVertex3f(vp3->x, -vp3->y, -vp3->z);
+    glVertex3f(vp4->x, -vp4->y, -vp4->z);
+    if (zShading)
+    {
+      getnormal(vp1, vp3, vp4, surf_norm);
+      glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+    }
+    glVertex3f(vp1->x, -vp1->y, -vp1->z);
+    glVertex3f(vp3->x, -vp3->y, -vp3->z);
+    glVertex3f(vp4->x, -vp4->y, -vp4->z);
+  }
   glEnd();
   if ((c > 32) && (c < 64))
     {
