@@ -223,6 +223,7 @@ float moveXamount = 10.0;
 float moveYamount = 8.0;
 float moveZamount = 10.0;
 float turnCenter[4][4] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int turnAxisVisible = 0;
 // staticbuffer is where our non-moving background goes
 // screenbuffer is where the final composite goes
 int staticbuffer = GL_BACK;
@@ -258,6 +259,7 @@ extern int Get1PartBox(int partnum, int sc[4]);
 extern int Make1Primitive(int partnum, char *str);
 extern int GetCurLineType(int partnum);
 extern int Inline1Part(int partnum);
+extern int DrawTurnAxis(float m[4][4]);
 
 int use_quads = 0;
 int curstep = 0;
@@ -1572,6 +1574,14 @@ render(void)
     glVertex3f(0.0, 0.0, 0.0);
     glVertex3f(0.0, 0.0, 400.0);
     glEnd();
+  }
+
+  if (editing)
+  {
+    if (turnAxisVisible)
+    {
+      DrawTurnAxis(turnCenter);
+    }
   }
 
   glColor3f(1.0, 1.0, 1.0); // White.
@@ -3460,7 +3470,13 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
           turnCenter[0][3] = turnCenter[1][3] = turnCenter[2][3] = 0.0;
 	printf("Turn Center at %f, %f, %f\n", turnCenter[0][3], turnCenter[1][3], turnCenter[2][3]);
 	clear_edit_mode_gui();
-	edit_mode_gui();
+	if (turnAxisVisible)
+	{
+	  dirtyWindow = 1;
+	  glutPostRedisplay();
+	}
+	else
+	  edit_mode_gui();
 	return 1;
       case 'o':
         sprintf(eprompt[0], "Turn Origin (x y z): ");
@@ -3470,8 +3486,10 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	edit_mode_gui();
 	return 1;
       case 'a':
-	drawAxis ^= 1;
+	turnAxisVisible ^= 1;
+	// printf("TurnAxisVisible = %d\n", turnAxisVisible);
 	clear_edit_mode_gui();
+	dirtyWindow = 1;
 	glutPostRedisplay();
 	return 1;
       case 'r':
@@ -3987,7 +4005,13 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	turnCenter[1][3] = v[0][1];
 	turnCenter[2][3] = v[0][2];
 	printf("Turn Center at %f, %f, %f\n", v[0][0], v[0][1], v[0][2]);
-	edit_mode_gui();
+	if (turnAxisVisible)
+	{
+	  dirtyWindow = 1;
+	  glutPostRedisplay();
+	}
+	else
+	  edit_mode_gui();
 	break;
       case '1':
 	sscanf(&(ecommand[1]),"%f", &f);
@@ -4066,7 +4090,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
   switch(key) {
   case 27:
   case '/':
-    sprintf(eprompt[0], "File Edit View Turn Piece Options Quit");
+    sprintf(eprompt[0], "File Edit View Turn Rotate Piece Options  Quit");
     ecommand[0] = '/';
     ecommand[1] = 0;
     edit_mode_gui();

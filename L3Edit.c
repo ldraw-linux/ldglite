@@ -1392,6 +1392,216 @@ int GetCurLineType(int partnum)
     return LinePtr->LineType;
 }
 
+/*****************************************************************************/
+struct L3PartS *ZeroBase = NULL;
+struct L3PartS *TurnAxis = NULL;
+
+/*****************************************************************************/
+// Convert Paul Easters nifty zerobase.dat into code so we always have it.
+/*****************************************************************************/
+int CreateZeroBase()
+{
+  struct L3LineS *lp;
+  struct L3PartS *PartPtr;
+
+  // printf("Creating ZeroBase\n");
+
+  // Create unscaled zerobase.dat part.
+  PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
+  PartPtr->DatName = strdup("zerobase.dat");
+  PartPtr->FirstLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = PartPtr->FirstLine;
+  // Axis
+  lp->LineType = 2; lp->Color = 4; 
+  lp->v[0][0] = -1; lp->v[0][1] = 0; lp->v[0][2] = 0;
+  lp->v[1][0] = 1; lp->v[1][1] = 0; lp->v[1][2] = 0;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 5; 
+  lp->v[0][0] = 0; lp->v[0][1] = -1; lp->v[0][2] = 0;
+  lp->v[1][0] = 0; lp->v[1][1] = 1; lp->v[1][2] = 0;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 9; 
+  lp->v[0][0] = 0; lp->v[0][1] = 0; lp->v[0][2] = -1;
+  lp->v[1][0] = 0; lp->v[1][1] = 0; lp->v[1][2] = 1;
+
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  // +x
+  lp->LineType = 2; lp->Color = 4; 
+  lp->v[0][0] = 1.16; lp->v[0][1] = 0; lp->v[0][2] =  .02;
+  lp->v[1][0] =  1.16; lp->v[1][1] = 0; lp->v[1][2] =  -.02;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 4; 
+  lp->v[0][0] = 1.18; lp->v[0][1] = 0; lp->v[0][2] = 0;
+  lp->v[1][0] =  1.14; lp->v[1][1] = 0; lp->v[1][2] =  0;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 4; 
+  lp->v[0][0] = 1.04; lp->v[0][1] = 0; lp->v[0][2] =  .04;
+  lp->v[1][0] =  1.08; lp->v[1][1] = 0; lp->v[1][2] =  -.04;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 4; 
+  lp->v[0][0] = 1.08; lp->v[0][1] = 0; lp->v[0][2] =  .04;
+  lp->v[1][0] =  1.04; lp->v[1][1] = 0; lp->v[1][2] =  -.04;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+   // -x
+  lp->LineType = 2; lp->Color = 4; 
+  lp->v[0][0] =  -1.18; lp->v[0][1] = 0; lp->v[0][2] = 0;
+  lp->v[1][0] =  -1.14; lp->v[1][1] = 0; lp->v[1][2] =  0;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 4; 
+  lp->v[0][0] =  -1.04; lp->v[0][1] = 0; lp->v[0][2] =  .04;
+  lp->v[1][0] =  -1.08; lp->v[1][1] = 0; lp->v[1][2] =  -.04;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 4; 
+  lp->v[0][0] =  -1.08; lp->v[0][1] = 0; lp->v[0][2] =  .04;
+  lp->v[1][0] =  -1.04; lp->v[1][1] = 0; lp->v[1][2] =  -.04;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+   // +y
+  lp->LineType = 2; lp->Color = 5; 
+  lp->v[0][0] =  .02; lp->v[0][1] = 1.16; lp->v[0][2] = 0;
+  lp->v[1][0] =  -.02; lp->v[1][1] =  1.16; lp->v[1][2] =  0;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 5; 
+  lp->v[0][0] =  0; lp->v[0][1] =   1.18; lp->v[0][2] = 0;
+  lp->v[1][0] =   0; lp->v[1][1] =    1.14; lp->v[1][2] =  0;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 5; 
+  lp->v[0][0] =  0; lp->v[0][1] =   1.06; lp->v[0][2] = 0;
+  lp->v[1][0] =   .04; lp->v[1][1] =  1.04; lp->v[1][2] =  0;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 5; 
+  lp->v[0][0] =  0; lp->v[0][1] =   1.06; lp->v[0][2] = 0;
+  lp->v[1][0] =  -.04; lp->v[1][1] =  1.06; lp->v[1][2] =  0;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 5; 
+  lp->v[0][0] =  0; lp->v[0][1] =   1.06; lp->v[0][2] = 0;
+  lp->v[1][0] =   .04; lp->v[1][1] =  1.08; lp->v[1][2] =  0;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+   // -y
+  lp->LineType = 2; lp->Color = 5; 
+  lp->v[0][0] =  0; lp->v[0][1] =  -1.18; lp->v[0][2] = 0;
+  lp->v[1][0] =   0; lp->v[1][1] =   -1.14; lp->v[1][2] =  0;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 5; 
+  lp->v[0][0] =  0; lp->v[0][1] =  -1.06; lp->v[0][2] = 0;
+  lp->v[1][0] =   .04; lp->v[1][1] = -1.04; lp->v[1][2] =  0;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 5; 
+  lp->v[0][0] =  0; lp->v[0][1] =  -1.06; lp->v[0][2] = 0;
+  lp->v[1][0] =  -.04; lp->v[1][1] = -1.06; lp->v[1][2] =  0;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 5; 
+  lp->v[0][0] =  0; lp->v[0][1] =  -1.06; lp->v[0][2] = 0;
+  lp->v[1][0] =   .04; lp->v[1][1] = -1.08; lp->v[1][2] =  0;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+   // +z
+  lp->LineType = 2; lp->Color = 9; 
+  lp->v[0][0] =  .02; lp->v[0][1] = 0; lp->v[0][2] = 1.16;
+  lp->v[1][0] =  -.02; lp->v[1][1] =  0; lp->v[1][2] =  1.16;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 9; 
+  lp->v[0][0] =  0; lp->v[0][1] =   0; lp->v[0][2] = 1.18;
+  lp->v[1][0] =   0; lp->v[1][1] =    0; lp->v[1][2] =  1.14;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 9; 
+  lp->v[0][0] =  .04; lp->v[0][1] = 0; lp->v[0][2] = 1.04;
+  lp->v[1][0] =   .04; lp->v[1][1] =  0; lp->v[1][2] =  1.08;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 9; 
+  lp->v[0][0] =  .04; lp->v[0][1] = 0; lp->v[0][2] = 1.04;
+  lp->v[1][0] =  -.04; lp->v[1][1] =  0; lp->v[1][2] =  1.08;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 9; 
+  lp->v[0][0] = -.04; lp->v[0][1] = 0; lp->v[0][2] = 1.04;
+  lp->v[1][0] =  -.04; lp->v[1][1] =  0; lp->v[1][2] =  1.08;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+   // -z
+  lp->LineType = 2; lp->Color = 9; 
+  lp->v[0][0] =  0; lp->v[0][1] =   0; lp->v[0][2] = -1.18;
+  lp->v[1][0] =  0; lp->v[1][1] =    0; lp->v[1][2] =  -1.14;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 9; 
+  lp->v[0][0] =  .04; lp->v[0][1] = 0; lp->v[0][2] = -1.04;
+  lp->v[1][0] =  .04; lp->v[1][1] =  0; lp->v[1][2] =  -1.08;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 9; 
+  lp->v[0][0] =  .04; lp->v[0][1] = 0; lp->v[0][2] = -1.04;
+  lp->v[1][0] = -.04; lp->v[1][1] =  0; lp->v[1][2] =  -1.08;
+  lp->NextLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  lp = lp->NextLine;
+  lp->LineType = 2; lp->Color = 9; 
+  lp->v[0][0] = -.04; lp->v[0][1] = 0; lp->v[0][2] = -1.04;
+  lp->v[1][0] = -.04; lp->v[1][1] =  0; lp->v[1][2] =  -1.08;
+
+  ZeroBase = PartPtr;
+}
+
+/*****************************************************************************/
+int CreateTurnAxis()
+{
+  struct L3LineS *LinePtr;
+  struct L3PartS *PartPtr;
+  float m[4][4] = {{100,0,0,0}, {0,100,0,0}, {0,0,100,0}, {0,0,0,1}};
+
+  // printf("Creating TurnAxis\n");
+
+  if (ZeroBase == NULL)
+    CreateZeroBase();
+
+  // Create a scaled version of ZeroBase part.
+  PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
+  PartPtr->DatName = strdup("TurnAxis.dat");
+  PartPtr->FirstLine = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+  LinePtr = PartPtr->FirstLine;
+  LinePtr->LineType = 1; LinePtr->Color = 16;     
+  memcpy(LinePtr->v, m, sizeof(LinePtr->v));
+  LinePtr->PartPtr = ZeroBase;
+
+  TurnAxis = PartPtr;
+}
+
+/*****************************************************************************/
+int DrawTurnAxis(float m[4][4])
+{
+  struct L3LineS *LinePtr;
+  int Color = 16;
+
+  if (TurnAxis == NULL)
+    CreateTurnAxis();
+
+  LinePtr = TurnAxis->FirstLine;
+  LinePtr->v[0][3] = m[0][3];
+  LinePtr->v[1][3] = m[1][3];
+  LinePtr->v[2][3] = m[2][3];
+
+  return Draw1PartPtr(LinePtr, Color);
+}
+
 #ifdef PART_BOX_TEST
 /***************************************************************/
 void PrintPartBox(struct L3PartS *PartPtr, char *boxfilename)

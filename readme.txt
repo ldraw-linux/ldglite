@@ -319,6 +319,13 @@ The Piece menu now also contains:
   a matrix replacement option.
   an part inliner option.
 
+The Turn menu now also contains:
+  an (x,y,z) origin option to select an arbitrary turn center.
+  an option to toggle display of the three axis through the turn center.
+  a rotate option (uses the part origin instead of the turn center)
+
+A Rotate menu has been added:  Like the rotate option on the Turn menu.
+
 			LEDIT emulation quirks
 
 Part lookup is not currently supported.  Try the printable parts catalog.
