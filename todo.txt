@@ -10,7 +10,22 @@ off part of a file as MPD.  Or a command to start a new MPD section
 with a filename.  Add a command to jump into the MPD parts and back
 into the main file.  I think I already added support for saving the 
 file as an MPD if it was one when I read it in.  This should be 
-enhanced to save a newly MPDed file.
+enhanced to save a newly MPDed file.  
+
+The inliner can already be used to pull MPD content into the main 
+file.  However it doesn't remove the MPD part, nor should it because
+the MPD part may be used multiple times.  
+
+The MPD splitter could split off from the current part to the end of
+the file (or to a 0 ENDMPD marker comment, whichever comes first).
+The splitter will also have to restructure the main file a bit if it
+wasn't MPD already.  Don't forget to set the Parts[i].IsMPD flags.
+
+I think I could allow editing inside the MPD portions by replacing
+Parts[0] everywhere in L3Edit.c with a FirstPartPtr which is set to
+point to Parts[n].  I could find my way to the MPD files by number
+or by searching Parts[n] for the IsMPD flag and then comparing the 
+name.
 
 ----------------------------------------------------------------------
 
