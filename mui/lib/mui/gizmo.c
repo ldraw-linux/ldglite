@@ -405,6 +405,8 @@ enum muiReturnValue textboxhandler(muiObject *obj, int event, int value, int x, 
 		return MUI_TEXTBOX_RETURN;
 	    if (value == '\025') { muiClearTBString(obj); }
 	    else if (value == '\b') { backspacetb((TextBox *)obj->object); }
+	    else if (value == '\177') /* Delete = BS on some systems. */
+	        { backspacetb((TextBox *)obj->object); }
 	    else inserttbchar((TextBox *)obj->object, (char)value);
 	    break;
     }
