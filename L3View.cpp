@@ -476,7 +476,9 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			break;
 		}
 	}
-
+	if (((zDetailLevel == TYPE_PART) && (PartPtr->FromPARTS)) ||
+	    ((zDetailLevel == TYPE_P) && (PartPtr->FromP)))
+	  zStep(-1, 0);
 }
 
 
