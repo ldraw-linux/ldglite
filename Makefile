@@ -16,9 +16,9 @@ OFFSCREEN_LIBS= -lgdi32
 
 # Comment these out to disable the test GUI made with MUI.
 #
-GUI_FLAGS=-DTEST_MUI_GUI
+GUI_FLAGS=-DTEST_MUI_GUI -I./mui/include
 GUI_SRC=ldglgui.c
-GUI_LIBS=-lmui
+GUI_LIBS=-L./mui/lib/mui -lmui
 LIBS = libmui.a
 
 RES_SRC=ldglite.rc
@@ -48,9 +48,7 @@ ldglite:   $(OBJS) $(LIBS)
 	cp ldglite.exe l3gledit.exe
 
 libmui.a:
-	-rm -f libmui.a
-	if [ -d mui/lib/mui ] ; then cd mui/lib/mui ; $(MAKE) -f makefile $@ ; fi
-	cp mui/lib/mui/libmui.a .
+	if [ -d mui/lib/mui ] ; then cd mui/lib/mui ; $(MAKE) -f Makefile $@ ; fi
 
 l3glite:   ldglite
 
