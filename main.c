@@ -39,6 +39,10 @@
 
 #include "dirscan.h"
 
+#ifndef TEST_MUI_GUI
+#define USE_GLUT_MENUS 1
+#endif
+
 #ifdef USE_L3_PARSER
 extern void          LoadModelPre(void);
 extern int           LoadModel(const char *lpszPathName);
@@ -65,6 +69,7 @@ int parsername = UNKNOWN_PARSER;
 
 int EPS_OUTPUT_FIGURED_OUT = 0;
 
+char *picfilename = NULL;
 char datfilename[256];
 char title[256];
 
@@ -908,6 +913,12 @@ void platform_step_filename(int step, char *filename)
   char filenum[32];
   char *dotptr;
 
+  if (picfilename)
+  {
+    strcpy(filename, picfilename);
+    return;
+  }
+    
   concat_path(pathname, use_uppercase ? "BITMAP" : "bitmap", filepath);
   if (ldraw_commandline_opts.rotate == 1) 
   {
@@ -6103,6 +6114,8 @@ void ParseParams(int *argc, char **argv)
 	if (ldraw_commandline_opts.M == 'S')
 	  OffScreenRendering = SetOffScreenRendering();
 	ldraw_commandline_opts.M = toupper(ldraw_commandline_opts.M);
+	if (pszParam[2])
+	  picfilename = strdup(&pszParam[2]);
 	break;
       case 'O':
       case 'o':
@@ -6295,7 +6308,7 @@ int registerGlutCallbacks()
 #ifdef TEST_MUI_GUI
   glutPassiveMotionFunc(NULL);
   glutMenuStateFunc(NULL);
-#if 0
+#ifdef USE_GLUT_MENUS
   glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
   glutAttachMenu(GLUT_RIGHT_BUTTON); // And reattach it
 #else
@@ -6568,7 +6581,7 @@ main(int argc, char **argv)
   glutMotionFunc(motion);
   glutIdleFunc(myGlutIdle);
 
-#ifndef TEST_MUI_GUI
+#ifdef USE_GLUT_MENUS
 
 #ifndef AGL
 #if (GLUT_XLIB_IMPLEMENTATION >= 13)
