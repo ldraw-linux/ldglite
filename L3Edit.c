@@ -275,27 +275,25 @@ int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
       else
       {
       if (s)
-	sprintf(s,"Line %5d:  --END--\n", i);
+	sprintf(s,"--END--\n");
       if (f)
-	fprintf(f,"Line %d:  --END--\n", i);
+	fprintf(f,"--END--\n");
       }
       return 0; //partnum not found
     }
     
-    if (f)
-      fprintf(f,"Line %d:  ", i);
     switch (LinePtr->LineType)
     {
     case 0:
       if (s)
-	sprintf(s,"Line %5d:  %s\n", i, LinePtr->Comment);
+	sprintf(s,"%d %s\n", LinePtr->LineType, LinePtr->Comment);
       if (f)
-	fprintf(f,"%s\n", LinePtr->Comment);
+	fprintf(f,"%d %s\n", LinePtr->LineType, LinePtr->Comment);
       break;
     case 1:
       if (s)
-	sprintf(s,"Line %5d:  %d %d %g %g %g %g %g %g %g %g %g %g %g %g %s\n",
-		i, LinePtr->LineType, LinePtr->Color,
+	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g %s\n",
+		LinePtr->LineType, LinePtr->Color,
 		LinePtr->v[0][3],LinePtr->v[1][3],LinePtr->v[2][3],
 		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
 		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
@@ -312,8 +310,8 @@ int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
       break;
     case 2:
       if (s)
-	sprintf(s,"Line %5d:  %d %d %g %g %g %g %g %g\n",
-		i, LinePtr->LineType, LinePtr->Color,
+	sprintf(s,"%d %d %g %g %g %g %g %g\n",
+		LinePtr->LineType, LinePtr->Color,
 		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
 		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2]);
       if (f)
@@ -324,8 +322,8 @@ int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
       break;
     case 3:
       if (s)
-	sprintf(s,"Line %5d:  %d %d %g %g %g %g %g %g %g %g %g\n",
-		i, LinePtr->LineType, LinePtr->Color,
+	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g\n",
+		LinePtr->LineType, LinePtr->Color,
 		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
 		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
 		LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2]);
@@ -338,8 +336,8 @@ int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
       break;
     case 4:
       if (s)
-	sprintf(s,"Line %5d:  %d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
-		i, LinePtr->LineType, LinePtr->Color,
+	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
+		LinePtr->LineType, LinePtr->Color,
 		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
 		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
 		LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2],
@@ -354,8 +352,8 @@ int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
       break;
     case 5:
       if (s)
-	sprintf(s,"Line %5d:  %d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
-		i, LinePtr->LineType, LinePtr->Color,
+	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
+		LinePtr->LineType, LinePtr->Color,
 		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
 		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
 		LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2],
@@ -370,7 +368,7 @@ int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
       break;
     default:
       if (s)
-	sprintf(s,"Line %5d:  \n", i);
+	sprintf(s,"\n");
       if (f)
 	fprintf(f,"\n");
       break;
