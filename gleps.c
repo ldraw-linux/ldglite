@@ -128,6 +128,10 @@ spewPrimitiveEPS(FILE * file, GLfloat * loc)
   Feedback3Dcolor *vertex;
   GLfloat xstep, ystep, rstep, gstep, bstep;
   GLfloat xnext, ynext, rnext, gnext, bnext, distance;
+#ifdef LDRAW_EPS	
+  GLfloat redc, greenc, bluec;
+  redc = greenc =  bluec = -1.0;
+#endif
 
   token = *loc;
   loc++;
@@ -184,8 +188,19 @@ spewPrimitiveEPS(FILE * file, GLfloat * loc)
       steps = 0;
     }
 
+#ifdef LDRAW_EPS	
+    if (redc != vertex[0].red || greenc != vertex[0].green || bluec != vertex[0].blue)
+    {
+      fprintf(file, "%g %g %g setrgbcolor\n",
+	      vertex[0].red, vertex[0].green, vertex[0].blue);
+      redc = vertex[0].red;
+      greenc = vertex[0].green;
+      bluec = vertex[0].blue;
+    }
+#else
     fprintf(file, "%g %g %g setrgbcolor\n",
       vertex[0].red, vertex[0].green, vertex[0].blue);
+#endif
     fprintf(file, "%g %g moveto\n", vertex[0].x, vertex[0].y);
 
     for (i = 0; i < steps; i++) {
@@ -195,7 +210,18 @@ spewPrimitiveEPS(FILE * file, GLfloat * loc)
       gnext += gstep;
       bnext += bstep;
       fprintf(file, "%g %g lineto stroke\n", xnext, ynext);
+#ifdef LDRAW_EPS	
+      if (redc != rnext || greenc != gnext || bluec != bnext)
+    {
+      fprintf(file, "%g %g %g setrgbcolor\n",
+	      rnext, gnext, bnext);
+      redc = rnext;
+      greenc = gnext;
+      bluec = bnext;
+    }
+#else
       fprintf(file, "%g %g %g setrgbcolor\n", rnext, gnext, bnext);
+#endif
       fprintf(file, "%g %g moveto\n", xnext, ynext);
     }
     fprintf(file, "%g %g lineto stroke\n", vertex[1].x, vertex[1].y);
@@ -236,10 +262,56 @@ spewPrimitiveEPS(FILE * file, GLfloat * loc)
             vertex[i + 1].red, vertex[i + 1].green, vertex[i + 1].blue,
             vertex[i + 2].red, vertex[i + 2].green, vertex[i + 2].blue);
         }
-      } else {
+      } 
+#ifdef LDRAW_EPS	
+      else if (nvertices == 3)
+      {
+	fprintf(file, "%g %g %g %g %g %g ",
+		vertex[0].x, vertex[0].y,
+		vertex[1].x, vertex[1].y,
+		vertex[2].x, vertex[2].y);
+        if (redc != red || greenc != green || bluec != blue)
+	{
+	  fprintf(file, "%g %g %g t3c\n", red, green, blue);
+	  redc = red;
+	  greenc = green;
+	  bluec = blue;
+	}
+	else
+	  fprintf(file, "t3\n");
+      }
+      else if (nvertices == 4)
+      {
+	fprintf(file, "%g %g %g %g %g %g %g %g ",
+		vertex[0].x, vertex[0].y,
+		vertex[1].x, vertex[1].y,
+		vertex[2].x, vertex[2].y,
+		vertex[3].x, vertex[3].y);
+        if (redc != red || greenc != green || bluec != blue)
+	{
+	  fprintf(file, "%g %g %g q4c\n", red, green, blue);
+	  redc = red;
+	  greenc = green;
+	  bluec = blue;
+	}
+	else
+	  fprintf(file, "q4\n");
+      }
+#endif
+      else {
         /* Flat shaded polygon; all vertex colors the same. */
         fprintf(file, "newpath\n");
+#ifdef LDRAW_EPS	
+        if (redc != red || greenc != green || bluec != blue)
+	{
+	  fprintf(file, "%g %g %g setrgbcolor\n", red, green, blue);
+	  redc = red;
+	  greenc = green;
+	  bluec = blue;
+	}
+#else
         fprintf(file, "%g %g %g setrgbcolor\n", red, green, blue);
+#endif
 
         /* Draw a filled triangle. */
         fprintf(file, "%g %g moveto\n", vertex[0].x, vertex[0].y);
@@ -445,6 +517,53 @@ spewWireFrameEPS(FILE * file, int doSort, GLint size, GLfloat * buffer, char *cr
   for (i = 0; gouraudtriangleEPS[i]; i++) {
     fprintf(file, "%s\n", gouraudtriangleEPS[i]);
   }
+
+#ifdef LDRAW_EPS	
+  // Define some macros to make LDRAW output more compact.
+  // Call a t3 macro for polys with 3 vertices.
+  // Call a q4 macro for polys with 4 vertices.
+  // Track the current color and call t3c or q4c when it changes.
+  fputs("% Compact macros for LDRAW quads and tris.\n");
+  fputs("/t3c %called as: x0 y0 x1 y1 x2 y2 r g b t3c\n");
+  fputs("{\n");
+  fprintf(file, "newpath\n");
+  fprintf(file, "setrgbcolor\n");
+  fputs("moveto\n");
+  fputs("lineto\n");
+  fputs("lineto\n");
+  fputs("closepath fill\n}\n");
+  fputs(" bind def\n");
+
+  fputs("/t3 %called as: x0 y0 x1 y1 x2 y2 t3\n");
+  fputs("{\n");
+  fprintf(file, "newpath\n");
+  fputs("moveto\n");
+  fputs("lineto\n");
+  fputs("lineto\n");
+  fputs("closepath fill\n}\n");
+  fputs(" bind def\n");
+
+  fputs("/q4c %called as: x0 y0 x1 y1 x2 y2 x3 y3 r g b q4c\n");
+  fputs("{\n");
+  fprintf(file, "newpath\n");
+  fprintf(file, "setrgbcolor\n");
+  fputs("moveto\n");
+  fputs("lineto\n");
+  fputs("lineto\n");
+  fputs("lineto\n");
+  fputs("closepath fill\n}\n");
+  fputs(" bind def\n");
+
+  fputs("/q4 %called as: x0 y0 x1 y1 x2 y2 x3 y3 q4\n");
+  fputs("{\n");
+  fprintf(file, "newpath\n");
+  fputs("moveto\n");
+  fputs("lineto\n");
+  fputs("lineto\n");
+  fputs("lineto\n");
+  fputs("closepath fill\n}\n");
+  fputs(" bind def\n");
+#endif
 
   fprintf(file, "\n%g setlinewidth\n", lineWidth);
 
