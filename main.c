@@ -4840,9 +4840,21 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	sscanf(&(ecommand[1]),"%d", &i);
 	// Inline the current piece
 	clear_edit_mode_gui();
-	UnLightCurPiece();
-	Hose1Part(curpiece, i); // Inline1Part(curpiece);
-	HiLightNewPiece(curpiece);
+	i = Hose1Part(curpiece, i); // Inline1Part(curpiece);
+	// Steal some code from the goto command.
+	if (i > curpiece+1)
+	  {
+	    int j;
+	    //rendersetup();
+	    UnLightCurPiece();
+	    for (j=curpiece+1; j<i; j++)
+	      Draw1Part(j, -1);
+	    HiLightNewPiece(i);
+	    break;
+	  }
+	else 
+	  i = curpiece;
+	HiLightCurPiece(i);
 	return 1;
       case 2:
       case 3:

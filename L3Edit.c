@@ -1541,9 +1541,6 @@ int Hose1Part(int partnum, int steps)
     Move1Part(i, m, 1);
     //Rotate1Part(i, m);
 
-    // Restore SelectedLinePtr
-    SelectedLinePtr = PrevPtr;
-
     FirstPtr = LinePtr->NextLine; 
     if (!FirstPtr)
       return i;
@@ -1620,10 +1617,45 @@ int Hose1Part(int partnum, int steps)
     }
 #endif
 
+    // Position the segment insertion point after the plug.
+    SelectedLinePtr = FirstPtr;
+
     // Insert the hosed part between the last two comment lines.
     hoser(m, CurColor, steps, 0, parttext,firstparttext);
 
-    return 0;
+    // Restore SelectedLinePtr
+    SelectedLinePtr = PrevPtr;
+
+    return i+steps+2+1; // curpiece + numsteps + 2 plugs + 1 endpart.
+}
+
+/*****************************************************************************/
+int hoseseg(char *segname, int color, float m[4][4])
+{
+    struct L3LineS *LinePtr;
+    struct L3LineS *PrevPtr;
+    struct L3LineS *NextPtr;
+    struct L3LineS *FirstPtr;
+    struct L3LineS *LastPtr;
+    struct L3PartS *PartPtr;
+
+    LinePtr = SelectedLinePtr;
+
+    // Add a 755.dat plug part at near end of the hose.
+    NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+    memcpy(NextPtr, LinePtr, sizeof(struct L3LineS));
+    memcpy(NextPtr->v, m, sizeof(LinePtr->v));
+    PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
+    memcpy(PartPtr, LinePtr->PartPtr, sizeof(struct L3PartS));
+    NextPtr->PartPtr = PartPtr;
+
+    // Link it in
+    NextPtr->NextLine = LinePtr->NextLine; 
+    LinePtr->NextLine = NextPtr;
+
+    // Switch to part 755.dat
+    SelectedLinePtr = NextPtr;
+    Swap1Part(0, segname);
 }
 
 /*****************************************************************************/
