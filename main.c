@@ -178,8 +178,9 @@ double twirl_increment = 10.0;
 
 static int list_made = 0;
 
-#ifndef AGL
 #define USE_DOUBLE_BUFFER
+
+#ifndef AGL
 #define USE_OPENGL_STENCIL
 #endif
 
@@ -354,12 +355,27 @@ float fontwidth = 1.0;
 #ifdef AGL
 /***************************************************************/
 // GLUT stubs required by AllegroGl version 0.20
+#include "internal.h"
+
 GLUTAPI void *glutBitmapHelvetica12 = 0;
 
 /***************************************************************/
 GLUTAPI int GLUTAPIENTRY glutGetModifiers(void)
 {
-  return 0;
+  int mods = 0;
+
+  if (key[KEY_LCONTROL])
+    mods |= GLUT_ACTIVE_CTRL;
+  if (key[KEY_RCONTROL])
+    mods |= GLUT_ACTIVE_CTRL;
+  if (key[KEY_LSHIFT])
+    mods |= GLUT_ACTIVE_SHIFT;
+  if (key[KEY_RSHIFT])
+    mods |= GLUT_ACTIVE_SHIFT;
+  if (key[KEY_ALT])
+    mods |= GLUT_ACTIVE_ALT;
+	  
+  return mods;
 }
 
 GLUTAPI int GLUTAPIENTRY glutLayerGet(GLenum type)
@@ -367,12 +383,40 @@ GLUTAPI int GLUTAPIENTRY glutLayerGet(GLenum type)
   return 0;
 }
 
+#if 0
+/* create a custom mouse cursor bitmap... */
+   custom_cursor = create_bitmap(32, 32);
+   clear(custom_cursor); 
+   for (c=0; c<8; c++)
+      circle(custom_cursor, 16, 16, c*2, c);
+
+   /* select the custom cursor and set the focus point to the middle of it */
+   set_mouse_sprite(custom_cursor);
+   set_mouse_sprite_focus(16, 16);
+#endif
+
 GLUTAPI void GLUTAPIENTRY glutSetCursor(int cursor)
 {
+  if (g_mouse) 
+    {
+      switch (cursor)
+      {
+      case GLUT_CURSOR_NONE:
+	scare_mouse();
+	return;
+      case GLUT_CURSOR_INHERIT:
+	set_mouse_sprite(NULL);
+	break;
+      case GLUT_CURSOR_WAIT:
+      default:
+      }
+      unscare_mouse();
+    }
 }
 
 GLUTAPI void GLUTAPIENTRY glutWarpPointer(int x, int y)
 {
+  position_mouse(x, y);
 }
 
 GLUTAPI void GLUTAPIENTRY glutFullScreen(void)
@@ -2588,10 +2632,17 @@ void display(void)
     return;
   }
 
+#ifdef USE_DOUBLE_BUFFER
   if (panning)
     glDrawBuffer(GL_BACK);  // Enable double buffer for spin mode.
+#ifdef AGL_DOUBLE_BUFFER_HACK
+  else if (!panning)        // AMesa has trouble with GL_FRONT in
+    glDrawBuffer(GL_BACK);  // double buffer mode.
+#endif
   else
+#endif
     glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
+
 
   if (res = glutLayerGet(GLUT_NORMAL_DAMAGED))
     dirtyWindow = 1;
@@ -2635,7 +2686,22 @@ void display(void)
     }
   }
   else
+  {
+#ifdef AGL_DOES_NOT_FIX_PROBLEM
+    // This does NOT work!  glClear must switch to BACK after clear.
+    if (!panning)        // AMesa has trouble with GL_FRONT in
+      glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
+#endif
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  }
+
+#ifdef AGL
+  // This works!  Does glClear switch to back buffer after clearing?
+  // But GlutSwapBuffer() should also switch to FRONT before
+  // Unhiding the cursor.
+  if (!panning)        // AMesa has trouble with GL_FRONT in
+    glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
+#endif
 
   render();
 
@@ -2725,6 +2791,10 @@ GLUT_BITMAP_HELVETICA_18
 #ifdef USE_DOUBLE_BUFFER
   if (panning)
     glutSwapBuffers();
+#ifdef AGL_DOUBLE_BUFFER_HACK
+  else                 // AMesa has trouble with GL_FRONT in
+    glutSwapBuffers(); // double buffer mode.
+#endif
 #endif
 
   dirtyWindow = 0;  // The window is nice and squeaky clean now.
@@ -5240,9 +5310,11 @@ void CldliteCommandLineInfo()
   ldraw_commandline_opts.V_y=0;
   ldraw_commandline_opts.poll=0;
   ldraw_commandline_opts.output=0;
+  ldraw_commandline_opts.output_depth=0;
   ldraw_commandline_opts.rotate=0;
   ldraw_commandline_opts.debug_level=0;
   ldraw_commandline_opts.log_output=0;
+  ldraw_commandline_opts.W=1;
   ldraw_commandline_opts.Z=INT_MIN;
   ldraw_commandline_opts.clip=1;
   ldraw_commandline_opts.image_filetype=4; // BMP24
@@ -5568,6 +5640,7 @@ void ParseParams(int *argc, char **argv)
       case 'r':
 	sscanf(pszParam,"%c%s",&type, &output_file_name);
 	ldraw_commandline_opts.output=1;
+	ldraw_commandline_opts.output_depth=1;
 	printf("Save (%s)\n", output_file_name);
 	break;
       case 'S':
@@ -5813,6 +5886,9 @@ int
 main(int argc, char **argv)
 {
   char filename[256];
+  FILE *fp;
+  int  fd;
+  int  fd_new_stdout;
   int opts, view, colors, helpmenunum;
   int exitcode;
   char *str, *verstr, *extstr, *vendstr, *rendstr;
@@ -5822,12 +5898,22 @@ main(int argc, char **argv)
 	
   // glutInit moved first, so that GL can have as many args as it can recognize
   // and because glutInit is what actually fills argv on the Mac.
+#if defined(MAC)
   glutInit(&argc, argv);
+#endif
 
   InitInstance();
   platform_setpath();
   CldliteCommandLineInfo();
   ParseParams(&argc, argv);
+
+#if !defined(MAC)
+  // Get params first so we can skip this if rendering in OSMesa
+  if (OffScreenRendering == 0)
+  {
+    glutInit(&argc, argv);
+  }
+#endif
 
   Width = ldraw_commandline_opts.V_x;
   Height = ldraw_commandline_opts.V_y;
@@ -6144,6 +6230,33 @@ main(int argc, char **argv)
     parsername = L3_PARSER;
     use_quads = 1;
     list_made = 0; // Gotta reparse the file.
+  }
+
+#ifdef AGL
+  // Gotta stop writing to the console in DOS mode
+  // NOTE: I could do this for everyone with a commandline opt. (quiet mode)
+  // Make the message filename part of the option. 
+  // If the filename is empty, then be completely silent.
+  // Consider ldraw_commandline_opts.log_output (cmdline -l) (goes to ldlite.log)
+  ldraw_commandline_opts.log_output = 1;
+#endif
+
+  if (ldraw_commandline_opts.log_output)
+  {
+    printf("Redirecting stdout to %s\n", "ldglite.log");
+    if ((fp = fopen ("ldglite.log", "w")) != NULL)
+    {
+      fd = fileno (fp);
+    }
+    close(2);            // close stderr
+    dup(1);               // redirect stderr to stdout?
+    if (close (1) != -1) // close stdout
+    {
+      if (fp != NULL)
+      {
+	fd_new_stdout = dup (fd); // redirect printfs to stdout to the file
+      }
+    }
   }
    
   glutMainLoop();
