@@ -294,6 +294,7 @@ char filepattern[256] = "*.dat";
 int drawAxis = 0;
 int qualityLines = 0;
 float lineWidth = 0.0;
+int LineChecking = 0;
 
 #ifdef TILE_RENDER_OPTION
 #include "tr.h"
@@ -1534,7 +1535,8 @@ render(void)
   }
   glCallList(1);
 #else
-  if (qualityLines && ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) == 0))
+  if ((qualityLines && ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) == 0))
+      || LineChecking)
   {
     ldraw_commandline_opts.F |= TYPE_F_NO_LINES;
     linequalitysetup();
@@ -1580,7 +1582,8 @@ render(void)
   }
   glCallList(1);
 #else
-  if (qualityLines && ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) == 0))
+  if ((qualityLines && ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) == 0))
+      || LineChecking)
   {
     ldraw_commandline_opts.F |= TYPE_F_NO_LINES;
   }
@@ -1617,7 +1620,8 @@ render(void)
     ldlite_parse_with_rc(mpd_subfile_name);
     znamelist_pop();
   }
-  if (qualityLines && ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) == 0))
+  if ((qualityLines && ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) == 0))
+      || LineChecking)
   {
     ldraw_commandline_opts.F &= ~(TYPE_F_NO_LINES);
     linequalitysetup();
@@ -4667,6 +4671,7 @@ mouse(int button, int state, int x, int y)
   {
     // Restore wireframe and stud draw modes.
     ldraw_commandline_opts.F = pan_start_F;
+    LineChecking = 0;
 
     // The LdrawOblique matrix is a projection matrix.
     // Substitute Oblique view matrix so we can rotate it.
@@ -4794,6 +4799,12 @@ motion(int x, int y)
 	ldraw_commandline_opts.F = (TYPE_F_BBOX_MODE | TYPE_F_SHADED_MODE);
     else 
       ldraw_commandline_opts.F = pan_visible; 
+
+#ifdef NEW_SPIN_MODE_TEST
+    // Add this to the rest of the spin modes in opts.F
+    if (pan_visible & TYPE_F_NO_POLYGONS)
+      LineChecking = 1;
+#endif
 
     if ((ldraw_commandline_opts.F & TYPE_F_INVISIBLE) == TYPE_F_INVISIBLE)
     { // Draw the rubberband line
@@ -5712,6 +5723,84 @@ int registerGlutCallbacks()
 }
 
 /***************************************************************/
+void getDisplayProperties()
+{
+  char *str, *verstr, *extstr, *vendstr, *rendstr;
+
+  verstr = (char *) glGetString(GL_VERSION);
+  printf("GL_VERSION = %s\n", verstr);
+
+  extstr = (char *) glGetString(GL_EXTENSIONS);
+  printf("GL_EXTENSIONS = %s\n", extstr);
+
+  printf("GL_VENDOR ='%s'\n", (vendstr = (char *)glGetString(GL_VENDOR)));
+  printf("GL_RENDERER ='%s'\n", (rendstr = (char *)glGetString(GL_RENDERER)));
+  
+  glGetIntegerv(GL_RED_BITS, &rBits);
+  glGetIntegerv(GL_GREEN_BITS, &gBits);
+  glGetIntegerv(GL_BLUE_BITS, &bBits);
+  glGetIntegerv(GL_ALPHA_BITS, &aBits);
+  printf("GL_RGBA_BITS: (%d, %d, %d, %d)\n", rBits, gBits, bBits, aBits);
+
+  glGetIntegerv(GL_DEPTH_BITS, &DepthBits);
+  printf("GL_DEPTH_BITS = %d\n", DepthBits);
+
+  // Change the default znear for skimpy depth buffers like the Mesa Default.
+  if (DepthBits < 24) 
+    projection_znear = 100.0; 
+
+  glGetIntegerv(GL_STENCIL_BITS, &StencilBits);
+  printf("GL_STENCIL_BITS = %d\n", StencilBits);
+
+  if (!strcmp(rendstr, "Mesa X11"))
+    {
+      // MESA 4.0 no longer seems to #define MESA so check GL_RENDERER instead.
+      buffer_swap_mode = SWAP_TYPE_NODAMAGE;
+    }
+
+  if (strstr(extstr, "GL_WIN_swap_hint"))
+  {
+    if ((!strcmp(verstr, "1.1.0")) &&
+	(!strcmp(vendstr, "Microsoft Corporation")) &&
+	(!strcmp(rendstr, "GDI Generic"))
+	)
+    {
+      // Assume Microsoft software opengl which blits rather than page flips.
+      buffer_swap_mode = SWAP_TYPE_COPY;
+    }
+  }
+
+  test_ktx_buffer_region(extstr);
+
+#ifndef TNT2_TEST
+  // Stencil works with Microsoft Generic and Mesa, but not with the TNT2.
+  if (strstr(vendstr, "NVIDIA"))
+  {
+    printf("Stencil buffer disabled for XOR with NVIDIA driver.\n");
+    use_stencil_for_XOR = 0;
+
+    if (buffer_swap_mode == SWAP_TYPE_KTX)
+    {
+      NVIDIA_XOR_HACK = 2;
+      if (SOLID_EDIT_MODE == 0)
+	SOLID_EDIT_MODE = NVIDIA_XOR_HACK;
+    }
+  }
+#endif
+
+  printf("Buffer Swap Mode = %d\n", buffer_swap_mode);
+
+#ifdef USE_DOUBLE_BUFFER
+  // NOTE: Mesa segfaults if I do this BEFORE CreateWindow/EnterGameMode
+  //glDrawBuffer(GL_FRONT_AND_BACK); // Hmm, why did I want FRONT_AND_BACK? 
+#ifdef TILE_RENDER_OPTION
+  if (tiledRendering == 0)
+#endif
+    glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
+#endif
+}
+
+/***************************************************************/
 int 
 main(int argc, char **argv)
 {
@@ -5793,16 +5882,36 @@ main(int argc, char **argv)
   if (OffScreenRendering == 1)
   {
     /* Create an RGBA-mode context */
-    ctx = OSMesaCreateContext( GL_RGBA, NULL );
+#if OSMESA_MAJOR_VERSION * 100 + OSMESA_MINOR_VERSION >= 305
+   /* specify Z, stencil, accum sizes */
+    ctx = OSMesaCreateContextExt( OSMESA_RGBA, 16, 0, 0, NULL );
+#else
+    ctx = OSMesaCreateContext( OSMESA_RGBA, NULL );
+#endif
 
     /* Allocate the image buffer */
-    OSbuffer = malloc( Width * Height * 4 );
+    OSbuffer = malloc( Width * Height * 4 * sizeof(GLubyte) );
+    if (!OSbuffer) {
+      printf("Alloc image buffer failed!\n");
+      exit(0);
+    }
+
 
     /* Bind the buffer to the context and make it current */
-    OSMesaMakeCurrent( ctx, OSbuffer, GL_UNSIGNED_BYTE, Width, Height );
+    if (!OSMesaMakeCurrent( ctx, OSbuffer, GL_UNSIGNED_BYTE, Width, Height )) {
+      printf("OSMesaMakeCurrent failed!\n");
+      exit(0);
+    }
+
+    getDisplayProperties();
 
     initCamera();
     init();
+
+    reshape(Width, Height);
+
+    // Set the background to white like ldlite.
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     // NOTE:  Use display() instead when I add offscreen tiled rendering.
     OffScreenDisplay();
@@ -5866,71 +5975,7 @@ main(int argc, char **argv)
     }   
   }
 
-  verstr = (char *) glGetString(GL_VERSION);
-  printf("GL_VERSION = %s\n", verstr);
-
-  extstr = (char *) glGetString(GL_EXTENSIONS);
-  printf("GL_EXTENSIONS = %s\n", extstr);
-
-  printf("GL_VENDOR ='%s'\n", (vendstr = (char *)glGetString(GL_VENDOR)));
-  printf("GL_RENDERER ='%s'\n", (rendstr = (char *)glGetString(GL_RENDERER)));
-  
-  glGetIntegerv(GL_RED_BITS, &rBits);
-  glGetIntegerv(GL_GREEN_BITS, &gBits);
-  glGetIntegerv(GL_BLUE_BITS, &bBits);
-  glGetIntegerv(GL_ALPHA_BITS, &aBits);
-  printf("GL_RGBA_BITS: (%d, %d, %d, %d)\n", rBits, gBits, bBits, aBits);
-
-  glGetIntegerv(GL_DEPTH_BITS, &DepthBits);
-  printf("GL_DEPTH_BITS = %d\n", DepthBits);
-
-  // Change the default znear for skimpy depth buffers like the Mesa Default.
-  if (DepthBits < 24) 
-    projection_znear = 100.0; 
-
-  glGetIntegerv(GL_STENCIL_BITS, &StencilBits);
-  printf("GL_STENCIL_BITS = %d\n", StencilBits);
-
-  if (strstr(extstr, "GL_WIN_swap_hint"))
-  {
-    if ((!strcmp(verstr, "1.1.0")) &&
-	(!strcmp(vendstr, "Microsoft Corporation")) &&
-	(!strcmp(rendstr, "GDI Generic"))
-	)
-    {
-      // Assume Microsoft software opengl which blits rather than page flips.
-      buffer_swap_mode = SWAP_TYPE_COPY;
-    }
-  }
-
-  test_ktx_buffer_region(extstr);
-
-#ifndef TNT2_TEST
-  // Stencil works with Microsoft Generic and Mesa, but not with the TNT2.
-  if (strstr(vendstr, "NVIDIA"))
-  {
-    printf("Stencil buffer disabled for XOR with NVIDIA driver.\n");
-    use_stencil_for_XOR = 0;
-
-    if (buffer_swap_mode == SWAP_TYPE_KTX)
-    {
-      NVIDIA_XOR_HACK = 2;
-      if (SOLID_EDIT_MODE == 0)
-	SOLID_EDIT_MODE = NVIDIA_XOR_HACK;
-    }
-  }
-#endif
-
-  printf("Buffer Swap Mode = %d\n", buffer_swap_mode);
-
-#ifdef USE_DOUBLE_BUFFER
-  // NOTE: Mesa segfaults if I do this BEFORE CreateWindow/EnterGameMode
-  //glDrawBuffer(GL_FRONT_AND_BACK); // Hmm, why did I want FRONT_AND_BACK? 
-#ifdef TILE_RENDER_OPTION
-  if (tiledRendering == 0)
-#endif
-    glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
-#endif
+  getDisplayProperties();
 
   glutDisplayFunc(display);
   glutReshapeFunc(reshape);
@@ -6135,5 +6180,6 @@ main(int argc, char **argv)
   
   return exitcode;
 }
+
 
 
