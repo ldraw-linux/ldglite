@@ -354,7 +354,8 @@ The Turn menu now also contains:
   a rotate option (uses the part origin instead of the turn center)
 
 The Edit menu now also contains:
-  a hoser function.  Insert 2 hose end parts.  Type /EH50 at the first part.
+  a hoser function.  Insert 2 hose end parts.  Type /EH50 at the 2nd part.
+  Hose ends are 750.dat, 752.dat, 755.dat, 76.dat, 79.dat, and stud3a.dat.
 
 A Rotate menu has been added:  Like the rotate option on the Turn menu.
 
