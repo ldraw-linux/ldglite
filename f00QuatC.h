@@ -8,7 +8,7 @@
 #define f00QuatCH
 
 // System includes.
-#include <GL/glut.h>
+#include "glwinkit.h" //#include <GL/glut.h>
 
 #ifndef WINDOWS
 // This stuff gets pulled in by glut.h for windows.
