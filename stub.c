@@ -1657,6 +1657,7 @@ void zClear()
 
 #ifdef USE_OPENGL
   // Got "0 CLEAR"
+  // May want to do something else here when in editing mode.
   if (ldraw_commandline_opts.M == 'P')
   {
     // Non-continuous output stop after each step.
@@ -1672,7 +1673,6 @@ void zClear()
     if (stepcount > curstep)
       return;  // Do NOT render since we have not reached this step yet.
   }
-  printf("zclear\n");
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 #endif	
 }
