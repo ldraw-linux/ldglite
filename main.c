@@ -131,6 +131,7 @@ int buffer_swap_mode = SWAP_TYPE_NODAMAGE
 int buffer_swap_mode = SWAP_TYPE_UNDEFINED;
 #endif
 
+// Stuff for editing mode
 int editing = 0;
 int curpiece = 0;
 int movingpiece = -1;
@@ -147,6 +148,10 @@ float moveZamount = 10.0;
 // screenbuffer is where the final composite goes
 int staticbuffer = GL_BACK;
 int screenbuffer = GL_FRONT; 
+// Buffer pointers and IDs for speedier opengl extension functions.
+GLuint cbuffer_region = 0;
+GLuint zbuffer_region = 0;
+static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
 extern int Find1Part(int partnum);
 extern int Draw1Part(int partnum, int Color);
 extern int Move1Part(int partnum, float m[4][4]);
@@ -2172,6 +2177,122 @@ void TiledDisplay(void)
 }
 #endif
 
+// These symbols are defined in the MAX gfx.h header file
+#define GL_KTX_FRONT_REGION 0x0000
+#define GL_KTX_BACK_REGION 0x0001
+#define GL_KTX_Z_REGION 0x0002
+#define GL_KTX_STENCIL_REGION 0x0003
+
+extern GLuint glNewBufferRegion(GLenum type);
+extern void glDeleteBufferRegion(GLuint region);
+extern void glReadBufferRegion(GLuint region, GLint x, GLint y, GLsizei width, GLsizei height);
+extern void glDrawBufferRegion(GLuint region, GLint x, GLint y, GLsizei width, GLsizei height, GLint xDest, GLint yDest);
+extern GLuint glBufferRegionEnabled(void);
+
+typedef GLuint (* PFNGLNEWBUFFERREGIONEXTPROC)(GLenum);
+typedef void (* PFNGLDELETEBUFFERREGIONEXTPROC)(GLuint);
+typedef void (* PFNGLREADBUFFERREGIONEXTPROC)(GLuint, GLint, GLint, GLsizei, GLsizei);
+typedef void (* PFNGLDRAWBUFFERREGIONEXTPROC)(GLuint, GLint, GLint, GLsizei, GLsizei, GLint, GLint);
+typedef GLuint (* PFNGLBUFFERREGIONENABLEDEXTPROC)(void);
+
+PFNGLNEWBUFFERREGIONEXTPROC glNewBufferRegionEXT = NULL;
+PFNGLDELETEBUFFERREGIONEXTPROC glDeleteBufferRegionEXT = NULL;
+PFNGLREADBUFFERREGIONEXTPROC glReadBufferRegionEXT = NULL;
+PFNGLDRAWBUFFERREGIONEXTPROC glDrawBufferRegionEXT = NULL;
+PFNGLBUFFERREGIONENABLEDEXTPROC glBufferRegionEnabledEXT = NULL;
+
+/***************************************************************/
+void test_ktx_buffer_region(char *str)
+{
+  if (strstr(str,"GL_KTX_buffer_region") )
+  {	
+    printf("The GL_KTX_buffer_region extension is available\n");
+
+#if 0
+glNewBufferRegion = (GLuint (*)(GLenum))wglGetProcAddress("glNewBufferRegion");
+glDeleteBufferRegion = (void (*)(GLuint))wglGetProcAddress("glDeleteBufferRegion");
+glReadBufferRegion = (void (*)(GLuint, GLint, GLint, GLsizei, GLsizei))wglGetProcAddress("glReadBufferRegion");
+glDrawBufferRegion = (void (*)(GLuint, GLint, GLint, GLsizei, GLsizei, GLint, GLint))wglGetProcAddress("glDrawBufferRegion");
+glBufferRegionEnabled = (GLuint (*)(void))wglGetProcAddress("glBufferRegionEnabled");
+#endif
+
+    glNewBufferRegionEXT = (PFNGLNEWBUFFERREGIONEXTPROC)
+      wglGetProcAddress("glNewBufferRegion");
+    printf("The GL_KTX_f1 = %p\n",glNewBufferRegionEXT);
+    glDeleteBufferRegionEXT = (PFNGLDELETEBUFFERREGIONEXTPROC)
+      wglGetProcAddress("glDeleteBufferRegion");
+    printf("The GL_KTX_f1 = %p\n",glDeleteBufferRegionEXT);
+    glReadBufferRegionEXT = (PFNGLREADBUFFERREGIONEXTPROC)
+      wglGetProcAddress("glReadBufferRegion");
+    printf("The GL_KTX_f1 = %p\n",glReadBufferRegionEXT);
+    glDrawBufferRegionEXT = (PFNGLDRAWBUFFERREGIONEXTPROC)
+      wglGetProcAddress("glDrawBufferRegion");
+    printf("The GL_KTX_f1 = %p\n",glDrawBufferRegionEXT);
+#if 0    
+    buffer_region = glNewBufferRegion(GL_KTX_Z_REGION);
+#else
+    cbuffer_region = glNewBufferRegionEXT(GL_KTX_BACK_REGION);
+    zbuffer_region = glNewBufferRegionEXT(GL_KTX_Z_REGION);
+#endif
+  }
+}
+
+/***************************************************************/
+#if defined(WINDOWS)
+#include "wglext.h"
+
+PFNWGLCREATEBUFFERREGIONARBPROC		wglCreateBufferRegionARB = NULL;
+PFNWGLDELETEBUFFERREGIONARBPROC		wglDeleteBufferRegionARB = NULL;
+PFNWGLSAVEBUFFERREGIONARBPROC		wglSaveBufferRegionARB = NULL;
+PFNWGLRESTOREBUFFERREGIONARBPROC	wglRestoreBufferRegionARB = NULL;
+
+HANDLE			buffer_handle;
+HDC				hDC;
+
+/***************************************************************/
+void test_wgl_arb_buffer_region(char *str)
+{
+  if (strstr(str,"WGL_ARB_buffer_region") )
+  {	
+    printf("The WGL_ARB_buffer_region extension is available\n");
+
+    hDC = wglGetCurrentDC();
+
+    wglCreateBufferRegionARB = (PFNWGLCREATEBUFFERREGIONARBPROC)
+      wglGetProcAddress("wglCreateBufferRegionARB");
+    wglDeleteBufferRegionARB = (PFNWGLDELETEBUFFERREGIONARBPROC)
+      wglGetProcAddress("wglDeleteBufferRegionARB");
+    wglSaveBufferRegionARB = (PFNWGLSAVEBUFFERREGIONARBPROC)
+      wglGetProcAddress("wglSaveBufferRegionARB");
+    wglRestoreBufferRegionARB = (PFNWGLRESTOREBUFFERREGIONARBPROC)
+      wglGetProcAddress("wglRestoreBufferRegionARB");
+    
+    buffer_handle = wglCreateBufferRegionARB( hDC, 0, WGL_BACK_COLOR_BUFFER_BIT_ARB | WGL_DEPTH_BUFFER_BIT_ARB );
+  }
+}
+
+#endif
+
+/***************************************************************/
+void SaveDepthBuffer(void)
+{
+  if (zbuffer_region)
+  {
+    glReadBufferRegionEXT(cbuffer_region,0,0,Width,Height);
+    glReadBufferRegionEXT(zbuffer_region,0,0,Width,Height);
+  }
+  else
+  {
+    // Apparently there is only ONE zbuffer shared by front & back buffers.
+    if (zbufdata)
+      free (zbufdata);  // NOTE: gotta free this when finished editing.
+    zbufdata = (float *) malloc(Width * Height * sizeof(float));
+    glReadBuffer(staticbuffer); // set pixel source
+    glReadPixels(0,0, Width,Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+  }
+  //NOTE:  I have to reallocate zbufdata whenever we resize the window.
+}
+
 /***************************************************************/
 void display(void)
 {
@@ -2191,8 +2312,17 @@ void display(void)
     {
       if (SOLID_EDIT_MODE)
       {
+	if ((panning) || (movingpiece == curpiece))
+	  glDrawBuffer(staticbuffer); 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	render();
+	if (movingpiece == curpiece)
+	  SaveDepthBuffer();
+	if ((panning) || (movingpiece == curpiece))
+	{
+	  glutSwapBuffers();
+	  glDrawBuffer(screenbuffer); 
+	}
 	if (movingpiece == curpiece)
 	  DrawCurPart(-1);
 	else
@@ -2489,21 +2619,23 @@ glPopAttrib();
 #endif
 
 /***************************************************************/
-static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
-
 /***************************************************************/
 // CopyStaticBuffer is fairly slow but should always work.
 // I could speed this up with opengl extensions when I get more time
 // Look for:
 // WGL_ARB_pbuffer and/or WGL_EXT_pbuffer
 // GLX_MESA_copy_sub_buffer / glXCopySubBufferMESA()
-// WGL_ARB_buffer_region
 // GL_WIN_swap_hint (I have this one in software OpenGL)
 //   This may require a pixel format with PFD_SWAP_COPY.  Must read more...
 // GLX_SGIX_pbuffer
-// GL_KTX_buffer_region
 // Also I wonder if I could copy the depth buffer to the accumulation buffer.
 //
+// NOTE:  these two extensions are the same thing with different names.
+// I should try these first after testing MESA COPY_NODAMAGE stuff.
+// WGL_ARB_buffer_region
+// GL_KTX_buffer_region
+
+
 /***************************************************************/
 void CopyStaticBuffer(void)
 {
@@ -2517,18 +2649,23 @@ void CopyStaticBuffer(void)
       
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       render();
-      
-      // Apparently there is only ONE zbuffer shared by front & back buffers.
-      if (zbufdata)
-	free (zbufdata);  // NOTE: gotta free this when finished editing.
-      zbufdata = (float *) malloc(Width * Height * sizeof(float));
-      glReadBuffer(staticbuffer); // set pixel source
-      glReadPixels(0,0, Width,Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
 
-      //NOTE:  I have to reallocate zbufdata whenever we resize the window.
+      SaveDepthBuffer();
     }
     movingpiece = curpiece;
     
+    // get fresh copy of static data
+    if (zbuffer_region)
+    {
+      glDrawBuffer(staticbuffer); 
+      // On my card this call nukes the call stack so we crash on return below.
+      glDrawBufferRegionEXT(cbuffer_region,0,0,Width,Height,0,0);
+      glDrawBufferRegionEXT(zbuffer_region,0,0,Width,Height,0,0);
+      glutSwapBuffers(); 
+      glDrawBuffer(screenbuffer); 
+      return;
+    }
+
     // get fresh copy of static data
     glReadBuffer(staticbuffer); // set pixel source
     glDrawBuffer(screenbuffer); // set pixel destination
@@ -2670,9 +2807,10 @@ void InsertNewPiece(void)
     if (SOLID_EDIT_MODE)
     {
       // Add the current moving piece into the staticbuffer
-      glDrawBuffer(staticbuffer); 
-      DrawCurPart(-1); 
-      glDrawBuffer(screenbuffer); 
+      // Dont bother, CopyStaticBuffer gets a new copy of z-buffer.
+      //glDrawBuffer(staticbuffer); 
+      //DrawCurPart(-1); 
+      //glDrawBuffer(screenbuffer); 
     }
     else
     {
@@ -2686,7 +2824,11 @@ void InsertNewPiece(void)
   else 
     EraseCurPiece();
   curpiece = Add1Part(curpiece);
-  // NOTE: This crashes SOLID_EDIT_MODE because the piece isn't moving.
+  if (SOLID_EDIT_MODE)
+  {
+    movingpiece = -1; // Make sure movingpiece != curpiece so we save z-buffer.
+    CopyStaticBuffer(); 
+  }
   movingpiece = curpiece;
   DrawMovingPiece();
   Print1Part(curpiece, stdout);
@@ -2929,22 +3071,25 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	break;
       case 'e':
 	sprintf(eprompt[0], "Edit: ");
-	sprintf(eprompt[1], "Delete Swap Line-type");
+	sprintf(eprompt[1], "Insert Delete Swap Line-type");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
+	break;
       case 'v':
 	sprintf(eprompt[0], "View: ");
 	sprintf(eprompt[1], "Front Right Left Back Over Under Three-D In Center");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
+	break;
       case 'p':
 	sprintf(eprompt[0], "Piece: ");
 	sprintf(eprompt[1], "File Color Goto");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
+	break;
       case 'o':
 	sprintf(eprompt[0], "%c: ", key);
 	ecommand[0] = toupper(key);
@@ -3045,6 +3190,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       case 'l':
 	clear_edit_mode_gui();
 	sprintf(eprompt[0], "Line Type: ");
+	sprintf(eprompt[1], "Piece Comment Step");
 	ecommand[0] = tolower(key); // FILE_LOAD_ID == toupper('l');
 	edit_mode_gui();
 	return 1;
@@ -3073,7 +3219,59 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	HiLightCurPiece(i);
 	return 1;
       }
+      return 1;
     }
+    if (ecommand[0] == 'V') // View Menu
+    {
+      // Try to get submenu command
+      switch(key) {
+      case 'f':
+	m_viewMatrix = Front;
+	newview = 1;
+	break;
+      case 'r':
+	m_viewMatrix = Right;
+	newview = 1;
+	break;
+      case 'l':
+	m_viewMatrix = Left;
+	newview = 1;
+	break;
+      case 'b':
+	m_viewMatrix = Back;
+	newview = 1;
+	break;
+      case 'o':
+	m_viewMatrix = Above;
+	newview = 1;
+	break;
+      case 'u':
+	m_viewMatrix = Beneath;
+	newview = 1;
+	break;
+      case 't':
+	m_viewMatrix = LdrawOblique;
+	newview = 1;
+	break;
+      case 'i':
+	clear_edit_mode_gui();
+	HiLightCurPiece(curpiece);
+	ldraw_commandline_opts.S *= (1.0 / 0.5);
+	dirtyWindow = 1;
+	glutPostRedisplay();
+	return 1;
+      }
+      if (newview)
+      {
+	clear_edit_mode_gui();
+	HiLightCurPiece(curpiece); // unselect any moving parts
+	parse_view(m_viewMatrix);
+	initCamera(); // Reset the camera position for any stock views.
+	glutPostRedisplay();
+      }
+      return 1;
+    }
+
 
     // Not looking for a submenu command.  Just process the keystroke.
     switch(key) {
@@ -5034,8 +5232,8 @@ main(int argc, char **argv)
   extstr = (char *) glGetString(GL_EXTENSIONS);
   printf("GL_EXTENSIONS = %s\n", extstr);
 
-  printf("GL_VENDOR ='%s'\n", (vendstr = glGetString(GL_VENDOR)));
-  printf("GL_RENDERER ='%s'\n", (rendstr = glGetString(GL_RENDERER)));
+  printf("GL_VENDOR ='%s'\n", (vendstr = (char *)glGetString(GL_VENDOR)));
+  printf("GL_RENDERER ='%s'\n", (rendstr = (char *)glGetString(GL_RENDERER)));
   
   if (strstr(extstr, "GL_WIN_swap_hint"))
   {
@@ -5048,6 +5246,8 @@ main(int argc, char **argv)
       buffer_swap_mode = SWAP_TYPE_COPY;
     }
   }
+
+  test_ktx_buffer_region(extstr);
 
 #ifdef USE_DOUBLE_BUFFER
   // NOTE: Mesa segfaults if I do this BEFORE CreateWindow/EnterGameMode
