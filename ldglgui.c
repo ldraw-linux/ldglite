@@ -36,7 +36,6 @@
  */
 
 /***************************************************************/
-#define TEST_MUI_GUI 1
 #ifdef  TEST_MUI_GUI
 
 #include <stdio.h>

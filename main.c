@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 0.9.9g     ";
+char ldgliteVersion[] = "Version 1.0.0      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -8028,13 +8028,10 @@ int registerGlutCallbacks()
   glutMotionFunc(motion);
   glutIdleFunc(myGlutIdle);
   glutPassiveMotionFunc(passive_motion);
-#ifdef TEST_MUI_GUI
-  glutMenuStateFunc(NULL);
+  glutMenuStateFunc(NULL); //#ifdef TEST_MUI_GUI
 #ifdef USE_GLUT_MENUS
   glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
   glutAttachMenu(GLUT_RIGHT_BUTTON); // And reattach it
-#else
-#endif
 #endif
   glutWindowStatusFunc(visibility);
   glutVisibilityFunc(VISIBILITY);

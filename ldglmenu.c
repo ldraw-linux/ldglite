@@ -56,6 +56,13 @@ extern void colormenu(int c);
 /***************************************************************/
 void menu(int item)
 {
+#ifdef TEST_MUI_GUI
+  if  (item == 1)
+  {
+    mui_test();
+    return;
+  }
+#endif
   if  (item == 1)
   {
     glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
@@ -310,9 +317,13 @@ void initializeMenus(void)
   glutAddMenuEntry(ldgliteVersion, '\0');
 
   mainmenunum = glutCreateMenu(menu);
+#ifndef TEST_MUI_GUI
   glutAddSubMenu(  "File               ", filemenunum);
   glutAddSubMenu(  "Folder             ", dirmenunum);
   glutAddMenuEntry("Filter - All Files ", 1);
+#else
+  glutAddMenuEntry("Configuration      ", 1);
+#endif
   glutAddMenuEntry("                   ", '\0');
   glutAddSubMenu(  "View               ", view);
   glutAddSubMenu(  "Options            ", opts);
@@ -328,8 +339,9 @@ void initializeMenus(void)
   glutAddMenuEntry("                   ", '\0');
   glutAddSubMenu(  "Help               ", helpmenunum);
   glutAddMenuEntry("Quit               ", '\033');
+#ifdef USE_GLUT_MENUS
   glutAttachMenu(GLUT_RIGHT_BUTTON);
-
+#endif
   view = glutCreateMenu(menu);
   glutAddMenuEntry("Ldraw Oblique   ", '0');
 
