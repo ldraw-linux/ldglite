@@ -3426,9 +3426,30 @@ PFNWGLRESTOREBUFFERREGIONARBPROC	wglRestoreBufferRegionARB = NULL;
 HANDLE			buffer_handle;
 HDC				hDC;
 
+PFNWGLGETEXTENSIONSSTRINGARBPROC        wglGetExtensionsStringARB = NULL;
+
 /***************************************************************/
 void test_wgl_arb_buffer_region(char *str)
 {
+#if 1
+  const char *wglstr;
+  
+  wglGetExtensionsStringARB = wglGetProcAddress("wglGetExtensionsStringARB");
+  if (wglGetExtensionsStringARB)
+  {
+    hDC = wglGetCurrentDC();
+    wglstr = wglGetExtensionsStringARB(hDC);
+    str = wglstr;
+    printf("WGL_EXTENSIONS = %s\n", wglstr);
+    
+  }
+#endif
+
+  if (strstr(str,"WGL_ARB_pbuffer") )
+  {	
+    // Maybe I should use this one instead of buffer_region.
+    printf("The WGL_ARB_pbuffer extension is available\n");
+  }
   if (strstr(str,"WGL_ARB_buffer_region") )
   {	
     printf("The WGL_ARB_buffer_region extension is available\n");
@@ -3444,7 +3465,7 @@ void test_wgl_arb_buffer_region(char *str)
     wglRestoreBufferRegionARB = (PFNWGLRESTOREBUFFERREGIONARBPROC)
       wglGetProcAddress("wglRestoreBufferRegionARB");
     
-    buffer_handle = wglCreateBufferRegionARB( hDC, 0, WGL_BACK_COLOR_BUFFER_BIT_ARB | WGL_DEPTH_BUFFER_BIT_ARB );
+    //buffer_handle = wglCreateBufferRegionARB( hDC, 0, WGL_BACK_COLOR_BUFFER_BIT_ARB | WGL_DEPTH_BUFFER_BIT_ARB );
   }
 }
 
@@ -8497,6 +8518,10 @@ int getDisplayProperties()
       buffer_swap_mode = SWAP_TYPE_COPY;
     }
   }
+
+#if defined(WINDOWS)
+  test_wgl_arb_buffer_region(extstr);
+#endif
 
   test_ktx_buffer_region(extstr);
 
