@@ -124,6 +124,7 @@ int curpiece = 0;
 int movingpiece = -1;
 char editingprevmode = 'C';
 int editingkey = -1;
+int SOLID_EDIT_MODE = 0;
 // staticbuffer is where our non-moving background goes
 // screenbuffer is where the final composite goes
 int staticbuffer = GL_BACK;
@@ -140,8 +141,6 @@ extern int Delete1Part(int partnum);
 extern int Swap1Part(int partnum, char *SubPartDatName);
 extern int Print1Part(int partnum, FILE *f);
 extern int Print1Model(char *filename);
-// If I ever get SOLID_EDIT_MODE working I should make it a runtime option.
-#define SOLID_EDIT_MODE 1
 
 int use_quads = 0;
 int curstep = 0;
@@ -2110,35 +2109,38 @@ void display(void)
   {
     if (dirtyWindow)
     {
-#ifdef SOLID_EDIT_MODE
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      render();
-      if (movingpiece == curpiece)
-	DrawCurPart(-1);
-      else
-	XORcurPiece();
-#else
-      if (movingpiece == curpiece)
+      if (SOLID_EDIT_MODE)
       {
-	Select1Part(curpiece);
-	if (panning)
-	  glDrawBuffer(staticbuffer); 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	render();
-	if (panning)
+	if (movingpiece == curpiece)
+	  DrawCurPart(-1);
+	else
+	  XORcurPiece();
+      }
+      else
+      {
+	if (movingpiece == curpiece)
 	{
-	  glutSwapBuffers();
-	  glDrawBuffer(screenbuffer); 
+	  Select1Part(curpiece);
+	  if (panning)
+	    glDrawBuffer(staticbuffer); 
+	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	  render();
+	  if (panning)
+	  {
+	    glutSwapBuffers();
+	    glDrawBuffer(screenbuffer); 
+	  }
+	  UnSelect1Part(curpiece);
 	}
-	UnSelect1Part(curpiece);
+	else
+	{
+	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	  render();
+	}
+	XORcurPiece();
       }
-      else
-      {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	render();
-      }
-      XORcurPiece();
-#endif
     }
 
 #if 0 // This doesn't work for some reason
@@ -2420,101 +2422,110 @@ static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
 /***************************************************************/
 void CopyStaticBuffer(void)
 {
-#ifdef SOLID_EDIT_MODE
-  if (movingpiece != curpiece)
+  if (SOLID_EDIT_MODE)
   {
-    Select1Part(curpiece);
-    // Draw stuff into the staticbuffer
-    glDrawBuffer(staticbuffer); 
+    if (movingpiece != curpiece)
+    {
+      Select1Part(curpiece);
+      // Draw stuff into the staticbuffer
+      glDrawBuffer(staticbuffer); 
+      
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      render();
+      
+      // Apparently there is only ONE zbuffer shared by front & back buffers.
+      if (zbufdata)
+	free (zbufdata);  // NOTE: gotta free this when finished editing.
+      zbufdata = (float *) malloc(Width * Height * sizeof(float));
+      glReadBuffer(staticbuffer); // set pixel source
+      glReadPixels(0,0, Width,Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+    }
+    movingpiece = curpiece;
     
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    render();
-
-    // Apparently there is only ONE zbuffer shared by front & back buffers.
-    if (zbufdata)
-      free (zbufdata);  // NOTE: gotta free this when finished editing.
-    zbufdata = (float *) malloc(Width * Height * sizeof(float));
+    // get fresh copy of static data
     glReadBuffer(staticbuffer); // set pixel source
-    glReadPixels(0, 0, Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+    glDrawBuffer(screenbuffer); // set pixel destination
+    glDisable( GL_DEPTH_TEST ); // Speed up copying
+    glDisable(GL_LIGHTING);     // Speed up copying
+    glMatrixMode( GL_PROJECTION );
+    glLoadIdentity();
+    gluOrtho2D(0, Width, 0, Height);
+    glMatrixMode( GL_MODELVIEW );
+    glPushMatrix();
+    glLoadIdentity();
+    glRasterPos2i(0, 0);
+    glDepthMask(GL_FALSE); // disable updates to depth buffer
+    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
+    glCopyPixels(0, 0, Width, Height, GL_COLOR);
+    glRasterPos2i(0, 0);
+    glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
+    glDepthMask(GL_TRUE); // enable updates to depth buffer
+    glEnable( GL_DEPTH_TEST ); 
+    glDepthFunc(GL_ALWAYS);
+    glRasterPos2i(0, 0);
+    glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
+    glPopMatrix();
+    reshape(Width, Height);
+    glEnable( GL_DEPTH_TEST ); 
+    glDepthFunc(GL_LESS);
+    rendersetup();
+    // screenbuffer is ready for dynamic data
   }
-  movingpiece = curpiece;
-  
-  // get fresh copy of static data
-  glReadBuffer(staticbuffer); // set pixel source
-  glDrawBuffer(screenbuffer); // set pixel destination
-  glDisable( GL_DEPTH_TEST ); // Speed up copying
-  glDisable(GL_LIGHTING);     // Speed up copying
-  glMatrixMode( GL_PROJECTION );
-  glLoadIdentity();
-  gluOrtho2D(0, Width, 0, Height);
-  glMatrixMode( GL_MODELVIEW );
-  glPushMatrix();
-  glLoadIdentity();
-  glRasterPos2i(0, 0);
-  glDepthMask(GL_FALSE); // disable updates to depth buffer
-  glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); // enable color buffer updates
-  glCopyPixels(0, 0, Width, Height, GL_COLOR);
-  glRasterPos2i(0, 0);
-  glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); // disable color updates
-  glDepthMask(GL_TRUE); // enable updates to depth buffer
-  glEnable( GL_DEPTH_TEST ); 
-  glDepthFunc(GL_ALWAYS);
-  glRasterPos2i(0, 0);
-  glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
-  glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); // enable color buffer updates
-  glPopMatrix();
-  reshape(Width, Height);
-  glEnable( GL_DEPTH_TEST ); 
-  glDepthFunc(GL_LESS);
-  rendersetup();
-  // screenbuffer is ready for dynamic data
-#else
-  XORcurPiece(); // Erase the previous piece
-  if (movingpiece != curpiece)
+  else
   {
-    Select1Part(curpiece);
-    glDrawBuffer(staticbuffer); 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    render();
-    glutSwapBuffers();
-    glDrawBuffer(screenbuffer); 
-    UnSelect1Part(curpiece);
+    XORcurPiece(); // Erase the previous piece
+    if (movingpiece != curpiece)
+    {
+      Select1Part(curpiece);
+      glDrawBuffer(staticbuffer); 
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      render();
+      glutSwapBuffers();
+      glDrawBuffer(screenbuffer); 
+      UnSelect1Part(curpiece);
+    }
   }
-#endif
 }
       
 /***************************************************************/
 void DrawMovingPiece(void)
 {
-#ifdef SOLID_EDIT_MODE
-  if (zShading)
-    glEnable(GL_LIGHTING);
+  if (SOLID_EDIT_MODE)
+  {
+    if (zShading)
+      glEnable(GL_LIGHTING);
+    else
+      glDisable(GL_LIGHTING);
+    DrawCurPart(-1);
+  }
   else
-    glDisable(GL_LIGHTING);
-  DrawCurPart(-1);
-#else      
-  XORcurPiece();
-#endif
+  {
+    XORcurPiece();
+  }
   glFlush();
 }
 
 /***************************************************************/
 void EraseCurPiece(void)
 {
-#ifdef SOLID_EDIT_MODE
-      if (movingpiece == curpiece)
-      {
-	  UnSelect1Part(curpiece);
-	  movingpiece = -1;
-      }
-      else
-#endif
-      XORcurPiece(); // Erase the previous piece
+  if (SOLID_EDIT_MODE)
+  {
+    if (movingpiece == curpiece)
+    {
+      UnSelect1Part(curpiece);
+      movingpiece = -1;
+    }
+  }
+  else
+    XORcurPiece(); // Erase the previous piece
 }
 
 /***************************************************************/
 void fnkeys(int key, int x, int y)
 {
+  glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
+
 #ifdef USE_L3_PARSER
   if (editing) 
   {
@@ -2527,13 +2538,14 @@ void fnkeys(int key, int x, int y)
 
     switch(key) {
     case GLUT_KEY_INSERT:
-#ifdef SOLID_EDIT_MODE
-      if (movingpiece == curpiece)
+      if (SOLID_EDIT_MODE)
       {
+	if (movingpiece == curpiece)
+	{
 	  UnSelect1Part(curpiece);
 	  movingpiece = -1;
+	}
       }
-#endif
       // if (parsername == L3_PARSER)
       editing ^= 1;
       // if (ldraw_commandline_opts.debug_level == 1)
@@ -2553,22 +2565,25 @@ void fnkeys(int key, int x, int y)
       if (movingpiece >= 0)
       {
 	movingpiece = -1;
-#ifdef SOLID_EDIT_MODE
-	dirtyWindow = 1;
-	glutPostRedisplay();
-	if (Print1Part(curpiece, stdout) == 0)
+	if (SOLID_EDIT_MODE)
 	{
-	  curpiece--;
-	  Print1Part(curpiece, stdout);
+	  dirtyWindow = 1;
+	  glutPostRedisplay();
+	  if (Print1Part(curpiece, stdout) == 0)
+	  {
+	    curpiece--;
+	    Print1Part(curpiece, stdout);
+	  }
+	  return;
 	}
-	return;
-#else
-	glDrawBuffer(staticbuffer); 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	render();
-	glutSwapBuffers();
-	glDrawBuffer(screenbuffer); 
-#endif
+	else
+	{
+	  glDrawBuffer(staticbuffer); 
+	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	  render();
+	  glutSwapBuffers();
+	  glDrawBuffer(screenbuffer); 
+	}
       }
       XORcurPiece();
       Print1Part(curpiece, stdout);
@@ -2579,22 +2594,25 @@ void fnkeys(int key, int x, int y)
       if (movingpiece >= 0)
       {
 	movingpiece = -1;
-#ifdef SOLID_EDIT_MODE
-	dirtyWindow = 1;
-	glutPostRedisplay();
-	if (Print1Part(curpiece, stdout) == 0)
+	if (SOLID_EDIT_MODE)
 	{
-	  curpiece--;
-	  Print1Part(curpiece, stdout);
+	  dirtyWindow = 1;
+	  glutPostRedisplay();
+	  if (Print1Part(curpiece, stdout) == 0)
+	  {
+	    curpiece--;
+	    Print1Part(curpiece, stdout);
+	  }
+	  return;
 	}
-	return;
-#else
-	glDrawBuffer(staticbuffer); 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	render();
-	glutSwapBuffers();
-	glDrawBuffer(screenbuffer); 
-#endif
+	else
+	{
+	  glDrawBuffer(staticbuffer); 
+	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	  render();
+	  glutSwapBuffers();
+	  glDrawBuffer(screenbuffer); 
+	}
       }
       if (XORcurPiece() == 0) // if past last piece...
       {
@@ -2678,6 +2696,10 @@ void fnkeys(int key, int x, int y)
   switch(key) {
 #ifdef USE_L3_PARSER
   case GLUT_KEY_INSERT:
+    if (glutModifiers & GLUT_ACTIVE_CTRL)
+      SOLID_EDIT_MODE = 1;
+    else 
+      SOLID_EDIT_MODE = 0;
     editing ^= 1;
     // if (ldraw_commandline_opts.debug_level == 1)
       printf("Editing mode =  %d\n", editing);
@@ -2868,18 +2890,21 @@ void keyboard(unsigned char key, int x, int y)
     case 'i':
       if (movingpiece >= 0)
       {
-#ifdef SOLID_EDIT_MODE
-	// Add the current moving piece into the staticbuffer
-	glDrawBuffer(staticbuffer); 
-	DrawCurPart(-1); 
-	glDrawBuffer(screenbuffer); 
-#else
-	glDrawBuffer(staticbuffer); 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	render();
-	glutSwapBuffers();
-	glDrawBuffer(screenbuffer); 
-#endif
+	if (SOLID_EDIT_MODE)
+	{
+	  // Add the current moving piece into the staticbuffer
+	  glDrawBuffer(staticbuffer); 
+	  DrawCurPart(-1); 
+	  glDrawBuffer(screenbuffer); 
+	}
+	else
+	{
+	  glDrawBuffer(staticbuffer); 
+	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	  render();
+	  glutSwapBuffers();
+	  glDrawBuffer(screenbuffer); 
+	}
       }
       else 
 	EraseCurPiece();
@@ -2912,11 +2937,12 @@ void keyboard(unsigned char key, int x, int y)
       return;
     case 'd':
       CopyStaticBuffer(); 
-#ifdef SOLID_EDIT_MODE
-      // CopyStaticBuffer() selects current piece in SOLID_EDIT_MODE
-#else
-      Select1Part(curpiece);
-#endif
+      if (SOLID_EDIT_MODE)
+      {
+	// CopyStaticBuffer() selects current piece in SOLID_EDIT_MODE
+      }
+      else
+	Select1Part(curpiece);
       Delete1Part(curpiece);
       movingpiece = -1;
       curpiece--;
