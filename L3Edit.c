@@ -928,6 +928,8 @@ typedef struct vector3d_struct {
 	float z;
 } vector3d;
 
+extern void MakePartBox(struct L3PartS *PartPtr,float m[4][4],vector3d bb3[8]);
+
 /*****************************************************************************/
 void GetPartBox(struct L3LineS *LinePtr, int sc[4])
 {
@@ -943,63 +945,7 @@ void GetPartBox(struct L3LineS *LinePtr, int sc[4])
   GLdouble s2x, s2y, s2z;
 
   M4M4Mul(m,m_m,LinePtr->v); // Adjust center point of part by view matrix.
-
-  r2[0]=PartPtr->BBox[0][0]; //bb[0]
-  r2[1]=PartPtr->BBox[0][1];
-  r2[2]=PartPtr->BBox[0][2];
-  M4V3Mul(r,m,r2);
-  bb3d[0].x=r[0];
-  bb3d[0].y=r[1];
-  bb3d[0].z=r[2];
-  r2[0]=PartPtr->BBox[0][0]; //bb[1]
-  r2[1]=PartPtr->BBox[1][1];
-  r2[2]=PartPtr->BBox[0][2];
-  M4V3Mul(r,m,r2);
-  bb3d[1].x=r[0];
-  bb3d[1].y=r[1];
-  bb3d[1].z=r[2];
-  r2[0]=PartPtr->BBox[1][0]; //bb[2]
-  r2[1]=PartPtr->BBox[1][1];
-  r2[2]=PartPtr->BBox[0][2];
-  M4V3Mul(r,m,r2);
-  bb3d[2].x=r[0];
-  bb3d[2].y=r[1];
-  bb3d[2].z=r[2];
-  r2[0]=PartPtr->BBox[1][0]; //bb[3]
-  r2[1]=PartPtr->BBox[0][1];
-  r2[2]=PartPtr->BBox[0][2];
-  M4V3Mul(r,m,r2);
-  bb3d[3].x=r[0];
-  bb3d[3].y=r[1];
-  bb3d[3].z=r[2];
-  r2[0]=PartPtr->BBox[0][0]; //bb[4]
-  r2[1]=PartPtr->BBox[0][1];
-  r2[2]=PartPtr->BBox[1][2];
-  M4V3Mul(r,m,r2);
-  bb3d[4].x=r[0];
-  bb3d[4].y=r[1];
-  bb3d[4].z=r[2];
-  r2[0]=PartPtr->BBox[0][0]; //bb[5]
-  r2[1]=PartPtr->BBox[1][1];
-  r2[2]=PartPtr->BBox[1][2];
-  M4V3Mul(r,m,r2);
-  bb3d[5].x=r[0];
-  bb3d[5].y=r[1];
-  bb3d[5].z=r[2];
-  r2[0]=PartPtr->BBox[1][0]; //bb[6]
-  r2[1]=PartPtr->BBox[1][1];
-  r2[2]=PartPtr->BBox[1][2];
-  M4V3Mul(r,m,r2);
-  bb3d[6].x=r[0];
-  bb3d[6].y=r[1];
-  bb3d[6].z=r[2];
-  r2[0]=PartPtr->BBox[1][0]; //bb[7]
-  r2[1]=PartPtr->BBox[0][1];
-  r2[2]=PartPtr->BBox[1][2];
-  M4V3Mul(r,m,r2);
-  bb3d[7].x=r[0];
-  bb3d[7].y=r[1];
-  bb3d[7].z=r[2];
+  MakePartBox(PartPtr, m, bb3d);
 
   // Gotta convert to screen coords first for opengl.
   s2x = s1y = 0.0;
