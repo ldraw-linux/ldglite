@@ -179,7 +179,15 @@ Command line options (see also the original ldlite docs for more):
 
 -fh turns on shading mode.
 -fs turns off stud drawing. (l3glite only)
--fr turns off edge lines (Render mode?  Rough draft?  I don't know what R stands for.)
+-fe turns off edge lines 
+-fr same as -fe (Render mode?  Rough draft?  I don't know what R stands for.)
+-ffT,E,S,R,G,B turns on fogging 
+   T = fogging type (1 = linear, 2 = exp2, 3 = exp3)
+   E,S = end/far, start/near fog clip planes in linear mode.
+   E,S = fog density, S= ignored param in exp mode.
+   R,G,B = fog color (default = fade to white, try 0,0,0 for night scene)
+   All fog params except T are optional.
+   Try these:  -ff3,0.0004    -ff3,0.0003,0,0.8,0.8,1.0
 -v0 displays in a 320x200 window.
 -v-1 displays in fullscreen with no decorations.
 -v-2 displays in fullscreen gamemode (no menus in gamemode).
