@@ -22,7 +22,11 @@
 #include "math.h"
 #include "string.h"
 
+#ifdef USE_OPENGL
 #include "platform.h"
+
+extern char datfilepath[256];
+#endif
 
 char *part_name = NULL; 
 vector3d flip_scale;
@@ -31,8 +35,6 @@ FILE *output_file;
 FILE *log_output_file;
 char output_file_name[256];
 int yyparse();
-
-extern char datfilepath[256];
 
 LDRAW_COMMANDLINE_OPTS ldraw_commandline_opts;
 
@@ -120,13 +122,15 @@ void rotate_model()
 	free(v_temp);
 }
 
-void ldlite_parse(char *root_name, char *ldraw_lines)
+void ldlite_parse(char *filename, char *ldraw_lines)
 {
   FILE *fp;
   vector3d *v1;
   matrix3d *m1;
   static int init=0;
-  char filename[256];
+#ifdef USE_OPENGL
+  char filenamepath[256];
+#endif
 
   if (!init) {
 	  init = 1;
@@ -197,7 +201,7 @@ void ldlite_parse(char *root_name, char *ldraw_lines)
   } else {
 	  log_output_file = NULL;
   }
-  if (root_name==NULL) {
+  if (filename==NULL) {
 	  if (ldraw_commandline_opts.output > 0) {
 		  if ((output_file = fopen(output_file_name,"w+"))==NULL) {
 			  ldraw_commandline_opts.output = 0;
@@ -218,16 +222,21 @@ void ldlite_parse(char *root_name, char *ldraw_lines)
 		  output_file = NULL;
 	  }
   } else {
-	  if (!strcmp(root_name, ""))
+#ifdef USE_OPENGL
+	  if (!strcmp(filename, ""))
 	  {
-	    strcpy(filename,"-");
+	    strcpy(filenamepath,"-");
+	    filename = filenamepath;
 	    fp = stdin; 
 	  }
 	  else
 	  {
-	    concat_path(datfilepath, root_name, filename);
-	    fp = fopen( filename, "r" );
+	    concat_path(datfilepath, filename, filenamepath);
+	    fp = fopen( filenamepath, "r" );
 	  }
+#else
+	  fp = fopen( filename, "r" );
+#endif
 	  if (fp != NULL) {
 		  if (ldraw_commandline_opts.output > 0) {
 			  if ((output_file = fopen(output_file_name,"w+"))==NULL) {
