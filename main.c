@@ -1558,7 +1558,7 @@ void reshape(int width, int height)
 #ifdef USE_F00_CAMERA
   extern void resetCamera();
   extern void applyCamera();
-  extern void specialFunc( int key, int x, int y );
+  extern int specialFunc( int key, int x, int y );
 #endif
 
 /***************************************************************/
@@ -4513,8 +4513,25 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 /***************************************************************/
 void fnkeys(int key, int x, int y)
 {
+  float angle;
+
   glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
   
+  if (ldraw_commandline_opts.debug_level == 1)
+    printf("key(%c) = (%d, %d)\n", key, key, glutModifiers);
+
+  if (glutModifiers & GLUT_ACTIVE_ALT)
+  {
+    if (glutModifiers & GLUT_ACTIVE_SHIFT)
+      angle = 45.0;
+    else
+      angle = 5.0;
+  }
+  else if (glutModifiers & GLUT_ACTIVE_SHIFT)
+    angle = 1.0;
+  else 
+    angle = 0.0;
+
 #ifdef USE_L3_PARSER
   if (edit_mode_fnkeys(key, x, y))
     return;
@@ -4539,12 +4556,46 @@ void fnkeys(int key, int x, int y)
     // You can NOT zoom in or out in orthographic mode, only scale.
   switch(key) {
 #ifdef USE_F00_CAMERA
+  case GLUT_KEY_LEFT:
+    if (specialFunc( key, x, y ))
+      break;
+    if (angle == 0.0)
+      ldraw_commandline_opts.O.x -= 100;
+    rotate_about(0.0, 1.0, 0.0, angle );
+    break;
+  case GLUT_KEY_RIGHT:
+    if (specialFunc( key, x, y ))
+      break;
+    if (angle == 0.0)
+      ldraw_commandline_opts.O.x += 100;
+    rotate_about(0.0, 1.0, 0.0, -angle );
+    break;
+  case GLUT_KEY_UP:
+    if (specialFunc( key, x, y ))
+      break;
+    if (angle == 0.0)
+      ldraw_commandline_opts.O.y -= 100;
+    rotate_about(1.0, 0.0, 0.0, -angle );
+    break;
+  case GLUT_KEY_DOWN:
+    if (specialFunc( key, x, y ))
+      break;
+    if (angle == 0.0)
+      ldraw_commandline_opts.O.y += 100;
+    rotate_about(1.0, 0.0, 0.0, angle );
+    break;
+  case GLUT_KEY_HOME:
+    if (specialFunc( key, x, y ))
+      break;
+    rotate_about(0.0, 0.0, 1.0, angle );
+    break;
+  case GLUT_KEY_END:
+    if (specialFunc( key, x, y ))
+      break;
+    rotate_about(0.0, 0.0, 1.0, -angle );
+    break;
   case GLUT_KEY_PAGE_UP:
   case GLUT_KEY_PAGE_DOWN:
-  case GLUT_KEY_RIGHT:
-  case GLUT_KEY_LEFT:
-  case GLUT_KEY_UP:
-  case GLUT_KEY_DOWN:
     specialFunc( key, x, y );
     break;
 #else
@@ -4579,12 +4630,7 @@ void fnkeys(int key, int x, int y)
       fXRot -= 360.0;
     break;
 #endif
-  case GLUT_KEY_HOME:
-    rotate_about(0.0, 1.0, 0.0, 45.0 );
-    break;
-  case GLUT_KEY_END:
-    rotate_about(1.0, 0.0, 0.0, 45.0 );
-    break;
+#if 0
   case GLUT_KEY_F1:
     rotate_about(1.0, 0.0, 0.0, 5.0 );
     break;
@@ -4603,6 +4649,7 @@ void fnkeys(int key, int x, int y)
   case GLUT_KEY_F6:
     rotate_about(1.0, 0.0, 0.0, -1.0 );
     break;
+#endif
 #ifdef TEST_MUI_GUI
   case GLUT_KEY_F8:
     mui_test();
@@ -4700,6 +4747,9 @@ void keyboard(unsigned char key, int x, int y)
   char partname[256];
 
   glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
+
+  if (ldraw_commandline_opts.debug_level == 1)
+    printf("key(%c) = (%d, %d)\n", key, key, glutModifiers);
 
   if (editing)
   {
@@ -5404,11 +5454,15 @@ motion(int x, int y)
       pan_x -= pan_start_x;
       pan_y -= pan_start_y;
       pan_y = -pan_y; //Beats me why.
+#if DEPTH_BASED_MOUSE_SPIN
       pan_z = max(fabs(pan_x), fabs(pan_y));
       angle = atan2(pan_z, depth);
       //angle *= -1.0;
       angle *= 5.0;
       angle *= (180.0/3.1415927);
+#else
+      angle = 2.0 * max(fabs(x*3.1415927/Width), fabs(y*3.1415927/Width));
+#endif
       if (ldraw_commandline_opts.debug_level == 1)
 	printf("ROTATING about(%0.2f, %0.2f) by angle %0.2f\n", pan_y, -pan_x, angle);
       rotate_about(pan_y, -pan_x, 0.0, angle );
