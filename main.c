@@ -119,6 +119,8 @@ static int list_made = 0;
 
 #define USE_DOUBLE_BUFFER
 
+int buffer_swap_mode = 0;
+
 int editing = 0;
 int curpiece = 0;
 int movingpiece = -1;
@@ -2485,7 +2487,7 @@ static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
 // WGL_ARB_pbuffer and/or WGL_EXT_pbuffer
 // GLX_MESA_copy_sub_buffer / glXCopySubBufferMESA()
 // WGL_ARB_buffer_region
-// GL_WIN_swap_hint
+// GL_WIN_swap_hint (I have this one in software OpenGL)
 // GLX_SGIX_pbuffer
 // GL_KTX_buffer_region
 // Also I wonder if I could copy the depth buffer to the accumulation buffer.
@@ -2510,6 +2512,8 @@ void CopyStaticBuffer(void)
       zbufdata = (float *) malloc(Width * Height * sizeof(float));
       glReadBuffer(staticbuffer); // set pixel source
       glReadPixels(0,0, Width,Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+
+      //NOTE:  I have to reallocate zbufdata whenever we resize the window.
     }
     movingpiece = curpiece;
     
@@ -2527,7 +2531,19 @@ void CopyStaticBuffer(void)
     glRasterPos2i(0, 0);
     glDepthMask(GL_FALSE); // disable updates to depth buffer
     glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
-    glCopyPixels(0, 0, Width, Height, GL_COLOR);
+    if (buffer_swap_mode == 1)
+      glutSwapBuffers(); // Found GL_WIN_swap_hint extension
+    else
+      glCopyPixels(0, 0, Width, Height, GL_COLOR);
+#ifdef DEPTH_BUFFER_MASK
+    // Enable depth test, but disable depth writes while moving the piece
+    // This would work well if the moving piece were depth sorted.
+    // As is, the moving piece is drawn in random depth order and looks bad.
+    // This could work with the half depth buffer trick using a split
+    // depth range.  
+    // The moving piece gets half the depth range with GL_GREATER...
+    glDepthMask(GL_FALSE); // disable updates to depth buffer
+#else
     glRasterPos2i(0, 0);
     glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
     glDepthMask(GL_TRUE); // enable updates to depth buffer
@@ -2536,6 +2552,7 @@ void CopyStaticBuffer(void)
     glRasterPos2i(0, 0);
     glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
     glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
+#endif
     glPopMatrix();
     reshape(Width, Height);
     glEnable( GL_DEPTH_TEST ); 
@@ -2548,6 +2565,7 @@ void CopyStaticBuffer(void)
     XORcurPiece(); // Erase the previous piece
     if (movingpiece != curpiece)
     {
+      // Render the buffer without the new moving piece.
       Select1Part(curpiece);
       glDrawBuffer(staticbuffer); 
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -2580,13 +2598,10 @@ void DrawMovingPiece(void)
 /***************************************************************/
 void EraseCurPiece(void)
 {
-  if (SOLID_EDIT_MODE)
+  if ((SOLID_EDIT_MODE) && (movingpiece == curpiece))
   {
-    if (movingpiece == curpiece)
-    {
-      UnSelect1Part(curpiece);
-      movingpiece = -1;
-    }
+    UnSelect1Part(curpiece);
+    movingpiece = -1;
   }
   else
     XORcurPiece(); // Erase the previous piece
@@ -2613,6 +2628,7 @@ void HiLightCurPiece(int piecenum)
     movingpiece = -1;
     if (SOLID_EDIT_MODE)
     {
+      glDepthMask(GL_TRUE); // enable updates to depth buffer
       dirtyWindow = 1;
       glutPostRedisplay();
       Print1Part(curpiece, stdout) == 0;
@@ -2710,18 +2726,19 @@ int edit_mode_fnkeys(int key, int x, int y)
     {0.0,0.0,0.0,1.0}
   };
 
+  //printf("key = %d = '%c' (%08x)\n",key,key, glutModifiers);
   if (!editing) // See if we need to enter edit mode
   {
     if (key != GLUT_KEY_INSERT)
       return 0; // Not already editing and not entering editing mode.
 
-    if (glutModifiers & GLUT_ACTIVE_CTRL)
+    if ((glutModifiers & GLUT_ACTIVE_CTRL) != 0)
       SOLID_EDIT_MODE = 1;
     else 
       SOLID_EDIT_MODE = 0;
     editing ^= 1;
     // if (ldraw_commandline_opts.debug_level == 1)
-    printf("Editing mode =  %d\n", editing);
+    printf("Editing mode =  %d{%d}\n", editing, SOLID_EDIT_MODE);
     
     // Switch to continuous mode.
     editingprevmode = ldraw_commandline_opts.M;
@@ -2764,6 +2781,7 @@ int edit_mode_fnkeys(int key, int x, int y)
   case GLUT_KEY_INSERT:
     if (SOLID_EDIT_MODE)
     {
+      glDepthMask(GL_TRUE); // Just to be make sure 
       if (movingpiece == curpiece)
       {
 	UnSelect1Part(curpiece);
@@ -3209,7 +3227,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     return 1;
   case '\n':
   case '\r':
-    printf("Draw the current piece (not needed?)\n");
+    // If in piece moving mode, switch back to picking mode.
+    HiLightCurPiece(curpiece); 
     return 1;
   case 'x':
   case 'y':
@@ -3295,11 +3314,8 @@ void fnkeys(int key, int x, int y)
   glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
   
 #ifdef USE_L3_PARSER
-  if (editing) 
-  {
-    if (edit_mode_fnkeys(key, x, y))
-      return;
-  }
+  if (edit_mode_fnkeys(key, x, y))
+    return;
 #endif
 
     /*
@@ -3539,16 +3555,20 @@ void keyboard(unsigned char key, int x, int y)
 	break;
     case 's':
     case '-':
-        ldraw_commandline_opts.S *= 0.5;
-	if (glutModifiers & GLUT_ACTIVE_CTRL)
+        printf("key = %d = '%c' (%08x)\n",key,key, glutModifiers);
+	if ((glutModifiers & GLUT_ACTIVE_ALT) != 0)
 	  ldraw_commandline_opts.S *= 0.9;
+	else
+	  ldraw_commandline_opts.S *= 0.5;
 	dirtyWindow = 1; //reshape(Width, Height);
 	break;
     case 'S':
     case '+':
-        ldraw_commandline_opts.S *= (1.0 / 0.5);
-	if (glutModifiers & GLUT_ACTIVE_CTRL)
+        printf("key = %d = '%c' (%08x)\n",key,key, glutModifiers);
+	if ((glutModifiers & GLUT_ACTIVE_ALT) != 0)
 	  ldraw_commandline_opts.S *= (1.0 / 0.9);
+	else
+	  ldraw_commandline_opts.S *= (1.0 / 0.5);
 	dirtyWindow = 1; //reshape(Width, Height);
 	break;
     case '0':
@@ -4965,6 +4985,11 @@ main(int argc, char **argv)
 
   str = (char *) glGetString(GL_EXTENSIONS);
   printf("GL_EXTENSIONS = %s\n", str);
+
+  if (strstr(str, "GL_WIN_swap_hint"))
+  {
+    buffer_swap_mode = 1;
+  }
 
 #ifdef USE_DOUBLE_BUFFER
   // NOTE: Mesa segfaults if I do this BEFORE CreateWindow/EnterGameMode
