@@ -50,6 +50,7 @@
 #ifdef _WIN32_NATIVE_FILE_OPS
  #include "windows.h"
 #endif
+
 #ifdef USE_DIRENT
 #if defined(MAC)
 #include "macos_dirent.h"
@@ -58,190 +59,11 @@
 #else
 #include <dirent.h>  // directory operations
 #endif
-#else
- #include <sys/types.h>
- #include <dirent.h>  // directory operations
- #include <values.h>
-
+#else // NOT USE_DIRENT
  #include <glob.h>
 #endif
 
 #include "dirscan.h"
-
-//=====================================================================
-// Why are we recreating scandir?
-//=====================================================================
-#if 0
-int
-scandir(const char *dirname, struct dirent ***namelist,
-	int (*select)(struct dirent *),
-	int (*compar)(const void *, const void *));
-
-int
-alphasort(const void *d1, const void *d2);
-
-EXAMPLE
-      The example program below scans the /tmp directory.  It does not
-      exclude any entries since select is NULL.  The contents of namelist
-      are sorted by alphasort().  It prints out how many entries are in /tmp
-      and the sorted entries of the /tmp directory.  The memory used by
-      scandir() is returned using free().
-
-
-extern int scandir();
-extern int alphasort();
-
-main()
-{
-  int num_entries, i;
-  struct dirent **namelist, **list;
-  
-  if ((num_entries = scandir("/tmp", &namelist, NULL, alphasort)) < 0) {
-    fprintf(stderr, "Unexpected error\n");
-    exit(1);
-  }
-  printf("Number of entries is %d\n", num_entries);
-  if (num_entries) {
-    printf("Entries are:");
-    for (i=0, list=namelist; i<num_entries; i++) {
-      printf(" %s", (*list)->d_name);
-      free(*list);
-      *list++;
-    }
-    free(namelist);
-    printf("\n");
-  }
-  printf("\n");
-  exit(0);
-}
-
-
-
-      #include <regex.h>
-
-      int regcomp(regex_t *preg, const char *pattern, int cflags);
-
-      int regexec(
-           const regex_t *preg,
-           const char *string,
-           size_t nmatch,
-           regmatch_t pmatch[],
-           int eflags
-      );
-
-      void regfree(regex_t *preg);
-
-      size_t regerror(
-           int errcode,
-           const regex_t *preg,
-           char *errbuf,
-           size_t errbuf_size
-      );
-
-
- EXAMPLES
-           /* match string against the extended regular expression in pattern,
-           treating errors as no match.  Return 1 for match, 0 for no match.
-           Print an error message if an error occurs. */
-
-           int
-           match(string, pattern)
-           char *string;
-           char *pattern;
-           {
-               int i;
-               regex_t re;
-               char buf[256];
-
-               i=regcomp(&re, pattern, REG_EXTENDED|REG_NOSUB);
-               if (i != 0) {
-                   (void)regerror(i,&re,buf,sizeof buf);
-                   printf("%s\n",buf);
-                   return(0);                       /* report error */
-               }
-               i = regexec(&re, string, (size_t) 0, NULL, 0);
-               regfree(&re);
-               if (i != 0) {
-                   (void)regerror(i,&re,buf,sizeof buf);
-                   printf("%s\n",buf);
-                   return(0);                       /* report error */
-               }
-               return(1);
-           }
-
-
-
-#include <stdlib.h>
-#include <string.h>
-#include <glob.h>
-
-/* Convert a wildcard pattern into a list of blank-separated
-   filenames which match the wildcard.  */
-
-char * glob_pattern(char *wildcard)
-{
-  char *gfilename;
-  size_t cnt, length;
-  glob_t glob_results;
-  char **p;
-
-  glob(wildcard, GLOB_NOCHECK, 0, &glob_results);
-
-  /* How much space do we need?  */
-  for (p = glob_results.gl_pathv, cnt = glob_results.gl_pathc;
-       cnt; p++, cnt--)
-    length += strlen(*p) + 1;
-
-  /* Allocate the space and generate the list.  */
-  gfilename = (char *) calloc(length, sizeof(char));
-  for (p = glob_results.gl_pathv, cnt = glob_results.gl_pathc;
-       cnt; p++, cnt--)
-    {
-      strcat(gfilename, *p);
-      if (cnt > 1)
-        strcat(gfilename, " ");
-    }
-
-  globfree(&glob_results);
-  return gfilename;
-}
-
-
-include <glob.h>
-
-glob_t result;
-
-glob ("~homer/bin/*", GLOB_TILDE, NULL, &result);
-globfree (result);
-
-
-#include <glob.h>
-#include <stdio.h>
-#include "dinstall.h"
-
-int no_match(const char *path, const char *name, __mode_t mode){
-/* [<][>][^][v][top][bottom][index][help] */
-  int i,status;
-  glob_t globbuf;
-  struct stat statbuf;
-  snprintf(prtbuf,PRTBUFSIZE,"%s/*/%s",path,name);
-  glob( T_FILE(prtbuf), GLOB_NOSORT, NULL, &globbuf);
-  status=1;
-  if ( globbuf.gl_pathc > 0 ) {
-    for (i=0;i<globbuf.gl_pathc;i++) {
-      if ( (! stat(globbuf.gl_pathv[i],&statbuf) ) &&
-           ( (statbuf.st_mode & S_IFMT) == mode ) )  {
-        status=0;
-        break;
-      }
-    }
-  }
-  globfree(&globbuf); 
-  return status;
-}
-
-
-#endif
 
 //=====================================================================
 static const int maxDir = 10;
@@ -266,12 +88,6 @@ int ScanDirectory(char *dir, char *pattern, int firstfile,
   DIR           *searchPath = NULL;
   struct dirent *dataStruct;
 #else // Unix
-  DIR           *searchPath = NULL;
-  struct dirent *dataStruct;
-  int            test, lenf, lenp;
-  char          *file;
-
-  char *gfilename;
   size_t cnt, length;
   glob_t glob_results;
   char **p;
@@ -395,12 +211,6 @@ int ScanFolder(char *dir, char *pattern, int firstfile,
   DIR           *searchPath = NULL;
   struct dirent *dataStruct;
 #else // Unix
-  DIR           *searchPath = NULL;
-  struct dirent *dataStruct;
-  int            test, lenf, lenp;
-  char          *file;
-
-  char *gfilename;
   size_t cnt, length;
   glob_t glob_results;
   char **p;
@@ -476,6 +286,15 @@ int ScanFolder(char *dir, char *pattern, int firstfile,
     closedir(searchPath);
   }
 #else // Unix
+
+  #ifndef GLOB_PERIOD
+  // Some BSD systems do NOT have the GNU implementation of glob,
+  // so we must do the GLOB_PERIOD work by hand to get the ".." dir.
+  #define GLOB_PERIOD GLOB_APPEND
+  glob(".", 0, 0, &glob_results);
+  glob("..", GLOB_PERIOD, 0, &glob_results);
+  #endif
+
   glob(wildcard, GLOB_PERIOD, 0, &glob_results);
 
   // Skip files before our current window.
