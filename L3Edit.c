@@ -646,7 +646,7 @@ int Add1Part(int partnum)
 #ifndef __TURBOC__
     LinePtr->LineNo = i;
 #endif
-    if (PrevPtr)
+    if (PrevPtr && (PrevPtr->LineType == 1))
     {
 #ifdef REUSE_ORIENTATION
         LinePtr->v = PrevPtr->v;
@@ -1092,6 +1092,81 @@ int Get1PartBox(int partnum, int sc[4])
 	return 0; //partnum not found
 
     GetPartBox(LinePtr, sc);
+
+    return 1;
+}
+
+/*****************************************************************************/
+int Make1Primitive(int partnum, char *str)
+{
+    int            i = 0;
+    struct L3LineS *LinePtr;
+    int            Len;
+
+    struct L3LineS       Data;
+    int  n, j;
+    char seps[] = "() ,\t"; // Allow parens and commas for readability.
+    char *token;
+      
+    if (SelectedLinePtr)
+	LinePtr = SelectedLinePtr;
+    else
+    for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+    {
+	if (i == partnum)
+	    break;	    // Found the part
+	i++;
+    }
+
+    if (!LinePtr)
+	return 0; //partnum not found
+    
+#if 1 
+    for (n = 0, i = 0, j = 0,token = strtok( str, seps );
+	 token != NULL;
+	 token = strtok( NULL, seps ), n++, i++ )
+    {
+      if (n == 0)
+	sscanf(token, "%d", &Data.LineType);
+      if (n == 1)
+	sscanf(token, "%d", &Data.Color);
+      else
+      {
+	if (i > 4)
+	{
+	  j++;
+	  i = 2;
+	}
+	sscanf(token, "%f", &Data.v[j][i-2]);
+      }
+    }
+#else
+    memset(&Data, 0, sizeof(Data));
+    n = sscanf(str, "%d %d %f %f %f %f %f %f %f %f %f %f %f %f",
+                 &Data.LineType, &Data.Color,
+                 &Data.v[0][0], &Data.v[0][1], &Data.v[0][2],
+                 &Data.v[1][0], &Data.v[1][1], &Data.v[1][2],
+                 &Data.v[2][0], &Data.v[2][1], &Data.v[2][2],
+                 &Data.v[3][0], &Data.v[3][1], &Data.v[3][2]);
+#endif
+    if (n < 1)
+    {
+      return 0;  // Oops, must reset LinePtr to something reasonable.
+    }
+
+    // Make sure this is a primitive before modifying LinePtr.
+    if ((Data.LineType < 2) || (Data.LineType > 5))
+	return 0;
+
+    if (LinePtr->PartPtr)
+    {
+      //free(LinePtr->PartPtr);
+      LinePtr->PartPtr = NULL;
+    }
+
+    // Copy the structure.
+    Data.NextLine = LinePtr->NextLine;
+    *LinePtr = Data; 
 
     return 1;
 }
