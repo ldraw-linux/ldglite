@@ -149,6 +149,20 @@ char UpsideDown[] = "0.707104,0,0.707104,-0.353553,-0.866025,0.353553,0.612372,-
 char Natural[] = "0.5,0,0.866025,0.433013,0.866025,-0.25,-0.75,0.5,0.433013";
 char *m_viewMatrix = LdrawOblique;
 
+// If we separate the ldraw oblique projection from the underlying
+// Oblique rotation matrix we get this projection matrix.  Perhaps 
+// we can then offer 3 projection types: orthogonal, perspective, oblique.
+char ObliqueProjection[] = "1.4142,0,0,0,1.2196,-0.1124,0,-0.7171,1.2247";
+
+//Notes on deriving the Oblique rotation matrix: 
+//Rotate 45 degrees and then tilt 30 degrees?
+/*
+.707104 = sqrt(2) / 2
+.353553 = sqrt(2) / 4
+.866025 = sin(pi / 3)
+.612372 = sqrt(1.5) / 2
+*/
+
 extern int glCurColorIndex;
 extern float z_line_offset; 
 
@@ -1171,7 +1185,12 @@ int platform_write_step_comment(char *comment_string)
 
   glMatrixMode( GL_PROJECTION );
   glLoadIdentity();
-  gluOrtho2D( 0., 100., 0., 100. ); /* "percent units" */
+#ifdef USE_GLFONT
+  if (fontname)
+    gluOrtho2D( 0., Width, 0., Height );
+  else
+#endif
+    gluOrtho2D( 0., 100., 0., 100. ); /* "percent units" */
   glMatrixMode( GL_MODELVIEW );
   glPushMatrix();
   glLoadIdentity();
@@ -6485,6 +6504,11 @@ main(int argc, char **argv)
   if (fontname)
   {
     int n = 0;
+
+    /* just to be safe... */
+    //glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // Unpacking alignement not used.
+    glPixelStorei(GL_PACK_ALIGNMENT, 2); // Padded to even numbered bytes.
+    glPixelStorei(GL_PACK_ALIGNMENT, 1); // Use if data in glfont is unpadded.
 
     glFontCreate (&Font, fontname, FontTex); //Creates a glFont
     // void glFontDestroy (Font); //Deletes a glFont
