@@ -96,7 +96,9 @@ int glutPassiveMotionFunc()
 { printf("glutPassiveMotionFunc\n"); return 0; }
 int glutWindowStatusFunc()
 { printf("glutWindowStatusFunc\n"); return 0; }
-glutVisibilityFunc()
+int glutVisibilityFunc()
 { printf("glutVisibilityFunc\n"); return 0; }
+int glutMenuStateFunc()
+{ printf("glutMenuStateFunc\n"); return 0; }
 
 
