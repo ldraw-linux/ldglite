@@ -17,7 +17,21 @@
 
 // Flags indicating what functions are lacking on this platform
 
-#if defined(UNIX) 
+#if defined(MACOS_X) 
+// Look for MACOS_X *before* UNIX since its a special case of UNIX
+// and defines both.
+
+// unistd.h declares chdir() on Mac, Unix?
+#include <unistd.h>
+
+#define LACKS_STRDUP 0
+#define LACKS_STRICMP 1
+#define LACKS_STRNICMP 1
+#define LACKS_DIRNAME 1
+#define LACKS_BASENAME 1
+
+
+#elif defined(UNIX) 
 
 // unistd.h declares chdir() on Mac, Unix?
 #include <unistd.h>
