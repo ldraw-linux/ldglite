@@ -50,6 +50,13 @@ of main.c and ldglpr.c for this.
 
 ----------------------------------------------------------------------
 
+Also need to create instructions and a makefile for building a
+staticly linked, offscreen only executable for headless servers using
+OSMesa.  This should include a makefile that doesn't need any X,
+Windows, AGL, or other libraries that assume you have a screen.
+
+----------------------------------------------------------------------
+
 Implement some sort of part spreading algorithm for drag and drop
 of multiple parts.  I'm thinking some sort of fractal spiral would
 look nice.
