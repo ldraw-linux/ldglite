@@ -4343,12 +4343,20 @@ void loadnewdatfile(char *datpath, char *datfile)
 
   SetTitle(1); // Change title of the window to show the new dat filename.
   
+  if (editing) 
+  {
+    UnSelect1Part(curpiece); // UnSelect part before Loading
+    curpiece = 0;
+    movingpiece = -1;
+  }
+
 #ifdef USE_L3_PARSER
   if (parsername == L3_PARSER)
     list_made = 0; // Gotta reparse the file.
 #endif
   curstep = 0; // Reset to first step
   dirtyWindow = 1;
+
   glutPostRedisplay();
 }
 
@@ -5721,6 +5729,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	  sscanf(&(ecommand[1]),"%s", &datfilename);
 	  curstep = 0; // Reset to first step
 	  dirtyWindow = 1;
+	  UnSelect1Part(curpiece); // UnSelect part before Loading
 	  curpiece = 0;
 	  movingpiece = -1;
 	  list_made = 0; // Gotta reparse the file.
