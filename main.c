@@ -157,17 +157,15 @@ void write_bmp(char *filename)
   GLint xoff = 0;
   GLint yoff = 0;
 
-#if 1
   if (clipping)
   {
-    //xoff = max(0, z.extent_x1);
-    //yoff = max(0, z.extent_y1);
+    xoff = max(0, z.extent_x1);
+    yoff = max(0, z.extent_y1);
     width = min((z.extent_x2 - xoff), (Width - xoff));
     height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
     width = ((width + 31)/32) * 32; // round to a multiple of 32.
     printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
   }
-#endif
   
   printf("Write BMP %s\n", filename);
   if ((fp = fopen(filename,"wb+"))==NULL) {
@@ -291,7 +289,6 @@ void write_png(char *filename)
   GLint xoff = 0;
   GLint yoff = 0;
 
-#if 1
   if (clipping)
   {
     xoff = max(0, z.extent_x1);
@@ -301,7 +298,6 @@ void write_png(char *filename)
     width = ((width + 31)/32) * 32; // round to a multiple of 32.
     printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
   }
-#endif
   
   if ((p = strrchr(filename, '.')) != NULL)
     *p = 0;
@@ -1040,7 +1036,6 @@ void init(void)
     // if (result) render internal geometry
     // else don't render
 #endif
-
 }
 
 /***************************************************************/
