@@ -764,6 +764,34 @@ void platform_zDraw(ZIMAGE *zp,void *zDC)
     printf("zdraw\n");
 }
 
+#if defined(UNIX) || defined(MAC)
+/***************************************************************/
+int GetProfileInt(char *appName, char *appVar, int varDefault)
+{
+  // This should look up appVar in some .INI or .RC file for appName.
+  // Windows uses reg key HKCU\Software\Gyugyi Cybernetics\ldlite\Settings
+  // Just return the default for now.
+  return (varDefault);
+}
+
+/***************************************************************/
+int GetPrivateProfileInt(char *appName, char *appVar, int varDefault, char *fileName)
+{
+  // Just return the default for now.
+  return (varDefault);
+}
+
+/***************************************************************/
+int GetPrivateProfileString(char *appName, char *appVar, char *varDefault, 
+			    char *retString, int strSize, char *fileName)
+{
+  // Just return the default for now.
+  strcpy (retString, varDefault);
+  return (strlen(varDefault));
+}
+
+#endif
+
 /***************************************************************/
 void platform_setpath()
 {
@@ -782,7 +810,8 @@ void platform_setpath()
   {
     strcpy(pathname, env_str);
   }
-  else
+  else if (GetPrivateProfileString("LDraw","BaseDirectory","",
+			  pathname,256,"ldraw.ini") == 0)
   {
 #if defined(UNIX)
     sprintf(pathname, "/usr/local/ldraw");
@@ -2705,17 +2734,6 @@ void ParseParams(int *argc, char **argv)
     }
   }
 }
-
-#if defined(UNIX) || defined(MAC)
-/***************************************************************/
-int GetProfileInt(char *appName, char *appVar, int varDefault)
-{
-  // This should look up appVar in some .INI or .RC file for appName.
-  // Windows uses reg key HKCU\Software\Gyugyi Cybernetics\ldlite\Settings
-  // Just return the default for now.
-  return (varDefault);
-}
-#endif
 
 /***************************************************************/
 int InitInstance()
