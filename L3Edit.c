@@ -1630,7 +1630,8 @@ int Hose1Part(int partnum, int steps)
     SelectedLinePtr = FirstPtr;
 
     if ((stricmp(SubPartDatName, "750.dat") == 0) ||
-	(stricmp(SubPartDatName, "752.dat") == 0))
+	(stricmp(SubPartDatName, "752.dat") == 0) ||
+	(stricmp(SubPartDatName, "760.dat") == 0))
     {
       // Add some 755.dat plug parts at the ends of the hose.
       // rotate them 180 degrees around X.
@@ -1656,6 +1657,25 @@ int Hose1Part(int partnum, int steps)
 
       v1[1] = -5; // Offset in y of intermediate control points.
     }
+    if (stricmp(SubPartDatName, "757.dat") == 0)
+    {
+      // Add some 759.dat plug parts at the ends of the hose.
+      hoseends("759.dat", CurColor, m);
+
+      FirstPtr = LinePtr->NextLine; 
+      if (!FirstPtr)
+	return i;
+      if (FirstPtr->LineType != 1)
+	return i;
+      
+      // Get the names of the hose parts.
+      firstparttext = strdup("758.dat");
+      FixDatName(firstparttext);
+      parttext = strdup("754.dat");
+      FixDatName(parttext);
+
+      v1[1] = -5; // Offset in y of intermediate control points.
+    }
     else if (stricmp(SubPartDatName, "755.dat") == 0)
     {
       // Found a plug.  Get the names of the hose parts.
@@ -1665,6 +1685,66 @@ int Hose1Part(int partnum, int steps)
       FixDatName(parttext);
 
       v1[1] = -5; // Offset in y of intermediate control points.
+    }
+    else if (stricmp(SubPartDatName, "759.dat") == 0)
+    {
+      // Found a plug.  Get the names of the hose parts.
+      firstparttext = strdup("758.dat");
+      FixDatName(firstparttext);
+      parttext = strdup("754.dat");
+      FixDatName(parttext);
+
+      v1[1] = -5; // Offset in y of intermediate control points.
+    }
+    else if (stricmp(SubPartDatName, "208.dat") == 0)
+    {
+      // Found a chain link end.  Get the names of the link parts.
+#if 0
+      // Add some 209.dat link parts at the ends of the chain.
+      // rotate them -90 degrees around X.
+      angle = -PI/2.0;
+      m[1][1] = (float)cos(angle);
+      m[1][2] = (float)(-1.0*sin(angle));
+      m[2][1] = (float)sin(angle);
+      m[2][2] = (float)cos(angle);
+      m[2][3] = 12.0;
+      hoseends("209.dat", CurColor, m);
+
+      FirstPtr = LinePtr->NextLine; 
+      if (!FirstPtr)
+	return i;
+      if (FirstPtr->LineType != 1)
+	return i;
+#else
+      // Should do something similar to the technic pin method below
+      // to orient on the embedded half link in the 208 chain end parts.
+      // Maybe search for the torus part t04q3333.dat, except it scales by 3.
+      angle = -PI/2.0;
+      m[1][1] = (float)cos(angle);
+      m[1][2] = (float)(-1.0*sin(angle));
+      m[2][1] = (float)sin(angle);
+      m[2][2] = (float)cos(angle);
+      m[2][3] = 12.0;
+
+      NextPtr = FirstPtr;
+      PinPtr = LastPtr;
+      M4M4Mul(m1,LinePtr->v,m);
+      M4M4Mul(m2,LastPtr->v,m);
+#endif
+
+      firstparttext = strdup("209.dat");
+      FixDatName(firstparttext);
+      parttext = strdup("209.dat");
+      FixDatName(parttext);
+
+#if 0
+      v1[1] = 0; // Offset in y of intermediate control points.
+      v1[2] = 10; // Offset in z of intermediate control points.
+      v[1] = 0; // Velocity in y of intermediate control points.
+      v[2] = 50; // Velocity in z of intermediate control points.
+#else
+      v1[1] = -5; // Offset in y of intermediate control points.
+#endif
     }
     else if (stricmp(SubPartDatName, "76.dat") == 0)
     {
