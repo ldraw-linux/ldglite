@@ -245,7 +245,7 @@ void initializeMenus(void)
   glutAddMenuEntry("Normal          ", 'n');
   glutAddMenuEntry("Studs           ", 'f');
   glutAddMenuEntry("Quality Lines   ", 'q');
-  glutAddMenuEntry("Visible spin    ", 'v');
+  glutAddMenuEntry("Visible spin    ", 'V');
   glutAddMenuEntry("Step-Continuous ", 's');
   glutAddMenuEntry("Polling         ", 'g');
 #ifdef USE_L3_PARSER
