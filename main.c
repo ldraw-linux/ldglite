@@ -5442,6 +5442,7 @@ void keyboard(unsigned char key, int x, int y)
     case 'Q':
     case 'q':
       qualityLines ^= 1;
+      dirtyWindow = 1;
       break;
     case 27:
 	exit(0);
