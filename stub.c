@@ -64,6 +64,7 @@ int norm_turn = 0;
 
 #define STIP_OFFSET 100
 int current_stipple = 0;
+extern GLubyte stips[8][4*32];
       
 GLubyte halftone[] = {
     0xAA, 0xAA, 0xAA, 0xAA, 0x55, 0x55, 0x55, 0x55,
@@ -179,6 +180,67 @@ getnormal(vector3d *p1, vector3d *p2, vector3d *p3, float norm[3])
 double dotprod(float a[3], float b[3])
 {
    return (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]);
+}
+
+//**********************************************************************
+void setup_material(int c, ZCOLOR *zcp, ZCOLOR *zcs)
+{
+  if (((c > 32) && (c < 64)) || (zcs->a == 0)) // Translucent colors
+  {
+    glEnable(GL_POLYGON_STIPPLE);
+    glPolygonStipple(halftone);
+    //glCallList(current_stipple+STIP_OFFSET);
+    current_stipple++;
+    current_stipple %= 8;
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, hi_shininess);
+  }   
+  // Gold, Chrome silver, Electrical Contacts
+  else if ((c == 334) || (c == 383) || (c == 494))
+  {
+    //glColorMaterial(GL_FRONT_AND_BACK, GL_SPECULAR);
+    cur_mat[0] = zcp->r/255.0;
+    cur_mat[1] = zcp->g/255.0;
+    cur_mat[2] = zcp->b/255.0;
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, cur_mat);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, cur_mat);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mid_shininess);
+    if (/*(c == 383) ||*/ (c == 494))
+      glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, hi_shininess);
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
+  }
+  if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
+    if (!glCurLighting) glEnable(GL_LIGHTING);
+  glCurLighting = 1;
+  if (glCurColorIndex != -2)
+  {
+    if (glCurColorIndex != c)
+    {
+      //glColor3f(((float)zcp->r)/255.0, ((float)zcp->g)/255.0, ((float)zcp->b)/255.0);
+      glColor3ub(zcp->r, zcp->g, zcp->b);
+      if (MESA_3_COLOR_FIX)
+	glFlush();
+    }
+    glCurColorIndex = c;
+  }
+}
+
+//**********************************************************************
+void unset_material(int c, ZCOLOR *zcp, ZCOLOR *zcs)
+{
+  if (((c > 32) && (c < 64)) || (zcs->a == 0)) // Translucent colors
+  {
+    glDisable(GL_POLYGON_STIPPLE);
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, no_shininess);
+  }   
+  // Gold, Chrome silver, Electrical Contacts
+  else if ((c == 334) || (c == 383) || (c == 494))
+  {
+    //glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, full_mat);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, no_mat);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, no_shininess);
+    //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
+  }
 }
 
 #if 0
@@ -550,43 +612,34 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
     z.extent_y2 = max(s3y,z.extent_y2);
   }
 
-  if ((c > 32) && (c < 64)) // Translucent colors
+  if (c == 374)
   {
-    glEnable(GL_POLYGON_STIPPLE);
-    glPolygonStipple(halftone);
-    //glCallList(current_stipple+STIP_OFFSET);
-    current_stipple++;
-    current_stipple %= 8;
-    //glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, hi_shininess);
-  }   
-  // Gold, Chrome silver, Electrical Contacts
-  else if ((c == 334) || (c == 383) || (c == 494))
-  {
-    //glColorMaterial(GL_FRONT_AND_BACK, GL_SPECULAR);
-    cur_mat[0] = zc.r/255.0;
-    cur_mat[1] = zc.g/255.0;
-    cur_mat[2] = zc.b/255.0;
-    //glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, cur_mat);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, cur_mat);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mid_shininess);
-    if (/*(c == 383) ||*/ (c == 494))
-      glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, hi_shininess);
-    //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
-  }
-  if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
-    if (!glCurLighting) glEnable(GL_LIGHTING);
-  glCurLighting = 1;
-  if (glCurColorIndex != -2)
-  {
-    if (glCurColorIndex != c)
+    // Draw stippled gold (334) before drawing the quad
+    translate_color(334,&zc,&zs);
+    setup_material(334,&zc,&zs); // Gold
+    setup_material(46,&zc,&zs); // Stipple
+    glPolygonStipple(stips[current_stipple]);
+
+    // LDRAW has the y value reversed, so negate the y.
     {
-      //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
-      glColor3ub(zc.r, zc.g, zc.b);
-      if (MESA_3_COLOR_FIX)
-	glFlush();
+      glBegin(GL_TRIANGLES);
+      if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
+      {
+	getnormal(vp1, vp2, vp3, surf_norm);
+	glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+      }
+      glVertex3f(vp1->x, -vp1->y, -vp1->z);
+      glVertex3f(vp2->x, -vp2->y, -vp2->z);
+      glVertex3f(vp3->x, -vp3->y, -vp3->z);
+      glEnd();
     }
-    glCurColorIndex = c;
+
+    unset_material(46,&zc,&zs);
+    unset_material(334,&zc,&zs);
+    translate_color(c,&zc,&zs);
   }
+
+  setup_material(c,&zc,&zs);
 
   // LDRAW has the y value reversed, so negate the y.
   {
@@ -601,20 +654,8 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
     glVertex3f(vp3->x, -vp3->y, -vp3->z);
     glEnd();
   }
-  if ((c > 32) && (c < 64)) // Translucent colors
-  {
-    glDisable(GL_POLYGON_STIPPLE);
-    //glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, no_shininess);
-  }   
-  // Gold, Chrome silver, Electrical Contacts
-  else if ((c == 334) || (c == 383) || (c == 494))
-  {
-    //glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, full_mat);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, no_mat);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, no_shininess);
-    //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
-  }
+
+  unset_material(c,&zc,&zs);
 
   // Done Drawing a printed poly antialiased edges.  Fix lineWidth.
   if ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) &&
@@ -812,43 +853,73 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
   }
 
   // opengl render it as a quad
-  if ((c > 32) && (c < 64)) // Translucent colors
+  if (c == 374)
   {
-    glEnable(GL_POLYGON_STIPPLE);
-    glPolygonStipple(halftone);
-    //glCallList(current_stipple+STIP_OFFSET);
-    current_stipple++;
-    current_stipple %= 8;
-    //glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, hi_shininess);
-  }   
-  // Gold, Chrome silver, Electrical Contacts
-  else if ((c == 334) || (c == 383) || (c == 494))
-  {
-    //glColorMaterial(GL_FRONT_AND_BACK, GL_SPECULAR);
-    cur_mat[0] = zc.r/255.0;
-    cur_mat[1] = zc.g/255.0;
-    cur_mat[2] = zc.b/255.0;
-    //glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, cur_mat);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, cur_mat);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mid_shininess);
-    if (/*(c == 383) ||*/ (c == 494))
-      glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, hi_shininess);
-    //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
-  }
-  if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
-    if (!glCurLighting) glEnable(GL_LIGHTING);
-  glCurLighting = 1;
-  if (glCurColorIndex != -2)
-  {
-    if (glCurColorIndex != c)
+    // Draw stippled gold (334) before drawing the quad
+    translate_color(334,&zc,&zs);
+    setup_material(334,&zc,&zs); // Gold
+    setup_material(46,&zc,&zs); // Stipple
+    glPolygonStipple(stips[current_stipple]);
+
+    // LDRAW has the y value reversed, so negate the y.
+    if (use_quads)
     {
-      //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
-      glColor3ub(zc.r, zc.g, zc.b);
-      if (MESA_3_COLOR_FIX)
-	glFlush();
+      glBegin(GL_QUADS);
+      if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
+      {
+	getnormal(vp1, vp2, vp3, surf_norm);
+	glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+      }
+      glVertex3f(vp1->x, -vp1->y, -vp1->z);
+      glVertex3f(vp2->x, -vp2->y, -vp2->z);
+      glVertex3f(vp3->x, -vp3->y, -vp3->z);
+      glVertex3f(vp4->x, -vp4->y, -vp4->z);
     }
-    glCurColorIndex = c;
+    else
+    {
+      // Lame attempt to fix concave and bowtie quads gives bad shading.
+      // Gonna have to do some real math.
+      // Either find the convex hull or 
+      // Calculate turn direction with dot product of sequential cross products.
+      glBegin(GL_TRIANGLES);
+      if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
+      {
+	getnormal(vp1, vp2, vp3, surf_norm);
+#if 0
+	if (surf_norm[2] > 0.0)// Cheap hack: Always orient the normal toward eye
+	  glNormal3f(-surf_norm[0], surf_norm[1], surf_norm[2]);
+	else
+#endif
+	  glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+      }
+      glVertex3f(vp1->x, -vp1->y, -vp1->z);
+      glVertex3f(vp2->x, -vp2->y, -vp2->z);
+      glVertex3f(vp4->x, -vp4->y, -vp4->z);
+      if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
+      {
+	getnormal(vp2, vp3, vp4, surf_norm);
+	glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+      }
+      glVertex3f(vp2->x, -vp2->y, -vp2->z);
+      glVertex3f(vp3->x, -vp3->y, -vp3->z);
+      glVertex3f(vp4->x, -vp4->y, -vp4->z);
+      if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
+      {
+	getnormal(vp1, vp3, vp4, surf_norm);
+	glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
+      }
+      glVertex3f(vp1->x, -vp1->y, -vp1->z);
+      glVertex3f(vp3->x, -vp3->y, -vp3->z);
+      glVertex3f(vp4->x, -vp4->y, -vp4->z);
+    }
+    glEnd();
+
+    unset_material(46,&zc,&zs);
+    unset_material(334,&zc,&zs);
+    translate_color(c,&zc,&zs);
   }
+
+  setup_material(c,&zc,&zs);
 
   // LDRAW has the y value reversed, so negate the y.
   if (use_quads)
@@ -902,20 +973,7 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
     glVertex3f(vp4->x, -vp4->y, -vp4->z);
   }
   glEnd();
-  if ((c > 32) && (c < 64)) // Translucent colors
-  {
-    glDisable(GL_POLYGON_STIPPLE);
-    //glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, no_shininess);
-  }   
-  // Gold, Chrome silver, Electrical Contacts
-  else if ((c == 334) || (c == 383) || (c == 494))
-  {
-    //glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, full_mat);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, no_mat);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, no_shininess);
-    //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
-  }
+  unset_material(c,&zc,&zs);
 
   // Done Drawing a printed poly antialiased edges.  Fix lineWidth.
   if ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) &&
