@@ -6492,7 +6492,8 @@ void ParseParams(int *argc, char **argv)
       switch(pszParam[0]) {
       case '-':
 	if (!strcmp(datfilename,  " "))
-	  strcpy(datfilename, ""); // read from stdin if no filename.
+	  //strcpy(datfilename, ""); // read from stdin if no filename.
+	  strcpy(datfilename, "-"); // read from stdin if no filename.
 	break;
       case 'A':
       case 'a':
