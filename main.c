@@ -4587,12 +4587,18 @@ void loadnewdatfile(char *datpath, char *datfile)
 void saveasdatfile(char *datpath, char *datfile)
 {
 #ifdef USE_L3_PARSER
+  int i = -1;
+
   strcpy(datfilename, datfile);
   strcpy(datfilepath, datpath);
   strcpy(dirfilepath, datpath); // I think this is only used by glut menus.
 
+  if (editing)
+    i = UnSelect1Part(curpiece); // Link part back in before printing
   Print1Model(datfilename);
   SetTitle(1); // Change the title of the window.
+  if (i != -1)
+    Select1Part(curpiece); // Unlink part again if needed.
 #endif
 }
 
