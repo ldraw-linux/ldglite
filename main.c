@@ -8549,6 +8549,22 @@ main(int argc, char **argv)
 #endif
 
   glutInitDisplayMode(displaymode);
+  if (! glutGet(GLUT_DISPLAY_MODE_POSSIBLE))
+    displaymode &= ~GLUT_ALPHA;
+  glutInitDisplayMode(displaymode);
+  if (! glutGet(GLUT_DISPLAY_MODE_POSSIBLE))
+  {
+    printf("Stencil buffer disabled for XOR with current openglDriver.\n");
+    use_stencil_for_XOR = 0;
+    displaymode &= ~GLUT_STENCIL;
+  }
+  glutInitDisplayMode(displaymode);
+  if (! glutGet(GLUT_DISPLAY_MODE_POSSIBLE))
+  {
+    //glutInitDisplayMode(GLUT_SINGLE);
+    printf("Cannot get double buffer from GLUT with current opengl Driver.\n");
+    return 0;
+  }
 
 #ifndef AGL
 #if (GLUT_XLIB_IMPLEMENTATION >= 13)
