@@ -1640,7 +1640,11 @@ render(void)
     linequalitysetup();
     ldraw_commandline_opts.F |= TYPE_F_NO_POLYGONS; // zWire = 1;
     stepcount = 0; // NOTE: Not sure what effect this will have...
+    if (qualityLines)
+      z_line_offset += 0.2; // Nudge antialiased lines up in depth buffer.
     DrawModel();
+    if (qualityLines)
+      z_line_offset -= 0.2; // Nudge antialiased lines up in depth buffer.
   }
 #ifdef USE_OPENGL_OCCLUSION
   else if (editing && !(ldraw_commandline_opts.F & TYPE_F_STUDLESS_MODE))
@@ -1721,6 +1725,8 @@ render(void)
     ldraw_commandline_opts.F &= ~(TYPE_F_NO_LINES);
     linequalitysetup();
     ldraw_commandline_opts.F |= TYPE_F_NO_POLYGONS; // zWire = 1;
+    if (qualityLines)
+      z_line_offset += 0.2; // Nudge antialiased lines up in depth buffer.
 
     zcolor_init();
 
@@ -1755,6 +1761,8 @@ render(void)
       znamelist_pop();
     }
 
+    if (qualityLines)
+      z_line_offset -= 0.2; // Nudge antialiased lines up in depth buffer.
   }
 #endif
     //if (ldraw_commandline_opts.output != 1) zStep(INT_MAX, 0);
