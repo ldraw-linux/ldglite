@@ -650,6 +650,121 @@ int starttime, finishtime, elapsedtime;
 #pragma comment (lib, "winmm.lib")       /* link with Windows MultiMedia lib */
 #endif
 
+#ifdef MACOS_X_TEST2
+/***************************************************************/
+static char *cbufdata = NULL;   // NOTE: gotta free when finished editing.
+
+/***************************************************************/
+void SaveColorBuffer(void)
+{
+#ifdef WINTIMER
+  starttime = timeGetTime();
+#endif
+
+  {
+#ifndef SAVE_COLOR_ALL
+    // Gotta figure out the src,dst stuff.  glTranslate()?
+    //glRasterPos2i((int)sc[0], (int)sc[1]);
+    Get1PartBox(curpiece, sc);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("sbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
+    if (cbufdata)
+      free (cbufdata);  // NOTE: gotta free this when finished editing.
+    cbufdata = (int *) malloc(sc[2] * sc[3] * 4 * sizeof(char));
+    glReadBuffer(staticbuffer); // set pixel source
+    glReadPixels(sc[0],sc[1],sc[2],sc[3],GL_RGB,GL_UNSIGNED_BYTE,cbufdata);
+#else
+    if (cbufdata) // NOTE: gotta free this when finished editing.
+    {
+      //cbufdata = realloc(zbufdata, Width * Height * sizeof(float));
+    }
+    else
+      cbufdata = (char *) malloc(Width * Height * 4 * sizeof(char));
+    glReadBuffer(staticbuffer); // set pixel source
+    glReadPixels(0,0,Width,Height,GL_RGB,GL_UNSIGNED_BYTE,cbufdata);
+#endif
+}
+#ifdef WINTIMER
+  finishtime = timeGetTime();
+  printf("Save Color Elapsed = %d\n", finishtime-starttime);
+#endif
+  //NOTE:  I have to reallocate cbufdata whenever we resize the window.
+}
+
+/***************************************************************/
+void RestoreColorBuffer(void)
+{
+  int savedirty;
+
+#ifdef WINTIMER
+  starttime = timeGetTime();
+#endif
+  // get fresh copy of static data
+  {
+    // Gotta fix these later because they get set only once in init().
+    //glDisable(GL_COLOR_MATERIAL);
+    //glDisable(GL_POLYGON_OFFSET_FILL);
+    //glEnable(GL_CULL_FACE);
+    //glFrontFace(GL_CW);
+    //glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
+
+    glPixelZoom(1, 1);
+    glDisable(GL_STENCIL_TEST);    
+    glDisable(GL_FOG);
+
+  // Turn off any smoothing or blending modes.
+    glDisable( GL_POINT_SMOOTH ); 
+    glDisable(GL_ALPHA_TEST);
+    glDisable( GL_LINE_SMOOTH ); 
+    glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+    glDisable( GL_BLEND );
+    glDisable( GL_POLYGON_SMOOTH ); 
+    glHint( GL_POLYGON_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+    glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+
+    glDisable(GL_LIGHTING);     // Speed up copying
+    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
+    glDisable( GL_DEPTH_TEST ); 
+    glDepthFunc(GL_ALWAYS);
+
+    glMatrixMode( GL_PROJECTION );
+    glLoadIdentity();
+    gluOrtho2D(0, Width, 0, Height);
+    glMatrixMode( GL_MODELVIEW );
+    glPushMatrix();
+    glLoadIdentity();
+    glRasterPos2i(0, 0);
+
+    glDrawBuffer(screenbuffer); // set pixel destination
+#ifndef SAVE_COLOR_ALL
+    // Gotta figure out the src,dst stuff.  glTranslate()?
+    glRasterPos2i(sc[0], sc[1]);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
+    glDrawPixels(sc[2],sc[3],GL_RGB,GL_UNSIGNED_BYTE,cbufdata);
+#else
+    glDrawPixels(Width,Height,GL_RGB,GL_UNSIGNED_BYTE,cbufdata);
+#endif
+
+    glPopMatrix();
+    glEnable( GL_DEPTH_TEST ); 
+    glDepthFunc(GL_LESS);
+    glDrawBuffer(renderbuffer); // set pixel destination to the render buffer.
+
+    // Reset the projection matrix.
+    savedirty = dirtyWindow; 
+    reshape(Width, Height);
+    dirtyWindow = savedirty; 
+
+    rendersetup();
+  }
+#ifdef WINTIMER
+  finishtime = timeGetTime();
+  printf("Restore Color Elapsed = %d\n", finishtime-starttime);
+#endif
+}
+#endif
+
 /***************************************************************/
 void CopyColorBuffer(int srcbuffer, int destbuffer)
 {
@@ -2023,6 +2138,12 @@ void init(void)
 /***************************************************************/
 int exposeEvent(void)
 {
+#ifdef MACOS_X_TEST1
+  return 0;
+#endif
+#ifdef MACOS_X_TEST2
+  return 0;
+#endif
   // Check if we had a window expose event lately.
   return glutLayerGet(GLUT_NORMAL_DAMAGED);
 }
@@ -3081,6 +3202,10 @@ int NukeSavedDepthBuffer(void)
     free (zbufdata);  // NOTE: gotta free this when finished editing.
     zbufdata = NULL;
   }
+#if MACOS_X_TEST2
+  free (cbufdata);  // NOTE: gotta free this when finished editing.
+  cbufdata = NULL;
+#endif
 }
 
 /***************************************************************/
@@ -3424,6 +3549,19 @@ void CopyStaticBuffer(void)
       SaveDepthBuffer();
       goodZ = 1; // No need to copy depth back in yet.
     }
+#ifdef MACOS_X_TEST1
+    else
+    {
+      // Draw stuff into the staticbuffer
+      glDrawBuffer(staticbuffer); 
+      
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      render();
+
+      SaveDepthBuffer();
+      goodZ = 1; // No need to copy depth back in yet.
+    }
+#endif
     movingpiece = curpiece;
     
     // get fresh copy of static data
@@ -3442,8 +3580,14 @@ void CopyStaticBuffer(void)
     }
 
     // get fresh copy of static data
+#ifdef MACOS_X_TEST2
+    if (goodZ) // If we just rendered on a mac, backup colorbuf to RAM.
+      SaveColorBuffer();
+    RestoreColorBuffer();
+#else
     glDrawBuffer(screenbuffer); // set pixel destination
     CopyColorBuffer(staticbuffer, screenbuffer);
+#endif
     if (!goodZ) // Don't bother with z restore if we just rendered.
       RestoreDepthBuffer();
     // screenbuffer is ready for dynamic data
@@ -3531,6 +3675,11 @@ void DrawMovingPiece(void)
 #else
     // If not using depth box then the whole window was saved so
     // we can skip the save here.  Its only needed if the box moves.
+#endif
+#ifdef MACOS_X_TEST2
+#ifndef SAVE_COLOR_ALL
+    SaveColorBuffer();
+#endif
 #endif
     if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
       glEnable(GL_LIGHTING);
@@ -7722,6 +7871,15 @@ void getDisplayProperties()
   char *str;
   int newcontext = 0;
 
+#ifdef SIMULATE_APPLE_BUGS
+  if (strcmp(verstr, "1.1 APPLE-1.1"))
+  {	     
+    verstr = strdup("1.1 APPLE-1.1");
+    vendstr = strdup("Apple");
+    rendstr = strdup("Generic");
+    newcontext = 1;
+  }
+#else
   str = (char *) glGetString(GL_VERSION);
   if (str && strcmp(str, verstr))
   {
@@ -7746,6 +7904,7 @@ void getDisplayProperties()
     newcontext = 1;
     rendstr = strdup(str);
   }
+#endif
 
   // Reset all context dependent stuff when new context detected
   if (!newcontext)
