@@ -16,7 +16,7 @@ CC=gcc
 #GUI_SRC=ldglgui.c
 #GUI_LIBS=-lmui
 
-CFLAGS=-ggdb -DUNIX -DAGL -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS) $(TR_FLAGS) $(GUI_FLAGS) 
+CFLAGS=-ggdb -DUNIX -DAGL -DUSE_OPENGL -DUSE_L3_PARSER -DNEED_MIN_MAX $(PNG_FLAGS) $(TR_FLAGS) $(GUI_FLAGS) 
 
 
 ## This is lame.  I don't know how to do both .c and .cpp for the OBJS line

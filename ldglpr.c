@@ -25,6 +25,15 @@
 
 #include "platform.h"
 #include "ldliteVR.h"
+#ifndef WINDOWS
+// This stuff gets pulled in by glut.h for windows.
+#include "wstubs.h"
+#else
+// glut 3.7 no longer includes windows.h
+#if (GLUT_XLIB_IMPLEMENTATION >= 13)
+#include <windows.h>
+#endif
+#endif
 
 extern char buf[10240];
 extern int use_uppercase;
@@ -34,6 +43,13 @@ extern GLint Width;
 extern GLint Height;
 extern int cropping;
 extern char progname[256];
+
+#ifdef OSMESA_OPTION
+#include "GL/osmesa.h"
+extern int OffScreenRendering;
+extern void *OSbuffer;
+extern OSMesaContext ctx;
+#endif
 
 char *pix;
 
@@ -168,24 +184,34 @@ void write_bmp(char *filename)
     if (OffScreenRendering)
     {
       int j;
-      char *p = (char *)&OSbuffer[(i+yoff)*Width +xoff];
+      char *b = (char *)OSbuffer;
+      b += ((i+yoff)*Width +xoff) *4;
       for (j=0; j<width; j++) {
-	pix[4*j] = *p++;
-	pix[4*j+1] = *p++;
-	pix[4*j+2] = *p++;
-	p++;
+	// MESA or OSmesa bug?  ReadPixels gives GBR instead of RGB???
+	pix[3*j] = b[1];
+	pix[3*j+1] = b[0];
+	pix[3*j+2] = b[2];
+	b+=4;
       }
     }
     else
 #endif
-    glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, pix);
-    p = pix;
-    for (j = 0; j < width; j++) // RGB -> BGR
     {
-      c = p[0];
-      p[0] = p[2];
-      p[2] = c;
-      p+=3;
+      glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, pix);
+      p = pix;
+      for (j = 0; j < width; j++) // RGB -> BGR
+      {
+        c = p[0];
+#ifdef WINDOWS       
+        p[0] = p[2];
+        p[2] = c;
+#else
+	// MESA or OSmesa bug?  ReadPixels gives GBR instead of RGB???
+        p[0] = p[1];
+        p[1] = c;
+#endif
+        p+=3;
+      }
     }
     fwrite(pix, width*3, 1, fp);
   }
@@ -265,12 +291,13 @@ void write_ppm(char *filename)
     if (OffScreenRendering)
     {
       int j;
-      char *p = (char *)&OSbuffer[(i+yoff)*Width +xoff];
+      char *b = (char *)OSbuffer;
+      b += ((i+yoff)*Width +xoff) *4;
       for (j=0; j<width; j++) {
-	pix[4*j] = *p++;
-	pix[4*j+1] = *p++;
-	pix[4*j+2] = *p++;
-	p++;
+	pix[3*j] = b[0];
+	pix[3*j+1] = b[1];
+	pix[3*j+2] = b[2];
+	b+=4;
       }
     }
     else
@@ -485,14 +512,21 @@ void write_png(char *filename)
     if (OffScreenRendering)
     {
       int j;
-      char *p = (char *)&OSbuffer[(i+yoff)*Width +xoff];
+      char *b = (char *)OSbuffer;
+      b += ((i+yoff)*Width +xoff) *4;
       for (j=0; j<width; j++) {
-	pix[4*j] = *p++;
-	pix[4*j+1] = *p++;
-	pix[4*j+2] = *p++;
-	if (use_png_alpha)
-	  pix[4*j+3] = *p;
-	p++;
+	if (use_png_alpha){
+	  pix[4*j] = b[0];
+	  pix[4*j+1] = b[1];
+	  pix[4*j+2] = b[2];
+	  pix[4*j+3] = b[3];
+	}
+	else {
+	  pix[3*j] = b[0];
+	  pix[3*j+1] = b[1];
+	  pix[3*j+2] = b[2];
+	}
+	b+=4;
       }
     }
     else
@@ -518,14 +552,6 @@ void write_png(char *filename)
   if (width > 2560)
     free(pix);
 }
-#endif
-
-#ifdef WINDOWS
-#define USE_BMP8 1
-#else
-#ifndef AGL
-#define USE_BMP8 1
-#endif
 #endif
 
 #ifdef USE_BMP8
@@ -745,16 +771,19 @@ void write_bmp8(char *filename)
   if (OffScreenRendering)
   {
     int i;
+    pix = data;
     for (i = 0; i < height; i++)
     {
       int j;
-      char *p = (char *)&OSbuffer[(i+yoff)*Width +xoff];
+      char *b = (char *)OSbuffer;
+      b += ((i+yoff)*Width +xoff) *4;
       for (j=0; j<width; j++) {
-	data[4*j] = *p++;
-	data[4*j+1] = *p++;
-	data[4*j+2] = *p++;
-	p++;
+	pix[3*j] = b[0];
+	pix[3*j+1] = b[1];
+	pix[3*j+2] = b[2];
+	b+=4;
       }
+      pix += width*3;
     }
   }
   else

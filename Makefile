@@ -23,8 +23,8 @@ RES_SRC=ldglite.rc
 #       because we lose stdin.  Perhaps I should make 2 versions
 #       or make it a makefile option.
 #
-CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS) $(TR_FLAGS) $(GUI_FLAGS)
-#CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS) $(TR_FLAGS) $(GUI_FLAGS) -mwindows
+CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 $(PNG_FLAGS) $(TR_FLAGS) $(GUI_FLAGS)
+#CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 $(PNG_FLAGS) $(TR_FLAGS) $(GUI_FLAGS) -mwindows
 
 AR = ar
 RANLIB = ranlib

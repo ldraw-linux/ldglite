@@ -1,15 +1,22 @@
-#ifdef AGL
-// I guess these come from glut on linux???
-typedef unsigned char BYTE;
-//typedef int          INT;
-typedef int          BOOL;
-#endif
 
 #define UINT unsigned short
 #define DWORD long
 #define LONG long
 #define WORD short
+#define BYTE unsigned char
 #define BI_RGB 0L
+
+#ifndef BOOL
+#define BOOL int
+#endif
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+
+#ifndef FALSE
+#define FALSE 0
+#endif
 
 /*
   Header, 14 bytes.
@@ -59,4 +66,13 @@ typedef struct tagBITMAPINFOHEADER{
 
 typedef BITMAPINFOHEADER *LPBITMAPINFOHEADER;
 typedef BITMAPINFOHEADER *PBITMAPINFOHEADER;
+
+typedef struct tagRGBQUAD {
+	BYTE	rgbBlue;
+	BYTE	rgbGreen;
+	BYTE	rgbRed;
+	BYTE	rgbReserved;
+} RGBQUAD;
+
+
 

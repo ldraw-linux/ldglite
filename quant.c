@@ -1,7 +1,7 @@
 ///////////////////////////////////////
 // DL1 Quantization
 
-#include "stdafx.h"
+#include "StdAfx.h"
 
 #ifdef USE_OPENGL
 #include <GL/glut.h>
