@@ -352,35 +352,17 @@ static void png_warning_fn(png_structp png_ptr, const char *warn_msg)
 }
 
 /***************************************************************/
-void write_png(char *filename)
+FILE *start_png(char *filename, int width, int height,   
+		png_structp *png_pp, png_infop *info_pp)
 {
-  int i, j;
   char *p;
 
   png_structp png_ptr;
   png_infop info_ptr;
   jmp_buf jbuf;
-  png_text text_ptr[1];
   png_color_16 background;
   FILE *fp;
 
-  int width = Width;
-  int height = Height;
-  GLint xoff = 0;
-  GLint yoff = 0;
-
-  if (cropping)
-  {
-    xoff = max(0, z.extent_x1);
-    yoff = max(0, z.extent_y1);
-    width = min((z.extent_x2 - xoff), (Width - xoff));
-    height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
-    width = ((width + 3)/4) * 4; // round to a multiple of 4.
-    if (ldraw_commandline_opts.debug_level == 1)
-      printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
-    if ((width <= 0) || (height <= 0)) return;
-  }
-  
   if ((p = strrchr(filename, '.')) != NULL)
     *p = 0;
   strcat(filename, use_uppercase ? ".PNG" : ".png");
@@ -393,14 +375,14 @@ void write_png(char *filename)
   if (!png_ptr) 
   {
     printf("No Memory", filename);
-    return;
+    return(NULL);
   }
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr) {
     png_destroy_write_struct(&png_ptr,(png_infopp)NULL);
     printf("No Memory", filename);
-    return;
+    return(NULL);
   }
 
   if(setjmp(jbuf)) {
@@ -409,12 +391,12 @@ void write_png(char *filename)
     printf("Aborting PNG file %s", filename);
     png_destroy_write_struct(&png_ptr,(png_infopp)NULL);
     if(fp) fclose(fp);
-    return;
+    return(NULL);
   }
 
   if ((fp = fopen(filename,"wb+"))==NULL) {
     printf("Could not open %s\n", filename);
-    return;
+    return(NULL);
   }
   
   png_init_io(png_ptr, fp);
@@ -449,6 +431,42 @@ void write_png(char *filename)
 
   png_write_info(png_ptr, info_ptr);
   
+  *png_pp = png_ptr;
+  *info_pp = info_ptr;
+  return(fp);
+}
+
+/***************************************************************/
+void write_png(char *filename)
+{
+  int i, j;
+
+  png_structp png_ptr;
+  png_infop info_ptr;
+  png_text text_ptr[1];
+  FILE *fp;
+
+  int width = Width;
+  int height = Height;
+  GLint xoff = 0;
+  GLint yoff = 0;
+
+  if (cropping)
+  {
+    xoff = max(0, z.extent_x1);
+    yoff = max(0, z.extent_y1);
+    width = min((z.extent_x2 - xoff), (Width - xoff));
+    height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
+    width = ((width + 3)/4) * 4; // round to a multiple of 4.
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
+    if ((width <= 0) || (height <= 0)) return;
+  }
+  
+  fp = start_png(filename, width, height, &png_ptr, &info_ptr);
+  if (fp == NULL)
+    return;
+
   glReadBuffer(GL_FRONT);
   // Write image rows
   //png_write_image(png_ptr, row_pointers);
@@ -1678,6 +1696,12 @@ void TiledDisplay(void)
    char *p;
    char filename[256];
 
+#ifdef USE_PNG
+   png_structp png_ptr;
+   png_infop info_ptr;
+   png_text text_ptr[1];
+#endif
+
    GLdouble left, right, top, bottom, aspect;
    GLdouble width, height;
 
@@ -1777,48 +1801,39 @@ void TiledDisplay(void)
    platform_step_filename(curstep, filename);
 
 #ifdef USE_PNG
-      if (ldraw_image_type == IMAGE_TYPE_PNG_RGB)
-      {
-	use_png_alpha = 0;
-	//write_png(filename);
-      }
-      else if (ldraw_image_type == IMAGE_TYPE_PNG_RGBA)
-      {
-	// use_png_alpha = 1; 
-	use_png_alpha = 0; // Tiled renderer does not support alpha channel.
-	//write_png(filename);
-      }
-      else
-#endif
-#ifdef USE_BMP8
-      if (ldraw_image_type == IMAGE_TYPE_BMP8)
-      {
-	//write_bmp8(filename);
-      }
-      else
-#endif
-      {
-	//write_bmp(filename);
-      }
-
-   if ((p = strrchr(filename, '.')) != NULL)
-     *p = 0;
-   strcat(filename, use_uppercase ? ".PPM" : ".ppm");
-   
-   f = fopen(filename, "wb");  // open in binary mode (to use unix \n chars)
-   if (!f) {
-      printf("Couldn't open image file: %s\n", filename);
-      return;
+   if (ldraw_image_type == IMAGE_TYPE_PNG_RGB)
+   {
+     use_png_alpha = 0;
+     f = start_png(filename, width, height, &png_ptr, &info_ptr);
    }
-   fprintf(f,"P6\n");
-   fprintf(f,"# ppm-file created by %s\n", "trdemo2");
-   fprintf(f,"%i %i\n", TILE_IMAGE_WIDTH, TILE_IMAGE_HEIGHT);
-   fprintf(f,"255\n"); // need unix \n here for some ppm interpreters.
-   fclose(f);
-   f = fopen(filename, "ab");  /* now append binary data */
-   if (!f) {
-      printf("Couldn't append to image file: %s\n", filename);
-      return;
+   else if (ldraw_image_type == IMAGE_TYPE_PNG_RGBA)
+   {
+     // use_png_alpha = 1; 
+     use_png_alpha = 0; // Tiled renderer does not support alpha channel.
+     f = start_png(filename, width, height, &png_ptr, &info_ptr);
+   }
+   else
+#endif
+   {
+     if ((p = strrchr(filename, '.')) != NULL)
+       *p = 0;
+     strcat(filename, use_uppercase ? ".PPM" : ".ppm");
+   
+     f = fopen(filename, "wb");  // open in binary mode (to use unix \n chars)
+     if (!f) {
+       printf("Couldn't open image file: %s\n", filename);
+       return;
+     }
+     fprintf(f,"P6\n");
+     fprintf(f,"# ppm-file created by %s\n", "trdemo2");
+     fprintf(f,"%i %i\n", TILE_IMAGE_WIDTH, TILE_IMAGE_HEIGHT);
+     fprintf(f,"255\n"); // need unix \n here for some ppm interpreters.
+     fclose(f);
+     f = fopen(filename, "ab");  /* now append binary data */
+     if (!f) {
+       printf("Couldn't append to image file: %s\n", filename);
+       return;
+     }
    }
    /*************************************************************/
 
@@ -1863,6 +1878,14 @@ void TiledDisplay(void)
 	  /* Remember, OpenGL images are bottom to top.  Have to reverse. */
 	  rowPtr = buffer + (curTileHeight-1-i) * bytesPerImageRow;
 
+#ifdef USE_PNG
+	  if ((ldraw_image_type == IMAGE_TYPE_PNG_RGB) ||
+	      (ldraw_image_type == IMAGE_TYPE_PNG_RGBA))
+	  {
+	    png_write_row(png_ptr, rowPtr);
+	  }
+	  else
+#endif
 	  /************* Save a row to the ppm output file *************/
 	  // NOTE: We will have to disable ALPHA (just use RGB) for png files.
 	  fwrite(rowPtr, 1, TILE_IMAGE_WIDTH*3, f);
@@ -1872,6 +1895,23 @@ void TiledDisplay(void)
 
    }
    trDelete(tr);
+
+#ifdef USE_PNG
+   if ((ldraw_image_type == IMAGE_TYPE_PNG_RGB) ||
+       (ldraw_image_type == IMAGE_TYPE_PNG_RGBA))
+   {
+     text_ptr[0].key = "Software";
+     text_ptr[0].text = "LdGLite";
+     text_ptr[0].compression = PNG_TEXT_COMPRESSION_NONE;
+     png_set_text(png_ptr, info_ptr, text_ptr, 1);
+  
+     png_write_end(png_ptr, info_ptr);
+     png_destroy_write_struct(&png_ptr, &info_ptr);
+
+     fclose(f);
+   }
+   else
+#endif
 
    /************* Finish and close ppm output file **************/
    fclose(f);
