@@ -100,6 +100,7 @@ GLdouble pan_start_x = 0.0;
 GLdouble pan_start_y = 0.0;
 int pan_start_zWire;
 int pan_start_F;
+int pan_visible = 1;
 
 //#define USE_QUATERNION 1
 #ifdef USE_QUATERNION
@@ -1712,6 +1713,9 @@ void keyboard(unsigned char key, int x, int y)
       platform_step(INT_MAX, 0, -1, NULL);
       ldraw_commandline_opts.M = c;
       return;
+    case 'v':
+      pan_visible ^= 1;
+      return;
     case 27:
 	exit(0);
 	break;
@@ -2063,7 +2067,7 @@ motion(int x, int y)
     panning = 1;
 
     // Lets rotate the wireframe.
-    if (1)
+    if (pan_visible)
     {
       p_x = pan_x; //Save next pan_start coords.
       p_y = pan_y;
@@ -2808,6 +2812,7 @@ main(int argc, char **argv)
   glutAddMenuEntry("Wireframe       ", 'w');
   glutAddMenuEntry("Normal          ", 'n');
   glutAddMenuEntry("Studs           ", 'f');
+  glutAddMenuEntry("Visible spin    ", 'v');
   glutAddMenuEntry("                ", '\0');
   glutAddMenuEntry("Zoom out        ", 'z');
   glutAddMenuEntry("Zoom in         ", 'Z');
