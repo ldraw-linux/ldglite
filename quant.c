@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 
+#ifdef USE_OPENGL
 #include <GL/glut.h>
 
 #include "platform.h"
@@ -11,9 +12,10 @@
 // This stuff gets pulled in by glut.h for windows.
 #include "wstubs.h"
 #endif
+#endif
 
 //#include <stdlib.h>
-#include "Quant.h"
+#include "quant.h"
 
 //#define FAST		// improves speed but uses a lot of memory
 #define QUAL1		// slightly improves quality
