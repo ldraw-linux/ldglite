@@ -68,8 +68,13 @@ char title[256];
 char buf[10240];
 int use_uppercase = 0;
 
+#define IMAGE_TYPE_PNG_RGB 1
+#define IMAGE_TYPE_PNG_RGBA 2
+#define IMAGE_TYPE_BMP8 3
+#define IMAGE_TYPE_BMP 4
+
 int ldraw_projection_type = 0;  // 1 = perspective, 0 = orthographic.
-int ldraw_image_type = 0;  // 0 = .BMP, 1 = .PNG.
+int ldraw_image_type = IMAGE_TYPE_BMP8;
 
 // [Views] swiped from ldraw.ini
 // Modified some views to be orthogonal.
@@ -293,6 +298,7 @@ void write_bmp(char *filename)
 
   // no pallete since we use RGB
 
+  glReadBuffer(GL_FRONT);
   for (i = 0; i < height; i++)
   {
     glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, buf);
@@ -326,6 +332,7 @@ static void png_warning_fn(png_structp png_ptr, const char *warn_msg)
 	return;
 }
 
+#define USE_PNG_ALPHA 1
 /***************************************************************/
 void write_png(char *filename)
 {
@@ -336,6 +343,9 @@ void write_png(char *filename)
   png_infop info_ptr;
   jmp_buf jbuf;
   png_text text_ptr[1];
+#ifdef USE_PNG_ALPHA
+  png_color_16 background;
+#endif
   FILE *fp;
 
   int width = Width;
@@ -393,20 +403,44 @@ void write_png(char *filename)
   
   png_init_io(png_ptr, fp);
 
+#ifdef USE_PNG_ALPHA
+  // Set the default background for transparent image to white.
+  // I should just store the current background color in a global and use it.
+  // I should also make this a menu option/command line opt.
+  // Perhaps ctl-p for the hot key.  
+ // Perhaps I need to create 4 image types.  bmp24, bmp8, png, png-alpha
+  // and menu/hotkey/cmdline support for cropping modifier.
+  background.red = 0xffff;
+  background.green = 0xffff;
+  background.blue = 0xffff;
+
+  png_set_IHDR(png_ptr, info_ptr, width, height, 8, 
+	       PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE,
+	       PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+  png_set_bKGD(png_ptr, info_ptr, &background);
+
+#else
   png_set_IHDR(png_ptr, info_ptr, width, height, 8, 
 	       PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
 	       PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+#endif
 
   // png_set_bgr(png_ptr);
   // png_set_pHYs(png_ptr, info_ptr, resolution_x, resolution_y, 1);
 
   png_write_info(png_ptr, info_ptr);
   
+  glReadBuffer(GL_FRONT);
   // Write image rows
   //png_write_image(png_ptr, row_pointers);
   for (i = height-1; i >= 0; i--)
   {
+#ifdef USE_PNG_ALPHA
+    glReadPixels(xoff, i+yoff, width, 1, GL_RGBA, GL_UNSIGNED_BYTE, buf);
+#else
     glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, buf);
+#endif
     png_write_row(png_ptr, buf);
   }
 
@@ -423,6 +457,8 @@ void write_png(char *filename)
 #endif
 
 #ifdef WINDOWS
+#define USE_BMP8 1
+#else
 #define USE_BMP8 1
 #endif
 
@@ -638,6 +674,7 @@ void write_bmp8(char *filename)
 
   printf("Write BMP8 %s\n", filename);
   
+  glReadBuffer(GL_FRONT);
   glReadPixels(xoff, yoff, (GLint)width, (GLint)height, GL_RGB, GL_UNSIGNED_BYTE, data);
 
   dl1quant(data, colormappedBuffer, width, height, 256, TRUE, tmpPal); 
@@ -744,20 +781,23 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
 //        think that will work here since OpenGL does the screen transform.
 //*************************************************************************
 
-  if (ldraw_commandline_opts.debug_level == 1)
-    printf("EXTENTS: (%d, %d) -> (%d, %d)\n", zp->extent_x1, zp->extent_y1, 
-	   zp->extent_x2, zp->extent_y2);
+      if (ldraw_commandline_opts.debug_level == 1)
+	printf("EXTENTS: (%d, %d) -> (%d, %d)\n", 
+	       zp->extent_x1, zp->extent_y1, zp->extent_x2, zp->extent_y2);
 
 #ifdef USE_PNG
-      if (ldraw_image_type == 1)
+      if (ldraw_image_type == IMAGE_TYPE_PNG_RGB)
+	write_png(filename);
+      else if (ldraw_image_type == IMAGE_TYPE_PNG_RGBA)
 	write_png(filename);
       else
 #endif
 #ifdef USE_BMP8
-      write_bmp8(filename);
-#else
-      write_bmp(filename);
+      if (ldraw_image_type == IMAGE_TYPE_BMP8)
+	write_bmp8(filename);
+      else
 #endif
+	write_bmp(filename);
     }
   }
   if (pause && (ldraw_commandline_opts.M == 'P')&&(step!=INT_MAX))  {
@@ -1738,6 +1778,8 @@ void keyboard(unsigned char key, int x, int y)
 {
   int newview = 0;
   char c;
+  
+  glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
 
     switch(key) {
     case 'z':
@@ -1832,9 +1874,17 @@ void keyboard(unsigned char key, int x, int y)
     case 'P':
     case 'p':
       if (key == 'P') 
-	ldraw_image_type = 0;
+      {
+	ldraw_image_type = IMAGE_TYPE_PNG_RGB;
+	if (glutModifiers & GLUT_ACTIVE_CTRL)
+	  ldraw_image_type = IMAGE_TYPE_PNG_RGBA;
+      }
       else 
-	ldraw_image_type = 1;
+      {
+	ldraw_image_type = IMAGE_TYPE_BMP8;
+	if (glutModifiers & GLUT_ACTIVE_CTRL)
+	  ldraw_image_type = IMAGE_TYPE_BMP;
+      }
       c = ldraw_commandline_opts.M;
       ldraw_commandline_opts.M = 'S';
       platform_step(INT_MAX, 0, -1, NULL);
@@ -1874,6 +1924,15 @@ void keyboard(unsigned char key, int x, int y)
     case 'g':
       ldraw_commandline_opts.poll ^= 1;
       return;
+#ifdef USE_L3_PARSER
+    case 'l':
+      if (parsername == LDLITE_PARSER)
+	parsername = L3_PARSER;
+      else
+	parsername = LDLITE_PARSER;
+      list_made = 0; // Gotta reparse the file.
+      break;
+#endif
     case 27:
 	exit(0);
 	break;
@@ -2959,7 +3018,7 @@ main(int argc, char **argv)
   output_file = fopen(output_file_name,"w+");
 #endif
 
-  strcpy(progname, argv[0]);
+  strcpy(progname, basename(argv[0]));
   concat_path(datfilepath, datfilename, filename);
   if (filename[0] == '.') // I hate the ./filename thing.
     sprintf(title, "%s - %s", progname, datfilename);
@@ -2972,7 +3031,8 @@ main(int argc, char **argv)
   if (parsername == UNKNOWN_PARSER)
   {
     parsername = LDLITE_PARSER; // default to ldlite parser.
-    if (stricmp("l3glite", basename(progname)) == 0)
+    if ((stricmp("l3glite", progname) == 0) ||
+	(stricmp("l3glite.exe", progname) == 0))
     {
       parsername = L3_PARSER;
 
@@ -3060,6 +3120,9 @@ main(int argc, char **argv)
   glutAddMenuEntry("Visible spin    ", 'v');
   glutAddMenuEntry("Continuous      ", 'c');
   glutAddMenuEntry("Polling         ", 'g');
+#ifdef USE_L3_PARSER
+  glutAddMenuEntry("Parser          ", 'l');
+#endif
   glutAddMenuEntry("                ", '\0');
   glutAddMenuEntry("Zoom out        ", 'z');
   glutAddMenuEntry("Zoom in         ", 'Z');
