@@ -1204,7 +1204,7 @@ void GetPartBox(struct L3LineS *LinePtr, int sc[4])
   }
 
   // Gotta convert to screen coords first for opengl.
-  s2x = s1y = 0.0;
+  s2x = s2y = 0.0;
   s0x = Width;
   s0y = Height;
 
@@ -1240,8 +1240,10 @@ void GetPartBox(struct L3LineS *LinePtr, int sc[4])
   sc[2] = (int)(s2x - s0x);
   sc[3] = (int)(s2y - s0y);
 
-  if (sc[2] <= 0) sc[2] = 1;
-  if (sc[3] <= 0) sc[3] = 1;
+  if (sc[2] <= 0) 
+    sc[2] = 1;
+  if (sc[3] <= 0) 
+    sc[3] = 1;
 }
 
 /*****************************************************************************/
