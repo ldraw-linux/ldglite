@@ -93,13 +93,48 @@ float qspin[4] = {0.0, 0.0, 1.0, 0.0};
 #endif
 
 int  filemenunum;
+int  dirmenunum;
 int  mainmenunum;
 int  DateiCount    = 0;
+int  FolderCount    = 0;
 char DateiListe[MAX_DIR_ENTRIES][NAMELENGTH];
+char FolderList[MAX_DIR_ENTRIES][NAMELENGTH];
 int  minfilenum    = 0;
 char progname[256];
 char dirfilepath[256];
+char dirpattern[256] = "*";
 char filepattern[256] = "*";
+
+/***************************************************************/
+void draw_string(void *font, const char* string) 
+{
+  while(*string)
+    glutStrokeCharacter(font, *string++);
+}
+
+/***************************************************************/
+void draw_string_bitmap(void *font, const char* string) 
+{
+  while (*string)
+    glutBitmapCharacter(font, *string++);
+}
+
+/***************************************************************/
+/**
+ ** use glut to display a string of characters using a raster font:
+ **/
+/***************************************************************/
+void
+DoRasterString( float x, float y, char *s )
+{
+  char c;			/* one character to print		*/
+  
+  glRasterPos2f( x, y );
+  for( ; ( c = *s ) != '\0'; s++ )
+  {
+    glutBitmapCharacter( GLUT_BITMAP_TIMES_ROMAN_24, c );
+  }
+}
 
 /***************************************************************/
 #define BYTE1(i) ((unsigned char) (i & 0x0ff))
@@ -1209,6 +1244,48 @@ void display(void)
   glutWireCube(20.0);
 #endif
 
+#if 0  
+  glMatrixMode( GL_PROJECTION );
+  glLoadIdentity();
+  gluOrtho2D( 0., 100., 0., 100. ); /* "percent units" */
+  glMatrixMode( GL_MODELVIEW );
+  glLoadIdentity();
+  glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
+  glColor3f( 0.3, 0.3, 0.3 );		/* grey  	*/
+  DoRasterString( 5., 60., "My Volume = 345.6" );
+#endif
+
+  glColor3f(0.0, 0.5, 1.0); // Greenish blue
+  DoRasterString( -50.0, -100.0, "LdGLite" );
+  DoRasterString( 0.0, 0.0, "ldglite" );
+  /*
+GLUT_BITMAP_9_BY_15 
+GLUT_BITMAP_8_BY_13 
+GLUT_BITMAP_TIMES_ROMAN_10 
+GLUT_BITMAP_TIMES_ROMAN_24 
+GLUT_BITMAP_HELVETICA_10 
+GLUT_BITMAP_HELVETICA_12 
+GLUT_BITMAP_HELVETICA_18
+  */
+  glColor3f(0.0, 0.0, 0.0); // black
+  glPushMatrix();
+  glTranslatef(-Width/2, -100, 0);
+  glScalef(0.1f, 0.1f, 0.1f);
+  draw_string(GLUT_STROKE_ROMAN, "Hello!");
+  glTranslatef(-Width/2, -60, 0);
+  draw_string(GLUT_STROKE_MONO_ROMAN, "Hello!");
+  glPopMatrix();
+  gluOrtho2D(-Width/2, Width/2, -Height/2, Height/2);
+  glRasterPos2f(0, 0);
+  draw_string_bitmap(GLUT_BITMAP_HELVETICA_12, "HELLO!");
+  //rx+=glutBitmapWidth(GLUT_BITMAP_9_BY_15,'H'); 
+  //rx+=glutBitmapLength(GLUT_BITMAP_HELVETICA_12, "HELLO!");
+  //int glutStrokeWidth(void *font, int character);
+  //int glutStrokeLength(void *font, const unsigned char *string);
+
+
+  
+
   glFlush();
 
   glPopMatrix();
@@ -1583,7 +1660,23 @@ motion(int x, int y)
 /***************************************************************/
 void menu(int item)
 {
-  keyboard((unsigned char)item, 0, 0);
+  if  (item == 1)
+  {
+    glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
+    if (strcmp(filepattern, "*"))
+    {
+      strcpy(filepattern, "*");
+      glutChangeToMenuEntry(3, "Filter - *.dat     ", 1);
+    }
+    else
+    {
+      strcpy(filepattern, "*.dat");
+      glutChangeToMenuEntry(3, "Filter - All Files ", 1);
+    }
+    filemenu(15); // refresh the file list with files in new dir.
+  }
+  else
+    keyboard((unsigned char)item, 0, 0);
 }
 
 /***************************************************************/
@@ -1609,6 +1702,76 @@ void colormenu(int c)
   if (ldraw_commandline_opts.debug_level == 1)
     printf("clearcolor %d = (%d, %d, %d)\n", c, zc.r, zc.g, zc.b);
   glutPostRedisplay();
+}
+
+/***************************************************************/
+void dirmenu(int item)
+{
+  int         i, j, len1;
+  const int   len3 = WORDLENGTH;
+  char        myDir[len3+1];
+  char title[256];
+  char filename[256];
+
+  extern char modelspath[];
+
+  if (item == 15) // Real Refresh
+    minfilenum = 0;
+  if (item == 0) // Nothing (seperator line)
+    return;
+  if (item == 13) // PgUp
+  {
+    minfilenum -= MAX_DIR_ENTRIES;
+    if (minfilenum < 0)
+      minfilenum = 0;
+    item = 15;
+  }
+  if (item == 14) // PgDn
+  {
+    minfilenum += MAX_DIR_ENTRIES;
+    item = 15;
+  }
+  if (item == 15) // Refresh
+  {
+    strcpy(myDir, dirfilepath);
+    FolderCount = ScanFolder(myDir, dirpattern, minfilenum, FolderList);
+    if ((FolderCount == 0) && (minfilenum > 0))
+    { // Dont PgDn past the last file in the directory.
+      if (ldraw_commandline_opts.debug_level == 1)
+	printf("Rescanning from file %d", minfilenum);
+      minfilenum -= MAX_DIR_ENTRIES; 
+      if (minfilenum < 0)
+	minfilenum = 0;
+      if (ldraw_commandline_opts.debug_level == 1)
+	printf("to %d\n", minfilenum);
+      FolderCount = ScanFolder(myDir, dirpattern, minfilenum, FolderList);
+    }
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf ("Found %d folders starting at %d in %s\n", FolderCount,minfilenum, myDir);
+
+    glutSetMenu(dirmenunum);
+    for(j = 1; j <= MAX_DIR_ENTRIES; j++) 
+      glutChangeToMenuEntry(j, basename(FolderList[j-1]), j);
+    glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
+  }
+  else 
+  {
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("selected dir %d = %s\n", item, FolderList[item-1]);
+    if (item <= FolderCount)
+    {
+      strcpy(dirfilepath, FolderList[item-1]);
+      strcpy(myDir, basename(dirfilepath));
+      if (stricmp(myDir, ".") == 0)
+	strcpy(dirfilepath, dirname(FolderList[item-1]));
+#if 1
+      if (stricmp(myDir, "..") == 0)
+	strcpy(dirfilepath, dirname(dirname(FolderList[item-1])));
+#endif	
+      dirmenu(15); // refresh the folder list with folders in new dir.
+      filemenu(15); // refresh the file list with files in new dir.
+    }
+  }
 }
 
 /***************************************************************/
@@ -1641,8 +1804,6 @@ void filemenu(int item)
   if (item == 15) // Refresh
   {
     strcpy(myDir, dirfilepath);
-    strcat(myDir, "/");
-
     DateiCount = ScanDirectory(myDir, filepattern, minfilenum, DateiListe);
     if ((DateiCount == 0) && (minfilenum > 0))
     { // Dont PgDn past the last file in the directory.
@@ -1659,17 +1820,9 @@ void filemenu(int item)
       printf ("Found %d files starting at %d in %s\n", DateiCount,minfilenum, myDir);
 
     glutSetMenu(filemenunum);
-    for(j = 1; j <= MAX_DIR_ENTRIES; i++) 
-    {
-      //      if( CheckFile(DateiListe[i], "r") ) 
-      {// file > 0 byte ??
-	glutChangeToMenuEntry(j, basename(DateiListe[j-1]), j);
-	j++;
-      }
-    }
-
-    // Reset the current menu to the main menu.
-    glutSetMenu(mainmenunum);
+    for(j = 1; j <= MAX_DIR_ENTRIES; j++) 
+      glutChangeToMenuEntry(j, basename(DateiListe[j-1]), j);
+    glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
   }
   else 
   {
@@ -1683,10 +1836,11 @@ void filemenu(int item)
 	strcpy(myDir, basename(dirfilepath));
 	if (stricmp(myDir, ".") == 0)
 	  strcpy(dirfilepath, dirname(DateiListe[item-1]));
-#if 0
+#if 1
 	if (stricmp(myDir, "..") == 0)
-	  strcpy(myDir, dirname(dirname(DateiListe[item-1])));
+	  strcpy(dirfilepath, dirname(dirname(DateiListe[item-1])));
 #endif	
+        dirmenu(15);
 	filemenu(15); // refresh the file list with files in new dir.
 	return;
       }
@@ -2167,6 +2321,21 @@ main(int argc, char **argv)
   glutAddMenuEntry("Yellow             ", 14);
   glutAddMenuEntry("White              ", 15);
 
+  dirmenunum = glutCreateMenu(dirmenu);
+  glutAddMenuEntry("                   ", 1);
+  glutAddMenuEntry("                   ", 2);
+  glutAddMenuEntry("                   ", 3);
+  glutAddMenuEntry("                   ", 4);
+  glutAddMenuEntry("                   ", 5);
+  glutAddMenuEntry("                   ", 6);
+  glutAddMenuEntry("                   ", 7);
+  glutAddMenuEntry("                   ", 8);
+  glutAddMenuEntry("                   ", 9);
+  glutAddMenuEntry("                   ", 10);
+  glutAddMenuEntry("                   ", 0);
+  glutAddMenuEntry("Page Up            ", 13);
+  glutAddMenuEntry("Page Dn            ", 14);
+
   filemenunum = glutCreateMenu(filemenu);
   glutAddMenuEntry("                   ", 1);
   glutAddMenuEntry("                   ", 2);
@@ -2183,7 +2352,9 @@ main(int argc, char **argv)
   glutAddMenuEntry("Page Dn            ", 14);
 
   mainmenunum = glutCreateMenu(menu);
-  glutAddSubMenu(  "Files              ", filemenunum);
+  glutAddSubMenu(  "File               ", filemenunum);
+  glutAddSubMenu(  "Folder             ", dirmenunum);
+  glutAddMenuEntry("Filter - *.dat     ", 1);
   glutAddMenuEntry("                   ", '\0');
   glutAddSubMenu(  "View               ", view);
   glutAddSubMenu(  "Options            ", opts);
@@ -2195,6 +2366,7 @@ main(int argc, char **argv)
   glutAttachMenu(GLUT_RIGHT_BUTTON);
 
   // Read in the current directories dat filenames.
+  dirmenu(15);
   filemenu(15);
 
   init();
