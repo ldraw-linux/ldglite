@@ -222,7 +222,7 @@ static char eresponse[100] = "";
 float moveXamount = 10.0;
 float moveYamount = 8.0;
 float moveZamount = 10.0;
-float turnCenter[3] = {0.0, 0.0, 0.0};
+float turnCenter[4][4] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 // staticbuffer is where our non-moving background goes
 // screenbuffer is where the final composite goes
 int staticbuffer = GL_BACK;
@@ -238,6 +238,7 @@ static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
 extern int Find1PartMatrix(int partnum, float m[4][4]);
 extern int Find1Part(int partnum);
 extern int Draw1Part(int partnum, int Color);
+extern int Get1PartPos(int partnum, float m[4][4]);
 extern int Move1Part(int partnum, float m[4][4], int premult);
 extern int Rotate1Part(int partnum, float m[4][4]);
 extern int Translate1Part(int partnum, float m[4][4]);
@@ -3249,6 +3250,12 @@ int edit_mode_fnkeys(int key, int x, int y)
 #define TURN_Y_ID	'Y'
 #define TURN_Z_ID	'Z'
 
+// C-X, C-Y, C-Z, C-O
+#define ROTATE_X_ID	24
+#define ROTATE_Y_ID	25
+#define ROTATE_Z_ID	26
+#define ROTATE_O_ID	15
+
 #define MOVE_X_ID	'x'
 #define MOVE_Y_ID	'y'
 #define MOVE_Z_ID	'z'
@@ -3365,7 +3372,14 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	break;
       case 't':
 	sprintf(eprompt[0], "Turn: ");
-	sprintf(eprompt[1], "X-axis Y-axis Z-axis Center-set");
+	sprintf(eprompt[1], "X-axis Y-axis Z-axis Center-set  Origin Axis Rotate");
+	ecommand[0] = toupper(key);
+	ecommand[1] = 0;
+	edit_mode_gui();
+	break;
+      case 'r':
+	sprintf(eprompt[0], "Rotate: ");
+	sprintf(eprompt[1], "X-axis Y-axis Z-axis");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
@@ -3395,6 +3409,22 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       edit_mode_gui();
       return 1;
     }
+    if (ecommand[0] == 'R') // Rotate Menu
+    {
+      // Try to get submenu command
+      switch(key) {
+      case 'x':
+      case 'y':
+      case 'z':
+	clear_edit_mode_gui();
+	sprintf(eprompt[0], "Rotate %c-axis angle: ", toupper(key));
+	ecommand[0] = key - 0x60; // change 'x' to C-X etc.
+	ecommand[1] = 0;
+	edit_mode_gui();
+	return 1;
+      }
+      return 1;
+    }
     if (ecommand[0] == 'T') // Turn Menu
     {
       // Try to get submenu command
@@ -3410,14 +3440,32 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	return 1;
       case 'c':
 	// Center set axis
+	if (Get1PartPos(curpiece, turnCenter) == 0)
+          turnCenter[0][3] = turnCenter[1][3] = turnCenter[2][3] = 0.0;
+	printf("Turn Center at %f, %f, %f\n", turnCenter[0][3], turnCenter[1][3], turnCenter[2][3]);
 	clear_edit_mode_gui();
 	edit_mode_gui();
 	return 1;
       case 'o':
+        sprintf(eprompt[0], "Turn Origin (x y z): ");
+	eprompt[1][0] = 0;
+	ecommand[0] = key - 0x60; // change 'o' to C-O.
+	ecommand[1] = 0;
+	edit_mode_gui();
+	return 1;
+      case 'a':
 	drawAxis ^= 1;
 	clear_edit_mode_gui();
 	glutPostRedisplay();
 	return 1;
+      case 'r':
+	// Switch to the rotate menu
+	sprintf(eprompt[0], "Rotate: ");
+	sprintf(eprompt[1], "X-axis Y-axis Z-axis");
+	ecommand[0] = toupper(key);
+	ecommand[1] = 0;
+	edit_mode_gui();
+	break;
       }
       return 1;
     }
@@ -3835,6 +3883,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	SetTitle(1); // Change the title of the window.
 	edit_mode_gui();
 	break;
+      case 24:
+	c += 0x60;
       case 'X':
 	sscanf(&(ecommand[1]),"%f", &f);
 	angle = f;
@@ -3846,12 +3896,22 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	m[2][1] = (float)sin(angle);
 	m[2][2] = (float)cos(angle);
 	movingpiece = curpiece;
-	Move1Part(curpiece, m, 0);
+	if (c == 'X')
+	{
+	  m[0][3] = turnCenter[0][3];
+	  m[1][3] = turnCenter[1][3];
+	  m[2][3] = turnCenter[2][3];
+	  Move1Part(curpiece, m, 0);
+	}
+	else
+	  Move1Part(curpiece, m, 2);
 	DrawMovingPiece();
 	if (ldraw_commandline_opts.debug_level == 1)
 	    Print1Part(curpiece, stdout);
 	edit_mode_gui();
 	break;
+      case 25:
+	c += 0x60;
       case 'Y':
 	sscanf(&(ecommand[1]),"%f", &f);
 	angle = f;
@@ -3863,12 +3923,22 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	m[2][0] = (float)(-1.0*sin(angle));
 	m[2][2] = (float)cos(angle);
 	movingpiece = curpiece;
-	Move1Part(curpiece, m, 0);
+	if (c == 'Y')
+	{
+	  m[0][3] = turnCenter[0][3];
+	  m[1][3] = turnCenter[1][3];
+	  m[2][3] = turnCenter[2][3];
+	  Move1Part(curpiece, m, 0);
+	}
+	else
+	  Move1Part(curpiece, m, 2);
 	DrawMovingPiece();
 	if (ldraw_commandline_opts.debug_level == 1)
 	    Print1Part(curpiece, stdout);
 	edit_mode_gui();
 	break;
+      case 26:
+	c += 0x60;
       case 'Z':
 	sscanf(&(ecommand[1]),"%f", &f);
 	angle = f;
@@ -3880,10 +3950,27 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	m[0][1] = (float)(-1.0*sin(angle));
 	m[1][1] = (float)cos(angle);
 	movingpiece = curpiece;
-	Move1Part(curpiece, m, 0);
+	if (c == 'Z')
+	{
+	  m[0][3] = turnCenter[0][3];
+	  m[1][3] = turnCenter[1][3];
+	  m[2][3] = turnCenter[2][3];
+	  Move1Part(curpiece, m, 0);
+	}
+	else
+	  Move1Part(curpiece, m, 2);
 	DrawMovingPiece();
 	if (ldraw_commandline_opts.debug_level == 1)
 	    Print1Part(curpiece, stdout);
+	edit_mode_gui();
+	break;
+      case 15:
+	v[0][0] = v[0][1] = v[0][2] = 0.0; // Default location to (0, 0, 0)
+	ScanPoints(v, 1, &(ecommand[1]));
+	turnCenter[0][3] = v[0][0];
+	turnCenter[1][3] = v[0][1];
+	turnCenter[2][3] = v[0][2];
+	printf("Turn Center at %f, %f, %f\n", v[0][0], v[0][1], v[0][2]);
 	edit_mode_gui();
 	break;
       case '1':
@@ -4839,7 +4926,7 @@ motion(int x, int y)
   {
     //NOTE: something about ledit mode screws up the projection?
     // matrix (or perhaps the modeling matrix) so that gluUnProject()
-    // returns 80 for instead of 0 for pan_y at x=0.
+    // returns 80 instead of 0 for pan_y at x=0.
     // This is always > 10 so it always warps the pointer below,
     // which makes it impossible to spin.  reshape() fixes it, but
     // the real cause should be tracked down and fixed.
