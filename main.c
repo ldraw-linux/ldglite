@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.0.4      ";
+char ldgliteVersion[] = "Version 1.0.5      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -659,6 +659,7 @@ void pasteCommand(int x, int y)
 //#define SAVE_COLOR_ALL 1
 //#define SAVE_DEPTH_ALL 1
 //#define MESA_XOR_TEST 1
+//#define MESA_XOR_TEST2 1
 //---------------MESA TESTING BLOCK----------------------
 
 //---------------OSX MAC TESTING BLOCK----------------------
@@ -863,19 +864,23 @@ void CopyColorBuffer(int srcbuffer, int destbuffer)
 {
   int savedirty;
 
+#ifdef WINTIMER
+  starttime = timeGetTime();
+#endif
+
   if ((srcbuffer == staticbuffer) && (destbuffer == screenbuffer))
   {
     if ((buffer_swap_mode == SWAP_TYPE_COPY) ||
 	(buffer_swap_mode == SWAP_TYPE_NODAMAGE))
     {
       glutSwapBuffers(); // Found GL_WIN_swap_hint extension
+#ifdef WINTIMER
+      finishtime = timeGetTime();
+      printf("SwapIn Color Elapsed = %d\n", finishtime-starttime);
+#endif
       return;
     }
   }
-
-#ifdef WINTIMER
-  starttime = timeGetTime();
-#endif
 
   glPushAttrib(GL_COLOR_BUFFER_BIT|GL_CURRENT_BIT|GL_DEPTH_BUFFER_BIT|
 	       GL_FOG_BIT|GL_LIGHTING_BIT|GL_VIEWPORT_BIT);
@@ -1707,6 +1712,8 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
   if ((zDetailLevel > TYPE_P) && (zDetailLevel < TYPE_MODEL) &&
       (!panning) && (!editing) && (!OffScreenRendering))
   {
+    // This adds up at 50 ms per full screen copy at 1280x1024
+    // Consider copying only the bounding box of the cur piece.
     CopyColorBuffer(renderbuffer, screenbuffer);
   }
 
@@ -3581,8 +3588,10 @@ int XORcurPiece()
   {
     // Gotta fix Mesa to render to back buffer.  
     // Its 2x faster for normal drawing.  10x faster for XOR and BLEND.
+#ifndef MESA_XOR_TEST2
     if (!panning) // Panning already draws in the BACK buffer.
       CopyColorBuffer(screenbuffer, staticbuffer);
+#endif
     // NOTE: we must CopyBuffer way up here *before* we mess with rendersetup.
     // NOTE: Copybuffer at 1280x1024 on WinGeneric takes .5 to .8 seconds (slow)
     // NOTE: CopyBuffer seems to lose the block under the cursor in the
@@ -4008,6 +4017,10 @@ void display(void)
   {
     renderbuffer = screenbuffer;
     glDrawBuffer(screenbuffer); 
+#ifdef MESA_XOR_TEST2
+    renderbuffer = staticbuffer;
+    glDrawBuffer(staticbuffer); 
+#endif
     if (res = exposeEvent()) // Expose event?
     {
       printf("EXPOSED window during editing\n");
@@ -4022,7 +4035,7 @@ void display(void)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	render();
 	glutSwapBuffers();
-	glDrawBuffer(screenbuffer); 
+	glDrawBuffer(renderbuffer); 
       }
       if (SOLID_EDIT_MODE)
       {
@@ -4038,7 +4051,7 @@ void display(void)
 	  }	  
 	  else 
 	  {
-	    glDrawBuffer(screenbuffer); 
+	    glDrawBuffer(renderbuffer); 
 	    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	    render();
 	  }	  
@@ -4070,10 +4083,19 @@ void display(void)
 	XORcurPiece();
       }
       if (!panning)
+      {
+#ifdef MESA_XOR_TEST2
+	glDrawBuffer(staticbuffer); 
 	edit_mode_gui();
+	glutSwapBuffers();
+#else
+	edit_mode_gui();
+#endif
+      }
     }
 
     dirtyWindow = 0;  // The window is nice and squeaky clean now.
+
     return;
   }
 
