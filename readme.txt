@@ -92,10 +92,13 @@ To use ldglite from MS Internet Explorer do this:
 
 Or on the command line of windows 2000 type something like this:
     
-    ldlite.document=C:\some\directory\l3glite.exe -v3 -& "%1"
-    assoc .dat=ldlite.document
-    assoc .mpd=ldlite.document
-    assoc .ldr=ldlite.document
+    FTYPE ldlite.document=C:\some\directory\l3glite.exe -v3 "%1"
+    ASSOC .dat=ldlite.document
+    ASSOC .mpd=ldlite.document
+    ASSOC .ldr=ldlite.document
+    SET PATHEXT=.ldr;.mpd;.dat;%PATHEXT%
+
+The last bit allows you to skip the .ldr extension and just "run" .ldr files
     
 
 For Netscape:
