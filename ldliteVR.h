@@ -164,7 +164,6 @@ typedef struct {
 	matrix3d A;  // transform matrix
 	int B;       // background color
 	int F;		// global drawing mode
-	int F_now;	// current drawing mode
 	char M;     // drawing mode {P|C|S}
 	vector3d O; // set x and y position (z unused)
 	float S;    // scale factor
