@@ -4813,12 +4813,52 @@ void old_rotate_about(float x, float y, float z, float angle)
 }
 
 /***************************************************************/
-void
-mouse(int button, int state, int x, int y)
+UnProjectMouse(int x, int y, GLdouble *px, GLdouble *py, GLdouble *pz)
 {
   GLdouble model[4*4];
   GLdouble proj[4*4];
   GLint view[4];
+  GLdouble pan_x, pan_y, pan_z;
+
+  // Load an identity matrix before dealing with the mouse.
+  // Otherwise we get some odd jumpy mouse effects.
+  // It gets reset before rendering by rendersetup() in render().
+  glMatrixMode( GL_MODELVIEW );
+  glPushMatrix();
+  glLoadIdentity();
+  glGetDoublev(GL_MODELVIEW_MATRIX, model);
+  glPopMatrix();
+  glGetDoublev(GL_PROJECTION_MATRIX, proj);
+  glGetIntegerv(GL_VIEWPORT, view);
+  gluUnProject((GLdouble)x, (GLdouble)y, 1.0,
+	       model, proj, view,
+	       &pan_x, &pan_y, &pan_z);
+  pan_y = -pan_y;
+  
+  *px = pan_x;
+  *py = pan_y;
+  *pz = pan_z;
+
+#if 0
+    printf("view(%d, %d, %d, %d)\n", view[0], view[1] , view[2], view[3]);
+    printf("model(%g,%g,%g,%g, %g,%g,%g,%g %g,%g,%g,%g, %g,%g,%g,%g)\n", 
+	   model[0], model[1] , model[2], model[3],
+	   model[4], model[5] , model[6], model[7],
+	   model[8], model[9] , model[10], model[11],
+	   model[12], model[13] , model[14], model[15]);
+    printf("proj(%g,%g,%g,%g, %g,%g,%g,%g, "
+	   "%g,%g,%g,%g, %g,%g,%g,%g)\n", 
+	   proj[0], proj[1] , proj[2], proj[3],
+	   proj[4], proj[5] , proj[6], proj[7],
+	   proj[8], proj[9] , proj[10], proj[11],
+	   proj[12], proj[13] , proj[14], proj[15]);
+#endif
+}
+
+/***************************************************************/
+void
+mouse(int button, int state, int x, int y)
+{
   GLdouble pan_x, pan_y, pan_z, x_angle, y_angle, angle, depth;
 
   glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
@@ -4830,24 +4870,12 @@ mouse(int button, int state, int x, int y)
     return;
   }
 
-  // Load an identity matrix before dealing with the mouse.
-  // Otherwise we get some odd jumpy mouse effects.
-  // It gets reset before rendering by rendersetup() in render().
-  glMatrixMode( GL_MODELVIEW );
-  glLoadIdentity();
-
   // Only count mouse button down GLUT_UP
   if (state == GLUT_DOWN)
   {
     //printModelMat("ModelD");
 
-    glGetDoublev(GL_MODELVIEW_MATRIX, model);
-    glGetDoublev(GL_PROJECTION_MATRIX, proj);
-    glGetIntegerv(GL_VIEWPORT, view);
-    gluUnProject((GLdouble)x, (GLdouble)y, 1.0,
-		 model, proj, view,
-		 &pan_x, &pan_y, &pan_z);
-    pan_y = -pan_y;
+    UnProjectMouse(x, y, &pan_x, &pan_y, &pan_z);
 
     pan_start_x = pan_end_x = pan_x;
     pan_start_y = pan_end_y = pan_y;
@@ -4857,6 +4885,7 @@ mouse(int button, int state, int x, int y)
     panning = 0;
     //glutSetCursor(GLUT_CURSOR_INHERIT);
     //glutWarpPointer(Width/2, Height/2);
+
     return;
   }
   else if (panning)
@@ -4877,13 +4906,7 @@ mouse(int button, int state, int x, int y)
       m_viewMatrix = Oblique;
     }
  
-    glGetDoublev(GL_MODELVIEW_MATRIX, model);
-    glGetDoublev(GL_PROJECTION_MATRIX, proj);
-    glGetIntegerv(GL_VIEWPORT, view);
-    gluUnProject((GLdouble)x, (GLdouble)y, 1.0,
-		 model, proj, view,
-		 &pan_x, &pan_y, &pan_z);
-    pan_y = -pan_y;
+    UnProjectMouse(x, y, &pan_x, &pan_y, &pan_z);
 
     if (ldraw_commandline_opts.debug_level == 1)
       printf("pup(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
@@ -4939,9 +4962,6 @@ mouse(int button, int state, int x, int y)
 void
 motion(int x, int y)
 {
-  GLdouble model[4*4];
-  GLdouble proj[4*4];
-  GLint view[4];
   GLdouble pan_x, pan_y, pan_z, x_angle, y_angle, angle, depth;
   GLdouble p_x, p_y;
   //int glutModifiers;  // Glut doesn't like this here!
@@ -4953,31 +4973,10 @@ motion(int x, int y)
     // Load an identity matrix before dealing with the mouse.
     // Otherwise we get some odd jumpy mouse effects.
     // It gets reset before rendering by rendersetup() in render().
-    glMatrixMode( GL_MODELVIEW );
-    glLoadIdentity();
+    //glMatrixMode( GL_MODELVIEW );
+    //glLoadIdentity();
 
-    glGetDoublev(GL_MODELVIEW_MATRIX, model);
-    glGetDoublev(GL_PROJECTION_MATRIX, proj);
-    glGetIntegerv(GL_VIEWPORT, view);
-    gluUnProject((GLdouble)x, (GLdouble)y, 1.0,
-		 model, proj, view,
-		 &pan_x, &pan_y, &pan_z);
-    pan_y = -pan_y;
-
-#if 0
-    printf("view(%d, %d, %d, %d)\n", view[0], view[1] , view[2], view[3]);
-    printf("model(%g,%g,%g,%g, %g,%g,%g,%g %g,%g,%g,%g, %g,%g,%g,%g)\n", 
-	   model[0], model[1] , model[2], model[3],
-	   model[4], model[5] , model[6], model[7],
-	   model[8], model[9] , model[10], model[11],
-	   model[12], model[13] , model[14], model[15]);
-    printf("proj(%g,%g,%g,%g, %g,%g,%g,%g, "
-	   "%g,%g,%g,%g, %g,%g,%g,%g)\n", 
-	   proj[0], proj[1] , proj[2], proj[3],
-	   proj[4], proj[5] , proj[6], proj[7],
-	   proj[8], proj[9] , proj[10], proj[11],
-	   proj[12], proj[13] , proj[14], proj[15]);
-#endif
+    UnProjectMouse(x, y, &pan_x, &pan_y, &pan_z);
 
     if (ldraw_commandline_opts.debug_level == 1)
       printf("pan(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
