@@ -57,6 +57,150 @@ extern "C" {
 extern void get_opengl_transforms(void);
 extern LDRAW_COMMANDLINE_OPTS ldraw_commandline_opts;
 static	float	v[4];
+
+extern int Skip1Line(int IsModel, struct L3LineS *LinePtr);
+extern int Init1LineCounter(void);
+
+// Drawing modes
+#define NORMAL_MODE 	0x0000
+#define STUDLESS_MODE 	0x0001
+#define WIREFRAME_MODE 	0x0002
+#define SHADED_MODE 	0x0004
+#define BBOX_MODE 	0x0008
+#define INVISIBLE_MODE 	0x0010
+#define STUDONLY_MODE 	0x0020
+
+//************************************************************************
+void DrawPartBox(struct L3PartS *PartPtr,int CurColor,float m[4][4],int wire)
+{
+  float          r[4];
+  int            i, Color;
+  float          r2[4];
+  vector3d       bb3d[8];
+
+  if (0 <= CurColor  &&  CurColor <= 15)
+    Color = edge_color(CurColor);
+  else
+    Color = 0;
+  
+  Color = CurColor;
+#if 0	    
+  printf("IsModel = %d  FromPARTS = %d  color = %d\n",
+	 IsModel, PartPtr->FromPARTS, Color);
+  printf("BBox = (%0.2f,%0.2f,%0.2f) (%0.2f,%0.2f,%0.2f)\n",
+	 PartPtr->BBox[0][0],PartPtr->BBox[0][1],PartPtr->BBox[0][2],
+	 PartPtr->BBox[1][0],PartPtr->BBox[1][1],PartPtr->BBox[1][2]);
+#endif
+  r2[0]=PartPtr->BBox[0][0]; //bb[0]
+  r2[1]=PartPtr->BBox[0][1];
+  r2[2]=PartPtr->BBox[0][2];
+  M4V3Mul(r,m,r2);
+  bb3d[0].x=r[0];
+  bb3d[0].y=r[1];
+  bb3d[0].z=r[2];
+  r2[0]=PartPtr->BBox[0][0]; //bb[1]
+  r2[1]=PartPtr->BBox[1][1];
+  r2[2]=PartPtr->BBox[0][2];
+  M4V3Mul(r,m,r2);
+  bb3d[1].x=r[0];
+  bb3d[1].y=r[1];
+  bb3d[1].z=r[2];
+  r2[0]=PartPtr->BBox[1][0]; //bb[2]
+  r2[1]=PartPtr->BBox[1][1];
+  r2[2]=PartPtr->BBox[0][2];
+  M4V3Mul(r,m,r2);
+  bb3d[2].x=r[0];
+  bb3d[2].y=r[1];
+  bb3d[2].z=r[2];
+  r2[0]=PartPtr->BBox[1][0]; //bb[3]
+  r2[1]=PartPtr->BBox[0][1];
+  r2[2]=PartPtr->BBox[0][2];
+  M4V3Mul(r,m,r2);
+  bb3d[3].x=r[0];
+  bb3d[3].y=r[1];
+  bb3d[3].z=r[2];
+  r2[0]=PartPtr->BBox[0][0]; //bb[4]
+  r2[1]=PartPtr->BBox[0][1];
+  r2[2]=PartPtr->BBox[1][2];
+  M4V3Mul(r,m,r2);
+  bb3d[4].x=r[0];
+  bb3d[4].y=r[1];
+  bb3d[4].z=r[2];
+  r2[0]=PartPtr->BBox[0][0]; //bb[5]
+  r2[1]=PartPtr->BBox[1][1];
+  r2[2]=PartPtr->BBox[1][2];
+  M4V3Mul(r,m,r2);
+  bb3d[5].x=r[0];
+  bb3d[5].y=r[1];
+  bb3d[5].z=r[2];
+  r2[0]=PartPtr->BBox[1][0]; //bb[6]
+  r2[1]=PartPtr->BBox[1][1];
+  r2[2]=PartPtr->BBox[1][2];
+  M4V3Mul(r,m,r2);
+  bb3d[6].x=r[0];
+  bb3d[6].y=r[1];
+  bb3d[6].z=r[2];
+  r2[0]=PartPtr->BBox[1][0]; //bb[7]
+  r2[1]=PartPtr->BBox[0][1];
+  r2[2]=PartPtr->BBox[1][2];
+  M4V3Mul(r,m,r2);
+  bb3d[7].x=r[0];
+  bb3d[7].y=r[1];
+  bb3d[7].z=r[2];
+  if (wire) // Draw wireframe box.
+  {
+    render_line(&bb3d[0],&bb3d[1],Color);
+    render_line(&bb3d[1],&bb3d[2],Color);
+    render_line(&bb3d[2],&bb3d[3],Color);
+    render_line(&bb3d[3],&bb3d[0],Color);
+    render_line(&bb3d[4],&bb3d[5],Color);
+    render_line(&bb3d[5],&bb3d[6],Color);
+    render_line(&bb3d[6],&bb3d[7],Color);
+    render_line(&bb3d[7],&bb3d[4],Color);
+    render_line(&bb3d[0],&bb3d[4],Color);
+    render_line(&bb3d[1],&bb3d[5],Color);
+    render_line(&bb3d[2],&bb3d[6],Color);
+    render_line(&bb3d[3],&bb3d[7],Color);
+  }
+  else // Lets try a solid box.
+  {
+    render_quad(&bb3d[0],&bb3d[1],&bb3d[2],&bb3d[3],Color);
+    render_quad(&bb3d[4],&bb3d[5],&bb3d[6],&bb3d[7],Color);
+    
+    render_quad(&bb3d[0],&bb3d[4],&bb3d[5],&bb3d[1],Color);
+    render_quad(&bb3d[1],&bb3d[5],&bb3d[6],&bb3d[2],Color);
+    render_quad(&bb3d[2],&bb3d[6],&bb3d[7],&bb3d[3],Color);
+    render_quad(&bb3d[3],&bb3d[7],&bb3d[4],&bb3d[0],Color);
+  }
+}
+#endif
+
+#ifdef USE_OPENGL_OCCLUSION
+//************************************************************************
+#include <GL/glut.h>
+int Occluded(struct L3PartS *PartPtr, int Color, float m1[4][4])
+{
+  GLfloat feedbackBuffer[1024];
+  GLint returned = 0;
+  int size = 1024;
+
+  // Nutz!!  Depth test is performed AFTER feedback is generated
+  // so this does NOT work.  Need HP_OCCLUSION_TEST extension...
+  glFeedbackBuffer(size, GL_3D_COLOR, feedbackBuffer);
+  (void) glRenderMode(GL_FEEDBACK);
+
+  DrawPartBox(PartPtr, Color, m1, 0);
+  glFlush();
+
+  returned = glRenderMode(GL_RENDER);
+
+  if (returned > 0)
+    return 0;
+  else 
+    return 1;
+}
+
+//************************************************************************
 #endif
 
 static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m[4][4])
@@ -67,122 +211,24 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 	vector3d       v3d[4];
 
 #ifdef USE_OPENGL
-
-// Drawing modes
-#define NORMAL_MODE 	0x0000
-#define STUDLESS_MODE 	0x0001
-#define WIREFRAME_MODE 	0x0002
-#define SHADED_MODE 	0x0004
-#define BBOX_MODE 	0x0008
-#define INVISIBLE_MODE 	0x0010
-
 	// Draw only bounding boxes of top level parts if in fast spin mode.
 	if (ldraw_commandline_opts.F & BBOX_MODE) 
 	  if (PartPtr->FromPARTS) // (!IsModel)
 	  {
-	    float      r2[4];
-            vector3d   bb3d[8];
-
-            if (0 <= CurColor  &&  CurColor <= 15)
-              Color = edge_color(CurColor);
-            else
-              Color = 0;
-
-	    Color = CurColor;
-#if 0	    
-	    printf("IsModel = %d  FromPARTS = %d  color = %d\n",
-		   IsModel, PartPtr->FromPARTS, Color);
-	    printf("BBox = (%0.2f,%0.2f,%0.2f) (%0.2f,%0.2f,%0.2f)\n",
-		   PartPtr->BBox[0][0],PartPtr->BBox[0][1],PartPtr->BBox[0][2],
-		   PartPtr->BBox[1][0],PartPtr->BBox[1][1],PartPtr->BBox[1][2]);
-#endif
-	    r2[0]=PartPtr->BBox[0][0]; //bb[0]
-	    r2[1]=PartPtr->BBox[0][1];
-	    r2[2]=PartPtr->BBox[0][2];
-	    M4V3Mul(r,m,r2);
-	    bb3d[0].x=r[0];
-	    bb3d[0].y=r[1];
-	    bb3d[0].z=r[2];
-	    r2[0]=PartPtr->BBox[0][0]; //bb[1]
-	    r2[1]=PartPtr->BBox[1][1];
-	    r2[2]=PartPtr->BBox[0][2];
-	    M4V3Mul(r,m,r2);
-	    bb3d[1].x=r[0];
-	    bb3d[1].y=r[1];
-	    bb3d[1].z=r[2];
-	    r2[0]=PartPtr->BBox[1][0]; //bb[2]
-	    r2[1]=PartPtr->BBox[1][1];
-	    r2[2]=PartPtr->BBox[0][2];
-	    M4V3Mul(r,m,r2);
-	    bb3d[2].x=r[0];
-	    bb3d[2].y=r[1];
-	    bb3d[2].z=r[2];
-	    r2[0]=PartPtr->BBox[1][0]; //bb[3]
-	    r2[1]=PartPtr->BBox[0][1];
-	    r2[2]=PartPtr->BBox[0][2];
-	    M4V3Mul(r,m,r2);
-	    bb3d[3].x=r[0];
-	    bb3d[3].y=r[1];
-	    bb3d[3].z=r[2];
-	    r2[0]=PartPtr->BBox[0][0]; //bb[4]
-	    r2[1]=PartPtr->BBox[0][1];
-	    r2[2]=PartPtr->BBox[1][2];
-	    M4V3Mul(r,m,r2);
-	    bb3d[4].x=r[0];
-	    bb3d[4].y=r[1];
-	    bb3d[4].z=r[2];
-	    r2[0]=PartPtr->BBox[0][0]; //bb[5]
-	    r2[1]=PartPtr->BBox[1][1];
-	    r2[2]=PartPtr->BBox[1][2];
-	    M4V3Mul(r,m,r2);
-	    bb3d[5].x=r[0];
-	    bb3d[5].y=r[1];
-	    bb3d[5].z=r[2];
-	    r2[0]=PartPtr->BBox[1][0]; //bb[6]
-	    r2[1]=PartPtr->BBox[1][1];
-	    r2[2]=PartPtr->BBox[1][2];
-	    M4V3Mul(r,m,r2);
-	    bb3d[6].x=r[0];
-	    bb3d[6].y=r[1];
-	    bb3d[6].z=r[2];
-	    r2[0]=PartPtr->BBox[1][0]; //bb[7]
-	    r2[1]=PartPtr->BBox[0][1];
-	    r2[2]=PartPtr->BBox[1][2];
-	    M4V3Mul(r,m,r2);
-	    bb3d[7].x=r[0];
-	    bb3d[7].y=r[1];
-	    bb3d[7].z=r[2];
 	    if (ldraw_commandline_opts.F & WIREFRAME_MODE) 
-	    {
-	      render_line(&bb3d[0],&bb3d[1],Color);
-	      render_line(&bb3d[1],&bb3d[2],Color);
-	      render_line(&bb3d[2],&bb3d[3],Color);
-	      render_line(&bb3d[3],&bb3d[0],Color);
-	      render_line(&bb3d[4],&bb3d[5],Color);
-	      render_line(&bb3d[5],&bb3d[6],Color);
-	      render_line(&bb3d[6],&bb3d[7],Color);
-	      render_line(&bb3d[7],&bb3d[4],Color);
-	      render_line(&bb3d[0],&bb3d[4],Color);
-	      render_line(&bb3d[1],&bb3d[5],Color);
-	      render_line(&bb3d[2],&bb3d[6],Color);
-	      render_line(&bb3d[3],&bb3d[7],Color);
-	    }
-	    else // Lets try solid boxes.
-	    {
-	      render_quad(&bb3d[0],&bb3d[1],&bb3d[2],&bb3d[3],Color);
-	      render_quad(&bb3d[4],&bb3d[5],&bb3d[6],&bb3d[7],Color);
-
-	      render_quad(&bb3d[0],&bb3d[4],&bb3d[5],&bb3d[1],Color);
-	      render_quad(&bb3d[1],&bb3d[5],&bb3d[6],&bb3d[2],Color);
-	      render_quad(&bb3d[2],&bb3d[6],&bb3d[7],&bb3d[3],Color);
-	      render_quad(&bb3d[3],&bb3d[7],&bb3d[4],&bb3d[0],Color);
-	    }
+	      DrawPartBox(PartPtr, CurColor, m, 1);
+	    else
+	      DrawPartBox(PartPtr, CurColor, m, 0);
 	    return;
 	  }
 #endif
 
 	for (LinePtr = PartPtr->FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
 	{
+#ifdef USE_OPENGL
+	        if (Skip1Line(IsModel,LinePtr))
+		  continue;
+#endif
 		switch (LinePtr->Color)
 		{
 		case 16:
@@ -227,8 +273,18 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
     // 
     // Other ideas include substituting GLU cylinder primitives for studs.  
 		        if (LinePtr->PartPtr->IsStud)
-                          if (ldraw_commandline_opts.F & STUDLESS_MODE) 
+			{
+                          if ((ldraw_commandline_opts.F & STUDLESS_MODE) != 0)
                             break;
+#ifdef USE_OPENGL_OCCLUSION
+                          if ((ldraw_commandline_opts.F & STUDONLY_MODE) != 0)
+			  {
+			    M4M4Mul(m1,m,LinePtr->v);
+			    if (Occluded(LinePtr->PartPtr, Color, m1))
+			      break;
+			  }
+#endif
+			}
 #endif
 			M4M4Mul(m1,m,LinePtr->v);
 			DrawPart(0,LinePtr->PartPtr,Color,m1);
@@ -239,6 +295,11 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 #endif
 			break;
 		case 2:
+#ifdef USE_OPENGL_OCCLUSION
+		        if ((ldraw_commandline_opts.F & STUDONLY_MODE) &&
+			    !(PartPtr->IsStud))
+                            break;
+#endif
 			for (i=0; i<LinePtr->LineType; i++)
 			{
 				M4V3Mul(r,m,LinePtr->v[i]);
@@ -249,6 +310,11 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			render_line(&v3d[0],&v3d[1],Color);
 			break;
 		case 3:
+#ifdef USE_OPENGL_OCCLUSION
+		        if ((ldraw_commandline_opts.F & STUDONLY_MODE) &&
+			    !(PartPtr->IsStud))
+                            break;
+#endif
 			for (i=0; i<LinePtr->LineType; i++)
 			{
 				M4V3Mul(r,m,LinePtr->v[i]);
@@ -259,6 +325,11 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			render_triangle(&v3d[0],&v3d[1],&v3d[2],Color);
 			break;
 		case 4:
+#ifdef USE_OPENGL_OCCLUSION
+		        if ((ldraw_commandline_opts.F & STUDONLY_MODE) &&
+			    !(PartPtr->IsStud))
+                            break;
+#endif
 			for (i=0; i<LinePtr->LineType; i++)
 			{
 				M4V3Mul(r,m,LinePtr->v[i]);
@@ -269,6 +340,11 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			render_quad(&v3d[0],&v3d[1],&v3d[2],&v3d[3],Color);
 			break;
 		case 5:
+#ifdef USE_OPENGL_OCCLUSION
+		        if ((ldraw_commandline_opts.F & STUDONLY_MODE) &&
+			    !(PartPtr->IsStud))
+                            break;
+#endif
 			for (i=0; i<4; i++)
 			{
 				M4V3Mul(r,m,LinePtr->v[i]);
@@ -340,11 +416,14 @@ int Draw1PartPtr(struct L3LineS *LinePtr, int Color)
 {
 	float          m1[4][4];
 	int CurColor = 7;
+	int SaveColor = LinePtr->Color;
 
 	InitViewMatrix();
 
 	if (Color < 0) 
 	    Color = LinePtr->Color;
+	else
+	    LinePtr->Color = Color;
 	switch (Color)
 	{
 	case 16:
@@ -376,6 +455,7 @@ int Draw1PartPtr(struct L3LineS *LinePtr, int Color)
 	    break;
 	}
 	
+	LinePtr->Color = SaveColor;
 	return 1;
 }
 
@@ -384,6 +464,7 @@ int Draw1Part(int partnum, int Color)
 	float          m1[4][4];
 	int            i;
 	struct L3LineS *LinePtr;
+	int SaveColor;
 
 	int CurColor = 7;
 
@@ -394,8 +475,11 @@ int Draw1Part(int partnum, int Color)
 	{
 	    if (i == partnum)
 	    {
+	        SaveColor = LinePtr->Color;
 		if (Color < 0) 
 		  Color = LinePtr->Color;
+		else
+		  LinePtr->Color = Color;
 		switch (Color)
 		{
 		case 16:
@@ -427,6 +511,7 @@ int Draw1Part(int partnum, int Color)
 			break;
 		}
 
+		LinePtr->Color = SaveColor;
 		return 1;
 	    }
 	    i++;
@@ -447,6 +532,8 @@ void DrawModel(void)
 	    ldraw_commandline_opts.output = 0;
 	  }
 	}
+
+	Init1LineCounter();
 
 	DrawPart(1,&Parts[0], 7, m_m);
 
