@@ -1,0 +1,120 @@
+WHAT I DID TO BUILD "macLDGLite"
+
+macLDG tossed together by Erik Olson.
+With Mac CodeWarrior 5 (July 99 release from Metrowerks)
+
+
+
+Warning: these notes were carried as far as the first working build...
+    Then I ripped out a lot of what I did and created platform.c and platform.h
+
+
+
+
+Used project stationery: Std C Console PPC
+
+I have the OpenGL libraries (GLUT too) under my Metrowerks CodeWarrior MacOS Support
+folder, so, they are visible with just the default System Access Paths. You might
+not have glut.lib or the OpenGL stubs unless you get the OpenGL SDK and move all the 
+libraries into CodeWarrior's hierarchy.
+I did add a path to the the glut.rsrc file, this might not be necessary but I'm
+not taking risks yet.
+
+Set Language Settings:
+	Turned off ANSI Strict
+	Turned off Use C++
+	Turned on Relaxed Pointer Type Rules
+
+There is some code in LDLite that is K&R prototypes. Yuck. It also has a lot
+of assigning unsigned char* to char*, so, I relax pointer rules for now.
+
+
+Created CodeWarrior prefix file: macldg_prefix.h
+All it does is:
+	#define MAC
+
+This macro will get used elsewhere in platform switches.
+
+in main.c, for stricmp macro, added MAC switch: (stricmp is in MFC, so MAC needs it too)
+	#if defined(UNIX) || defined(MAC)
+
+Problem: zmatrix_lookup doesn't have a prototype in a header file.
+
+Added it to ldliteVR.h
+	vector3d* zpoint_lookup(char *name);
+	matrix3d* zmatrix_lookup(char *name);
+maybe there should be a stub.h?
+
+removed from lex.yy.c, because no such header file in Metrowerks Standard Library:
+	#include "malloc.h"
+
+line 2250 has a possible unwanted assignment? not touching it though...
+    if (rc = tIDENT) {
+
+Added to stub.c, just like the UNIX case:
+	#elif defined(MAC)
+
+		// Stub out a few windows structs for now. 
+		// Should go back and remove them with #ifdef USE_OPENGL someday.
+		#include "wstubs.h" 
+
+
+	
+Added to main.c: (needed for getenv())
+	#include <stdlib.h>
+
+and:
+
+	#elif defined(MAC)
+	    sprintf(pathname, "Aulus:Code:Lego.CAD:LDRAW");
+
+Ideally this folder would be identified in a Mac-friendly way...
+
+
+DISCOVERY NOTES
+
+
+Metrowerks standard library's ccommand() is what actually populates argc & argv.
+It pops up the command line dialog -- we're a GUI, after all, hah hah.
+ccommand() is called by glutInit and doesn't care what you pass IN with argc,argv.
+
+I had to move glutInit to the top of main() because other things were looking in argv.
+
+
+All mac-specific code lives in the 'mac' subdirectory.
+Inside there is an 'apple' subdirectory with the MoreFiles package from Apple.
+This is needed for the StandardGetFolder() routine.
+
+I wrote the code that prompts you to locate the LDRAW folder. It saves an alias
+in a MacLDGLite Preferences file, so that it only has to ask once, even if you
+move that folder later on. The prefs file looks like a text file, but if you see a
+path there it's not necessarily current, and anyway the alias is used to find LDRAW.
+
+
+2/17/00 test build of Don Heyse' 0.5 version
+
+I have code in macstartup.c to handle Apple Events so that it behaves more like
+a proper application. You can set macLDGLite to browse DAT files from your web browser,
+or double click, or drag and drop DAT files onto the app. It's still pretty unfriendly
+though. If you open the app without any documents, you get a command line prompt.
+Enter a filename here, or some of the command line switches documented elsewhere.
+
+You are responsible for getting the standard LDRAW distribution onto your Mac
+somehow. You will need all the data files. This app pops up a dialog to ask you
+where the LDRAW folder is--that's what you need to get somehow. I used Virtual PC
+to install LDRAW.
+
+I modified the GLUT library (static linked) to get this app working:
+1. 
+glut_init.c 
+glutInitMac()
+I don't let it call ccommand()
+
+2.
+glut_event.c
+processEvents()
+I added this no-brainer:
+			case kHighLevelEvent:
+				AEProcessAppleEvent(&myEvent);
+				break;
+Shame on whoever neglected to put that in!!!

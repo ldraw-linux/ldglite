@@ -128,7 +128,7 @@ static int list_made = 0;
 #define SWAP_TYPE_KTX 4		// use the GL_KTX_buffer_region extension
 
 #ifdef MESA
-int buffer_swap_mode = SWAP_TYPE_NODAMAGE
+int buffer_swap_mode = SWAP_TYPE_NODAMAGE;
 #else
 int buffer_swap_mode = SWAP_TYPE_UNDEFINED;
 #endif
@@ -2252,7 +2252,9 @@ void test_ktx_buffer_region(char *str)
   if (strstr(str,"GL_KTX_buffer_region") )
   {	
     printf("The GL_KTX_buffer_region extension is available\n");
-
+#ifdef WINDOWS
+    // Figure out how to do load extensions in MESA
+    // See for example leocad/linux/linux_gl.cpp
 #if 0
     glNewBufferRegion = (GLuint (*)(GLenum))
       wglGetProcAddress("glNewBufferRegion");
@@ -2287,6 +2289,9 @@ void test_ktx_buffer_region(char *str)
     {
       buffer_swap_mode = SWAP_TYPE_KTX;
     }
+#else
+    // NOT WINDOWS (figure out how to load extensions)
+#endif
   }
 }
 
@@ -3382,8 +3387,12 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	    ldraw_commandline_opts.O.x = -m[0][3];
 	    ldraw_commandline_opts.O.y = -m[1][3];
 	    ldraw_commandline_opts.O.z = -m[2][3];
+	    initCamera(); // Reset the camera position for any stock views.
+	    dirtyWindow = 1;
+	    glutPostRedisplay();
 	  }
-	  edit_mode_gui();
+	  else
+	    edit_mode_gui();
 	}
 	return 1;
       }
@@ -5341,6 +5350,11 @@ main(int argc, char **argv)
       // get the screen size and subtract a fudge factor for window borders
       Width = ldraw_commandline_opts.V_x = glutGet(GLUT_SCREEN_WIDTH) - 8;
       Height = ldraw_commandline_opts.V_y = glutGet(GLUT_SCREEN_HEIGHT) - 32;
+#if defined(MAC)
+      // Set default window small for MACs to get cmdline args.
+      Width = 640;
+      Height = 480;
+#endif
     }
 
     if ((Width <= 0) || (Height <= 0))
@@ -5437,6 +5451,8 @@ main(int argc, char **argv)
   }
 
   test_ktx_buffer_region(extstr);
+
+  printf("Buffer Swap Mode = %d\n", buffer_swap_mode);
 
 #ifdef USE_DOUBLE_BUFFER
   // NOTE: Mesa segfaults if I do this BEFORE CreateWindow/EnterGameMode
