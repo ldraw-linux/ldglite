@@ -554,7 +554,7 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
     //glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, cur_mat);
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, cur_mat);
     glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mid_shininess);
-    if ((c == 383) || (c == 494))
+    if (/*(c == 383) ||*/ (c == 494))
       glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, hi_shininess);
     //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
   }
@@ -808,7 +808,7 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
     //glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, cur_mat);
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, cur_mat);
     glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mid_shininess);
-    if ((c == 383) || (c == 494))
+    if (/*(c == 383) ||*/ (c == 494))
       glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, hi_shininess);
     //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
   }
