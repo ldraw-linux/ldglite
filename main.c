@@ -408,10 +408,12 @@ void pasteCommand(int x, int y)
        token != NULL;
        i++, token = strtok( NULL, seps ))
   {
+    color = -1; // Use current color
+
     printf("got token <%s> from clipboard\n", token);
     
     // token is one line of text.
-    if ((ecommand[0] == 'p') || 
+    if ((ecommand[0] == 'p') || ((i > 0) && (ecommand[0] == 'c')) ||
 	(ecommand[0] == 'L') || (ecommand[0] == 'S'))
     {
       // NOTE: Should skip leading white space, trailing white space.
@@ -422,14 +424,18 @@ void pasteCommand(int x, int y)
       //     "%d %d %f %f %f %f %f %f %f %f %f %f %f %f %s",...)
       // if ((n == 15) && (d == 1))
       //     it's a type 1 LDRAW line.  Keep all info.
-      
-      if (strstr(token, "Part # Color Description"))
+
+      // If working on a part, check for peeron inventory list.
+      if ((ecommand[0] == 'p') || ((i > 0) && (ecommand[0] == 'c')))
       {
-	printf("// Hey, it's an inventory from peeron.com.\n");
-	inventory = 1;
-	token = strtok( NULL, seps); // Move on to the actual inventory.
+	if (strstr(token, "Part # Color Description"))
+	{
+	  printf("// Hey, it's an inventory from peeron.com.\n");
+	  inventory = 1;
+	  token = strtok( NULL, seps); // Move on to the actual inventory.
+	}
       }
- 
+
       // Look for '.' and remove trailing, leading whitespace.
       // If no '.' found, focus on the first word.
       if ((!inventory) && (p = strchr(token, '.')))
@@ -438,7 +444,7 @@ void pasteCommand(int x, int y)
 	s = strpbrk(p, whitespace);
 	if (s)
 	  *s = 0;
-	printf("got trailing <%s> from clipboard\n", token);
+	//printf("got trailing <%s> from clipboard\n", token);
 
 	// Eliminate leading whitespace
 	*p = 0;
@@ -446,40 +452,69 @@ void pasteCommand(int x, int y)
 	if (s)
 	  token = s+1;
 	*p = '.';
-	printf("got leading <%s> from clipboard\n", token);
+	//printf("got leading <%s> from clipboard\n", token);
       }
       else
       {
 	// Eliminate leading whitespace
-	for (p = token; (*p == ' ') || (*p == '\t'); *p++);
+	for (p = token; (*p == ' ') || (*p == '\t'); p++);
 	token = p;
-	printf("got leading <%s> from clipboard\n", token);
+	//printf("got leading <%s> from clipboard\n", token);
       }
     
       if (inventory)
       {
 	n = sscanf(token, "%d", &count);
-	printf("count = %d\n", count);
+	//printf("count = %d\n", count);
 	p = strpbrk(token, whitespace);
-	printf("got trailing <%s> from clipboard\n", p);
+	//printf("got trailing <%s> from clipboard\n", p);
 	if (!p)
 	  continue;
 	if (strncmp(p, "     ", 4))
 	{
-	  printf("scanning part, color\n");
+	  //printf("scanning part, color\n");
 	  n = sscanf(p, "   %s    %s", partstr, colorstr);
 	}
 	else
 	{
-	  printf("setting part\n");
+	  //printf("setting part\n");
 	  strcpy(partstr, "unknown.dat");
-	  printf("scanning color\n");
+	  //printf("scanning color\n");
 	  n = sscanf(p, "    %s", colorstr);
+
+	  // Eliminate leading whitespace
+	  //printf("skipping whitespace <%s>\n",p);
+	  for (; (*p == ' ') || (*p == '\t'); p++);
+	  //printf("skipping color <%s>\n", p);
+	  token = strpbrk(p, whitespace);
+	  if (token)
+	  {
+	    //printf("skipping blanks <%s>\n",token);
+	    for (p = token; (*p == ' ') || (*p == '\t'); p++);
+	  }
+	  // Eliminate trailing whitespace
+	  //printf("skipping trailer <%s>\n",p);
+	  token = p;
+	  for (p += (strlen(token)-1); p >= token; p--)
+	  {
+	    if ((*p == ' ') || (*p == '\t'))
+	      *p = 0;
+	    else
+	      break;
+	  }
+	  //printf("filling spaces <%s>\n",token);
+	  // Eliminate internal spaces
+	  for (p = token; *p; p++)
+	    if ((*p == ' ') || (*p == '\t'))
+	      *p = '_';
+	  //printf("copying token <%s>\n",token);
+	  strcpy(partstr, token);
 	}
-	printf("setting setting token to part <%s>\n", partstr);
+	//printf("setting setting token to part <%s>\n", partstr);
         token = partstr;
 	color = zcolor_lookup(colorstr);
-	printf("Part = <%s>, color = <%s> = %d\n", token, colorstr);
+	printf("Part = <%s>, color = <%s> = %d\n", token, colorstr, color);
+	sprintf(colorstr, "%d", color);
       }
     }
 
@@ -499,6 +534,13 @@ void pasteCommand(int x, int y)
       if (ecommand[0] != 'p') 
 	break;
 
+      if (color >= 0)
+      {
+	edit_mode_keyboard('\n', x, y);
+	edit_mode_keyboard('c', x, y);
+	strcat(dst, colorstr);
+      }	
+
       if (inventory)
 	for (n = 1; n < count; n++)
 	{
@@ -506,6 +548,12 @@ void pasteCommand(int x, int y)
 	  edit_mode_keyboard('i', x, y);
 	  edit_mode_keyboard('p', x, y);
 	  strcat(dst, token);
+	  if (color >= 0)
+	  {
+	    edit_mode_keyboard('\n', x, y);
+	    edit_mode_keyboard('c', x, y);
+	    strcat(dst, colorstr);
+	  }	
 	}
     }
   }
