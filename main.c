@@ -5650,6 +5650,37 @@ char *ScanPoints(float m[4][4], int numpoints, char *str)
 }
 
 /***************************************************************/
+char *getfilename(char *s, char *filename)
+{
+  // Allow filenames containing spaces and/or in quotes.
+
+  // Strip away leading whitespace (spaces and tabs).
+  s += strspn(s, " \t");
+  // Remove leading quotes
+  if (*s == '\"')
+    s++;
+
+  if (filename)
+    strcpy(filename, s);
+  else 
+    filename = strdup(s);
+
+  // Eliminate trailing whitespace.  AKA TrimRight() in L3Input.cpp.
+  for (s = filename + (strlen(filename)-1); s >= filename; s--)
+  {
+    if ((*s == ' ') || (*s == '\t'))
+      *s = 0;
+    else
+      break;
+  }
+  // Remove trailing quotes.
+  if ((s = strrchr(filename, '\"')) != NULL)
+    *s = 0;
+  
+  return(filename);
+}
+
+/***************************************************************/
 int edit_mode_keyboard(int key, int x, int y)
 {
   int newview = 0;
@@ -6172,9 +6203,8 @@ int edit_mode_keyboard(int key, int x, int y)
 	  edit_mode_gui(); // Redisplay the GUI
 	  return 1;
 	}
-
 	for (i = 1; ecommand[i] == ' '; i++); // Strip leading spaces
-	strcpy(partname, &(ecommand[i]));
+	getfilename(&(ecommand[i]), partname);
 	CopyStaticBuffer(0);
 	movingpiece = curpiece;
 	if (strrchr(partname, '.') == NULL)
@@ -6261,10 +6291,11 @@ int edit_mode_keyboard(int key, int x, int y)
 	break;
       case 'L':
 	// Load filename if new
+	for (i = 1; ecommand[i] == ' '; i++); // Strip leading spaces
 	printf("loading file: %s\n", &(ecommand[1]));
 	if (strcmp(&(ecommand[1]),datfilename))
 	{
-	  sscanf(&(ecommand[1]),"%s", &datfilename);
+	  getfilename(&(ecommand[i]), datfilename);
 	  curstep = 0; // Reset to first step
 	  dirtyWindow = 1;
 	  UnSelect1Part(curpiece); // UnSelect part before Loading
@@ -6281,7 +6312,7 @@ int edit_mode_keyboard(int key, int x, int y)
 	// Save as filename
 	for (i = 1; ecommand[i] == ' '; i++); // Strip leading spaces
 	printf("Save as: %s\n", &(ecommand[i]));
-	sscanf(&(ecommand[i]),"%s", &datfilename);
+	getfilename(&(ecommand[i]), datfilename);
 	i = UnSelect1Part(curpiece); // Link part back in before printing
 	Print1Model(datfilename);
 	SetTitle(1); // Change the title of the window.
