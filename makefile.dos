@@ -16,13 +16,13 @@ CC=gcc
 #GUI_SRC=ldglgui.c
 #GUI_LIBS=-lmui
 
-CFLAGS=-ggdb -DUNIX -DAGL -DUSE_OPENGL -DUSE_L3_PARSER -DNEED_MIN_MAX $(PNG_FLAGS) $(TR_FLAGS) $(GUI_FLAGS) 
+CFLAGS=-ggdb -DUNIX -DAGL -DUSE_GLFONT -DUSE_OPENGL -DUSE_L3_PARSER -DNEED_MIN_MAX $(PNG_FLAGS) $(TR_FLAGS) $(GUI_FLAGS) 
 
 
 ## This is lame.  I don't know how to do both .c and .cpp for the OBJS line
 ## so I pretend L3*.cpp is L3*.c and make rules for them later.
 #
-SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c stub.c lcolors.c y.tab.c lex.yy.c qbuf.c main.c ldglpr.c L3Edit.c L3Math.c L3Input.c L3View.c $(TR_SRC) 
+SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c stub.c lcolors.c y.tab.c lex.yy.c qbuf.c main.c ldglpr.c glfont.c L3Edit.c L3Math.c L3Input.c L3View.c $(TR_SRC) 
 OBJS = $(SRCS:.c=.o)
 
 all	: ldglite
