@@ -61,6 +61,7 @@ To use ldglite from MS Internet Explorer do this:
 
     1) Open an Explorer window (or any folder window).
     2) Select the "View->Folder Options" menu selection.
+       ("Tools->Folder Options" on 2000.)
     3) Go to the "File Types" tab.
     4) Scroll down and double click on the "ldlite Document" line.  
        If there is no "ldlite Document" line, click the "New Type" button
@@ -70,6 +71,14 @@ To use ldglite from MS Internet Explorer do this:
     6) In the "Actions" area, Click on the "New..." button.  
        For the Action name, type "open".  
        For the filename, browse to the location of ldglite.exe
+
+Or on the command line of windows 2000 type something like this:
+    
+    ldlite.document=C:\some\directory\l3glite.exe -v3 -& "%1"
+    assoc .dat=ldlite.document
+    assoc .mpd=ldlite.document
+    assoc .ldr=ldlite.document
+    
 
 For Netscape:
 
