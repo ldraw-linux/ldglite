@@ -1847,12 +1847,14 @@ void unMUI_fnkeys(int key, int x, int y)
     muiSetVSValue(vs, sliderval + 0.02);
     sliderval = muiGetVSVal(vs);
     muiSetTLTop(tl, sliderval);
+    glutPostRedisplay();
     break;
   case GLUT_KEY_PAGE_DOWN:
   case GLUT_KEY_DOWN:
     muiSetVSValue(vs, sliderval - 0.01);
     sliderval = muiGetVSVal(vs);
     muiSetTLTop(tl, sliderval);
+    glutPostRedisplay();
     break;
   case GLUT_KEY_RIGHT:
   case GLUT_KEY_LEFT:
