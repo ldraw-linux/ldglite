@@ -1785,7 +1785,18 @@ case 102:
 					if (stop_include_file() == (-1)) { YYACCEPT; };
 				}
 			}
-		}
+		} else {
+		  if (start_include_file(yyvsp[-1].c) == 0) {
+		    /* update transform matricies */
+		    push_transform(yyvsp[-3].v, yyvsp[-2].m);
+		    znamelist_push();
+		    current_color[include_stack_ptr] = yyvsp[-4].i;
+		  } else {
+#ifndef NO_COMMENTS
+		  printf("# Cannot find %s, ignoring.\n",yyvsp[-1].c);
+#endif
+		  }
+	    }
 #ifdef USE_QBUF_MALLOC
 		qbufReleasePtr(word_pool, (char *)yyvsp[-1].c);
 #else
