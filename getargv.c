@@ -41,7 +41,7 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <AppleEvents.h>
 #include <AEObjects.h>
 #else
-#include <Carbon.h>
+#include <Carbon/Carbon.h>
 #endif
 
 #if defined(GENERATINGCFM) && !defined(USING_CARBON)	/* Defined to 0 or 1 in Universal headers */

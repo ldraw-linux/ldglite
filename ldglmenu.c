@@ -89,7 +89,7 @@ void menu(int item)
     filemenu(15); // refresh the file list with files in new dir.
   }
   else
-    keyboard((unsigned char)item, 0, 0);
+    menuKeyEvent(item, 0, 0);
 }
 
 /***************************************************************/
@@ -352,7 +352,7 @@ void initializeMenus(void)
   }
   glutAddMenuEntry("                   ", '\0');
   glutAddSubMenu(  "Help               ", helpmenunum);
-  glutAddMenuEntry("Quit               ", '\033');
+  glutAddMenuEntry("Quit               ", UI_ESCAPE_EVENT);
 #ifdef USE_GLUT_MENUS
   glutAttachMenu(GLUT_RIGHT_BUTTON);
 #endif

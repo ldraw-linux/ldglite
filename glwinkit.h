@@ -32,6 +32,9 @@
 
 /************************************************************************/
 
+#ifndef GLWINKIT_H
+#define GLWINKIT_H
+
 #ifdef USING_SLUT
 #  include "slut.h" // A sleazy implementation of GLUT on SDL.
 #else
@@ -42,3 +45,10 @@
 #  endif
 #endif
 
+// Define our generic menu and keyboard event handler fn.
+void menuKeyEvent(int key, int x, int y);
+
+// Define some events.  Put them above the ASCII range of 128 or 256.
+#define UI_ESCAPE_EVENT (512 + 27)
+
+#endif //GLWINKIT_H

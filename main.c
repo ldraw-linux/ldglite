@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.0.9      ";
+char ldgliteVersion[] = "Version 1.0.10     ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -355,7 +355,7 @@ float fZRot = 0.0;
 
 void reshape(int width, int height);
 void rendersetup(void);
-int edit_mode_keyboard(unsigned char key, int x, int y);
+int edit_mode_keyboard(int key, int x, int y);
 int edit_mode_fnkeys(int key, int x, int y);
 void mouse(int button, int state, int x, int y);
 
@@ -5360,7 +5360,7 @@ char *ScanPoints(float m[4][4], int numpoints, char *str)
 }
 
 /***************************************************************/
-int edit_mode_keyboard(unsigned char key, int x, int y)
+int edit_mode_keyboard(int key, int x, int y)
 {
   int newview = 0;
   char c;
@@ -6588,7 +6588,7 @@ void fnkeys(int key, int x, int y)
 void outputEPS(int size, int doSort, char *filename);
 
 /***************************************************************/
-void keyboard(unsigned char key, int x, int y)
+void menuKeyEvent(int key, int x, int y)
 {
   int newview = 0;
   char c;
@@ -6843,6 +6843,7 @@ void keyboard(unsigned char key, int x, int y)
       dirtyWindow = 1;
       break;
     case 27:
+    case UI_ESCAPE_EVENT:
 	exit(0);
 	break;
     case '\r':
@@ -6871,6 +6872,12 @@ void keyboard(unsigned char key, int x, int y)
     }
 
     glutPostRedisplay();
+}
+
+/***************************************************************/
+void keyboard(unsigned char key, int x, int y)
+{
+  menuKeyEvent((int)key, x, y);
 }
 
 /***************************************************************/
