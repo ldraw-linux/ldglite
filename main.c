@@ -252,6 +252,7 @@ float fYRot = 0.0;
 float fZRot = 0.0;
 
 void reshape(int width, int height);
+void rendersetup(void);
 
 /***************************************************************/
 void draw_string(void *font, const char* string) 
@@ -372,6 +373,7 @@ int edit_mode_gui()
   glPopMatrix();
   glMatrixMode( GL_PROJECTION );
   glPopMatrix();
+  glMatrixMode( GL_MODELVIEW );
 
   glEnable( GL_DEPTH_TEST ); 
 
@@ -379,6 +381,11 @@ int edit_mode_gui()
   savedirty = dirtyWindow; 
   reshape(Width, Height);
   dirtyWindow = savedirty; 
+
+  // NOTE: reshape() does NOT seem to prevent a jump when I spin with mouse.
+  // I Should probably call glPushAttrib() and glPopAttrib() instead of
+  // reshape() and rendersetup().
+  rendersetup();
 }
 
 /***************************************************************/
@@ -1857,10 +1864,10 @@ render(void)
   {
     ldraw_commandline_opts.F |= STUDLESS_MODE;
     DrawModel();
-    ldraw_commandline_opts.F &= (!STUDLESS_MODE);
+    ldraw_commandline_opts.F &= ~(STUDLESS_MODE);
     ldraw_commandline_opts.F |= STUDONLY_MODE;
     DrawModel();
-    ldraw_commandline_opts.F &= (!STUDONLY_MODE);
+    ldraw_commandline_opts.F &= ~(STUDONLY_MODE);
   }
 #endif
   else 
@@ -3753,7 +3760,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       switch(key) {
       case 'l':
 	clear_edit_mode_gui();
-	ldraw_commandline_opts.F ^= STUDLESS_MODE;
+	//ldraw_commandline_opts.F ^= STUDLESS_MODE;
+	ldraw_commandline_opts.F ^= STUDLINE_MODE;
 	dirtyWindow = 1;
 	glutPostRedisplay();
 	return 1;
@@ -4416,14 +4424,14 @@ void keyboard(unsigned char key, int x, int y)
     case 'n':
       zWire = 0;
       zShading = 0;
-      ldraw_commandline_opts.F &= !(WIREFRAME_MODE);
-      ldraw_commandline_opts.F &= !(SHADED_MODE);
+      ldraw_commandline_opts.F &= ~(WIREFRAME_MODE);
+      ldraw_commandline_opts.F &= ~(SHADED_MODE);
       reshape(Width, Height);
       break;
     case 'h':
       zWire = 0;
       zShading = 1;
-      ldraw_commandline_opts.F &= !(WIREFRAME_MODE);
+      ldraw_commandline_opts.F &= ~(WIREFRAME_MODE);
       ldraw_commandline_opts.F |= SHADED_MODE;
       reshape(Width, Height);
       break;
@@ -4431,7 +4439,7 @@ void keyboard(unsigned char key, int x, int y)
       zWire = 1;
       zShading = 0;
       ldraw_commandline_opts.F |= WIREFRAME_MODE;
-      ldraw_commandline_opts.F &= !(SHADED_MODE);
+      ldraw_commandline_opts.F &= ~(SHADED_MODE);
       reshape(Width, Height);
       break;
     case 'B': // Bitmap
@@ -5461,8 +5469,8 @@ void ParseParams(int *argc, char **argv)
 	  case 'N':
 	    zShading = 0; // mnemonic = normal (no shading)
 	    zWire = 0;
-	    ldraw_commandline_opts.F &= !(SHADED_MODE);
-	    ldraw_commandline_opts.F &= !(WIREFRAME_MODE);
+	    ldraw_commandline_opts.F &= ~(SHADED_MODE);
+	    ldraw_commandline_opts.F &= ~(WIREFRAME_MODE);
 	    break;
 	  }
 	}
