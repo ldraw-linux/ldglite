@@ -1,3 +1,9 @@
+#ifdef AGL
+// I guess these come from glut on linux???
+typedef unsigned char BYTE;
+//typedef int          INT;
+typedef int          BOOL;
+#endif
 
 #define UINT unsigned short
 #define DWORD long

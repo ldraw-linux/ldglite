@@ -42,6 +42,11 @@
 #define USE_DIRENT 1
 #endif
 
+#ifdef AGL
+// This compiles easiest with DJGPP, but does it work?
+#define USE_DIRENT 1
+#endif
+
 #ifdef _WIN32_NATIVE_FILE_OPS
  #include "windows.h"
 #endif

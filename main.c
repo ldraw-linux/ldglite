@@ -178,8 +178,10 @@ double twirl_increment = 10.0;
 
 static int list_made = 0;
 
+#ifndef AGL
 #define USE_DOUBLE_BUFFER
 #define USE_OPENGL_STENCIL
+#endif
 
 #define SAVE_DEPTH_BOX
 
@@ -350,6 +352,36 @@ float fontwidth = 1.0;
 /***************************************************************/
 #endif
 
+#ifdef AGL
+/***************************************************************/
+// GLUT stubs required by AllegroGl version 0.20
+GLUTAPI void *glutBitmapHelvetica12 = 0;
+
+/***************************************************************/
+GLUTAPI int GLUTAPIENTRY glutGetModifiers(void)
+{
+  return 0;
+}
+
+GLUTAPI int GLUTAPIENTRY glutLayerGet(GLenum type)
+{
+  return 0;
+}
+
+GLUTAPI void GLUTAPIENTRY glutSetCursor(int cursor)
+{
+}
+
+GLUTAPI void GLUTAPIENTRY glutWarpPointer(int x, int y)
+{
+}
+
+GLUTAPI void GLUTAPIENTRY glutFullScreen(void)
+{
+}
+
+#endif
+
 /***************************************************************/
 void draw_string(void *font, const char* string) 
 {
@@ -401,7 +433,9 @@ DoRasterString( float x, float y, char *s )
   glRasterPos2f( x, y );
   for( ; ( c = *s ) != '\0'; s++ )
   {
+#ifndef AGL    
     glutBitmapCharacter( GLUT_BITMAP_HELVETICA_12, c );
+#endif
   }
 }
 
@@ -4018,6 +4052,7 @@ void fnkeys(int key, int x, int y)
     mui_test();
     return;
 #endif
+#ifndef AGL
 #if (GLUT_XLIB_IMPLEMENTATION >= 13)
   case GLUT_KEY_F9:
     glutLeaveGameMode();
@@ -4045,6 +4080,7 @@ void fnkeys(int key, int x, int y)
       init();
     }
     break;
+#endif
 #endif
   default:
     return;
@@ -5058,8 +5094,10 @@ void myGlutIdle( void )
   /* According to the GLUT specification, the current window is
      undefined during an idle callback.  So we need to explicitly change
      it if necessary */
+#ifndef AGL
 #if (GLUT_XLIB_IMPLEMENTATION >= 13)
   if (ldraw_commandline_opts.V_x >= -1)
+#endif
 #endif
   if ( glutGetWindow() != main_window )
     glutSetWindow(main_window);
@@ -5776,7 +5814,7 @@ main(int argc, char **argv)
 
   glutInitDisplayMode(displaymode);
 
-
+#ifndef AGL
 #if (GLUT_XLIB_IMPLEMENTATION >= 13)
   if (ldraw_commandline_opts.V_x < -1)
   {
@@ -5789,6 +5827,7 @@ main(int argc, char **argv)
     }
   }
   else
+#endif
 #endif
   {
     glutInitWindowSize(Width, Height);
@@ -5877,9 +5916,11 @@ main(int argc, char **argv)
   glutMotionFunc(motion);
   glutIdleFunc(myGlutIdle);
 
+#ifndef AGL
 #if (GLUT_XLIB_IMPLEMENTATION >= 13)
 // Rats, no menus in game mode.  Perhaps GLUI or PUI look good again.
   if (ldraw_commandline_opts.V_x >= -1)
+#endif
 #endif
   {
   view = glutCreateMenu(menu);
