@@ -153,6 +153,7 @@ Command line options (see also the original ldlite docs for more):
 
 -fh turns on shading mode.
 -fs turns off stud drawing. (l3glite only)
+-fr turns off edge lines (Render mode?  Rough draft?  I don't know what R stands for.)
 -v-1 displays in fullscreen with no decorations.
 -v-2 displays in fullscreen gamemode (no menus in gamemode).
 -x displays the x,y,z axis.
@@ -171,6 +172,9 @@ Command line options (see also the original ldlite docs for more):
 -zN sets the near clipping plane.
 -ZN sets the far clipping plane.
 -caN sets the camera field of view angle in degrees.  (like l3p)
+-ccX,Y,Z sets the camera location.  (like l3p)
+-coX,Y,Z sets the model origin for the camera to look at.
+-cuX,Y,Z sets the camera up vector.
 -uX,Y saves a huge output image from window sized tiles.  (see notes below)
 -& windows mode.  Detach from the console window.  Windows version only.
 -- if no DAT filename is given on the command line ldglite will read
