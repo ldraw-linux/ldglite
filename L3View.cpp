@@ -599,15 +599,19 @@ int Draw1PartPtr(struct L3LineS *LinePtr, int Color)
 {
 	float          m1[4][4];
 	int CurColor = ldraw_commandline_opts.C;
-	int SaveColor = LinePtr->Color;
+	int SaveColor;
 
 	int            i;
 	float          r[4];
 	vector3d       v3d[4];
 
+	if (!LinePtr)
+	  return 0;
+
 	InitViewMatrix();
 	include_stack_ptr = 1; // Start nesting level pointer at 1.
 
+	SaveColor = LinePtr->Color;
 	if (Color < 0) 
 	    Color = LinePtr->Color;
 	else
