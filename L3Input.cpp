@@ -322,6 +322,47 @@ static char         *StudPrimitives[] = {
    "stud4.dat",
 };
 
+
+
+/* If this code works, it was written by Lars C. Hassing. */
+/* If not, I don't know who wrote it.                     */
+
+/* Like fgets, except that 1) any line ending is accepted (\n (unix),
+\r\n (DOS/Windows), \r (Mac (OS9)) and 2) Str is ALWAYS zero terminated
+(even if no line ending was found) */
+char *L3fgets(char *Str, int n, FILE *fp)
+{
+   register int   c;
+   int            nextc;
+   register char *s = Str;
+
+   while (--n > 0)
+   {
+      if ((c = getc(fp)) == EOF)
+         break;
+      if (c == '\032')
+         continue;              /* Skip CTRL+Z                               */
+      if (c == '\r' || c == '\n')
+      {
+         *s++ = '\n';
+         /* We got CR or LF, eat next character if LF or CR respectively */
+         if ((nextc = getc(fp)) == EOF)
+            break;
+         if (nextc == c || (nextc != '\r' && nextc != '\n'))
+            ungetc(nextc, fp);  /* CR-CR or LF-LF or ordinary character      */
+         break;
+      }
+      *s++ = c;
+   }
+   *s = 0;
+
+   /* if (ferror(fp)) return NULL; if (s == Str) return NULL; */
+   if (s == Str)
+      return NULL;
+
+   return Str;
+}
+
 /* Modifies the string: lower case and OS-correct slashes */
 #ifndef USE_OPENGL
 static 
@@ -1354,7 +1395,7 @@ static int           ReadDatFile(FILE *fp, struct L3PartS * PartPtr,
    ExpectedEnd = 0;
    PartPtr->FirstLine = NULL;
    LinePtrPtr = &(PartPtr->FirstLine);
-   while (fgets(IInfo.InputStr, sizeof(IInfo.InputStr), fp))
+   while (L3fgets(IInfo.InputStr, sizeof(IInfo.InputStr), fp))
    {
       ++IInfo.LineNo;
       TrimRight(IInfo.InputStr);
@@ -1971,7 +2012,7 @@ int                  InitLDrawDir(void)
       if (fp)
       {
          InLDrawSection = 0;
-         while (fgets(Str, sizeof(Str), fp))
+         while (L3fgets(Str, sizeof(Str), fp))
          {
             if (Str[0] == '[')
             {
