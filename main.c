@@ -79,6 +79,7 @@ int use_png_alpha = 1;
 int ldraw_projection_type = 0;  // 1 = perspective, 0 = orthographic.
 double projection_znear = -1.0;
 double projection_zfar = -1.0;
+double projection_fov = -1.0;
 int ldraw_image_type = IMAGE_TYPE_BMP8;
 
 // [Views] swiped from ldraw.ini
@@ -1688,6 +1689,8 @@ void reshape(int width, int height)
     znear = 100.0;
     zfar = 4000.0;
 #endif
+    if (projection_fov != -1.0)
+      fov = projection_fov;
     if (projection_znear != -1.0)
       znear = projection_znear;
     if (projection_zfar != -1.0)
@@ -2143,6 +2146,8 @@ void TiledDisplay(void)
    znear = 100.0;
    zfar = 4000.0;
 #endif
+    if (projection_fov != -1.0)
+      fov = projection_fov;
     if (projection_znear != -1.0)
       znear = projection_znear;
     if (projection_zfar != -1.0)
@@ -5688,7 +5693,16 @@ void ParseParams(int *argc, char **argv)
 	break;
       case 'C':
       case 'c':
-	sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.C));
+        if ((pszParam[1] == 'a') || (pszParam[1] == 'A'))
+	{
+	  float g;
+	  sscanf(&pszParam[2],"%f",&g);
+	  printf("FOV = %g\n", g);
+	  if ((g >= 0.0) && (g <= 360.0))
+	    projection_fov = g;
+	}
+	else
+	  sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.C));
 	break;
       case 'E':
       case 'e':
