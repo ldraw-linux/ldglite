@@ -77,9 +77,30 @@ int use_uppercase = 0;
 int use_png_alpha = 1;
 
 int ldraw_projection_type = 0;  // 1 = perspective, 0 = orthographic.
-double projection_znear = -1.0;
-double projection_zfar = -1.0;
-double projection_fov = -1.0;
+#define WIDE_ANGLE_VIEW 1
+#if WIDE_ANGLE_VIEW
+double projection_znear = 1.0;
+double projection_zfar = 2000.0;
+double projection_fov = 45.0;
+double projection_fromx = 0.0;
+double projection_fromy = 0.0;
+double projection_fromz = 1000.0;
+double projection_depth = 1000; // distance(from, toward);
+#else
+double projection_znear = 100.0;
+double projection_zfar = 4000.0;
+double projection_fov = 20.0;
+double projection_fromx = 0.0;
+double projection_fromy = 0.0;
+double projection_fromz = 2000.0;
+double projection_depth = 2000; // 500 ??
+#endif
+double projection_towardx = 0.0;
+double projection_towardy = 0.0;
+double projection_towardz = 0.0;
+double projection_upx = 0.0;
+double projection_upy = 1.0;
+double projection_upz = 0.0;
 int ldraw_image_type = IMAGE_TYPE_BMP8;
 
 // [Views] swiped from ldraw.ini
@@ -1679,22 +1700,9 @@ void reshape(int width, int height)
     // frustrum = clipping space(left, right, bottom, top, near, far)
     //glFrustum(-3.0, 3.0, -3.0, 3.0, 64, 256);
  
-#define WIDE_ANGLE_VIEW 1
-#if WIDE_ANGLE_VIEW
-    fov = 45.0;
-    znear = 1.0;
-    zfar = 2000.0;
-#else
-    fov = 20.0;
-    znear = 100.0;
-    zfar = 4000.0;
-#endif
-    if (projection_fov != -1.0)
-      fov = projection_fov;
-    if (projection_znear != -1.0)
-      znear = projection_znear;
-    if (projection_zfar != -1.0)
-      zfar = projection_zfar;
+    fov = projection_fov;
+    znear = projection_znear;
+    zfar = projection_zfar;
 
     // try to get better resolution in depth buffer.  Move near, far.
     if (ldraw_projection_type)
@@ -1756,6 +1764,8 @@ void reshape(int width, int height)
 // Note any push/pop of model matrix must be done outside of this fn.
 void rendersetup(void)
 {
+  GLdouble fx, fy, fz, tx, ty, tz, ux, uy, uz;
+
   if (zShading)
     glEnable(GL_LIGHTING);
   else
@@ -1795,19 +1805,23 @@ void rendersetup(void)
 
   // ldlite_parse seems to offset x,y coords by half the window size.
 
-  // Hmmm, my up vector is straight up.  This may NOT be perpendicular 
-  // to my view vector if it looks down at an angle toward (0,100,0).
-
-  // from, toward, upvector
-#if WIDE_ANGLE_VIEW
   // Height/6 moves the origin from halfway to 2/3 of the way down the screen.
   // Original LdLite uses zGetRowsize() and zGetColsize() to do this.
   // I stubbed them to return 0 for OpenGL since its origin is the window
   // center, not the corner.  See LDRAW_COMPATIBLE_CENTER in LdliteVR_main.c.
-  gluLookAt(0.0, Height/6.0, 1000.0, 0.0, Height/6.0, 0.0, 0.0, 1.0, 0.0);
-#else
-  gluLookAt(0.0, Height/6.0, 2000.0, 0.0, Height/6.0, 0.0, 0.0, 1.0, 0.0);
-#endif
+  fx = projection_fromx;
+  fy = projection_fromy + (Height/6.0);
+  fz = projection_fromz;
+  tx = projection_towardx;
+  ty = projection_towardy + (Height/6.0);
+  tz = projection_towardz;
+  // Hmmm, my up vector is straight up.  This may NOT be perpendicular 
+  // to my view vector if it looks down at an angle toward (0,100,0).
+  ux = projection_upx;
+  uy = projection_upy;
+  uz = projection_upz;
+  // from, toward, upvector
+  gluLookAt(fx, fy, fz, tx, ty, tz, ux, uy, uz);
 
 #ifdef ORBIT_THE_CAMERA_ABOUT_THE_MODEL
   // Do camera translation/rotation AFTER the GluLookAt camera transform.
@@ -2137,27 +2151,15 @@ void TiledDisplay(void)
    trImageSize(tr, TILE_IMAGE_WIDTH, TILE_IMAGE_HEIGHT);
    trRowOrder(tr, TR_TOP_TO_BOTTOM);
 
-#if WIDE_ANGLE_VIEW
-   fov = 45.0;
-   znear = 1.0;
-   zfar = 2000.0;
-#else
-   fov = 20.0;
-   znear = 100.0;
-   zfar = 4000.0;
-#endif
-    if (projection_fov != -1.0)
-      fov = projection_fov;
-    if (projection_znear != -1.0)
-      znear = projection_znear;
-    if (projection_zfar != -1.0)
-      zfar = projection_zfar;
+   fov = projection_fov;
+   znear = projection_znear;
+   zfar = projection_zfar;
 
    // try to get better resolution in depth buffer.  Move near, far.
    if (ldraw_projection_type)
    {
      // fov, aspect, near, far
-     trPerspective(tr, 45.0, aspect, znear, zfar);
+     trPerspective(tr, fov, aspect, znear, zfar);
      //glDepthRange(0.0, 1.0); // I do NOT understand this fn.
    }
    else
@@ -5065,11 +5067,7 @@ mouse(int button, int state, int x, int y)
     //glRotated(pan_y-pan_start_y, 0.0, 1.0, 0.0);
 
     // Convert from world coords across screen plane to angle thru origin.
-#if WIDE_ANGLE_VIEW
-    depth = 1000.0;
-#else
-    depth = 500.0;
-#endif
+    depth = projection_depth;
 
 #if 0
     pan_z = pan_x - pan_start_x;
@@ -5211,11 +5209,7 @@ motion(int x, int y)
       }
 
       // Convert from world coords across screen plane to angle thru origin.
-#if WIDE_ANGLE_VIEW
-      depth = 1000.0;
-#else
-      depth = 500.0;
-#endif
+      depth = projection_depth;
 
       pan_x -= pan_start_x;
       pan_y -= pan_start_y;
@@ -5693,13 +5687,43 @@ void ParseParams(int *argc, char **argv)
 	break;
       case 'C':
       case 'c':
-        if ((pszParam[1] == 'a') || (pszParam[1] == 'A'))
+	if (toupper(pszParam[1]) == 'A') // Camera FOV angle.
 	{
 	  float g;
 	  sscanf(&pszParam[2],"%f",&g);
 	  printf("FOV = %g\n", g);
 	  if ((g >= 0.0) && (g <= 360.0))
 	    projection_fov = g;
+	}
+        else if (toupper(pszParam[1]) == 'C') // Camera location.
+	{
+	  float v[4][4];
+	  v[0][0] = v[0][1] = v[0][2] = 0.0;
+	  ScanPoints(v, 3, &(pszParam[2]));
+	  printf("CAM = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
+	  projection_fromx = v[0][0];
+	  projection_fromy = v[0][1];
+	  projection_fromz = v[0][2];
+	}
+        else if (toupper(pszParam[1]) == 'O') // Object Origin to look at.
+	{
+	  float v[4][4];
+	  v[0][0] = v[0][1] = v[0][2] = 0.0;
+	  ScanPoints(v, 3, &(pszParam[2]));
+	  printf("LOOK AT (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
+	  projection_towardx = v[0][0];
+	  projection_towardy = v[0][1];
+	  projection_towardz = v[0][2];
+	}
+        else if (toupper(pszParam[1]) == 'U') // Camera up vector.
+	{
+	  float v[4][4];
+	  v[0][0] = v[0][1] = v[0][2] = 0.0;
+	  ScanPoints(v, 3, &(pszParam[2]));
+	  printf("UP = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
+	  projection_upx = v[0][0];
+	  projection_upy = v[0][1];
+	  projection_upz = v[0][2];
 	}
 	else
 	  sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.C));
@@ -5734,6 +5758,9 @@ void ParseParams(int *argc, char **argv)
 	    zWire = 0;
 	    ldraw_commandline_opts.F &= ~(SHADED_MODE);
 	    ldraw_commandline_opts.F &= ~(WIREFRAME_MODE);
+	    break;
+	  case 'R':
+	    zSolid = 1;
 	    break;
 	  }
 	}
