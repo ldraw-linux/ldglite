@@ -273,6 +273,8 @@ int curstep = 0;
 int cropping = 1;
 int panning = 0;
 int dirtyWindow = 0;
+int pan_start_sx = 0; // Screen Coords
+int pan_start_sy = 0;
 GLdouble pan_start_x = 0.0;
 GLdouble pan_start_y = 0.0;
 GLdouble pan_end_x = 0.0;
@@ -1020,7 +1022,7 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
 	int i = 0;
 	char *p = extend_filename(filename);
 
-	while ( (_access( filename, 0 )) != -1 )
+	while ( (access( filename, 0 )) != -1 )
 	{
 	  /* The file already exists */
 	  i++;
@@ -5021,6 +5023,9 @@ void keyboard(unsigned char key, int x, int y)
     case 'g':
       ldraw_commandline_opts.poll ^= 1;
       return;
+    case 'G':
+      ldraw_commandline_opts.debug_level ^= 1;
+      return;
 #ifdef USE_L3_PARSER
     case 'r': // Reader (parser)
       if (editing) 
@@ -5337,7 +5342,15 @@ mouse(int button, int state, int x, int y)
     if (ldraw_commandline_opts.debug_level == 1)
       printf("pdn(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
     panning = 0;
+
+    pan_start_sx = x; // Save start point for when we pass hysteresis.
+    pan_start_sy = y;
+    // Do not hide or warp the pointer until past hysteresis.
+#ifdef VISIBLE_WARP_CHECK
     //glutSetCursor(GLUT_CURSOR_INHERIT);
+#else
+    //glutSetCursor(GLUT_CURSOR_NONE);
+#endif
     //glutWarpPointer(Width/2, Height/2);
 
     return;
@@ -5393,11 +5406,16 @@ mouse(int button, int state, int x, int y)
     pan_x -= pan_start_x;
     pan_y -= pan_start_y;
     pan_y = -pan_y; //Beats me why.
+#if DEPTH_BASED_MOUSE_SPIN
     pan_z = max(fabs(pan_x), fabs(pan_y));
     angle = atan2(pan_z, depth);
     //angle *= -1.0;
     angle *= 5.0;
     angle *= (180.0/3.1415927);
+#else
+    //angle = 2.0 * max(fabs(x*3.1415927/Width), fabs(y*3.1415927/Width));
+    angle = 0.5 * max(fabs(x-(Width/2.0)), fabs(y-(Height/2.0)));
+#endif
     if (ldraw_commandline_opts.debug_level == 1)
       printf("rotating about(%0.2f, %0.2f) by angle %0.2f\n", pan_y, -pan_x, angle);
     rotate_about(pan_y, -pan_x, 0.0, angle );
@@ -5456,6 +5474,10 @@ motion(int x, int y)
       // Save draw modes, then switch to wireframe and turn off studs.
       pan_start_F = ldraw_commandline_opts.F;
       ldraw_commandline_opts.F = pan_visible; 
+
+      // Pretend we skipped hysteresis check and warped pointer right away.
+      x += (Width/2) - pan_start_sx;
+      y += (Height/2) - pan_start_sy;
     }
 #ifdef VISIBLE_WARP_CHECK
     glutSetCursor(GLUT_CURSOR_INHERIT);
@@ -5538,7 +5560,8 @@ motion(int x, int y)
       angle *= 5.0;
       angle *= (180.0/3.1415927);
 #else
-      angle = 2.0 * max(fabs(x*3.1415927/Width), fabs(y*3.1415927/Width));
+      //angle = 2.0 * max(fabs(x*3.1415927/Width), fabs(y*3.1415927/Width));
+      angle = 0.5 * max(fabs(x-(Width/2.0)), fabs(y-(Height/2.0)));
 #endif
       if (ldraw_commandline_opts.debug_level == 1)
 	printf("ROTATING about(%0.2f, %0.2f) by angle %0.2f\n", pan_y, -pan_x, angle);
