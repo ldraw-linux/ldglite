@@ -62,7 +62,13 @@ extern int  filemenunum;
 extern int  dirmenunum;
 extern int  mainmenunum;
 
+#ifdef USE_L3_PARSER
+extern int parsername;
+#endif
+
 extern int ldraw_projection_type;  // 1 = perspective, 0 = orthographic.
+extern int pan_visible;
+extern int qualityLines;
 
 extern char Back[];
 extern char Left[];
@@ -106,6 +112,10 @@ int oh = 0;
 #define HELP_UILIST	7
 
 int fileOpenSave = 0;
+
+int viewchoice = 0;
+int projchoice = 0;
+int panchoice = 0;
 
 /***************************************************************/
 void muiHide(muiObject *obj, int state)
@@ -388,9 +398,6 @@ void makemainui(void)
 
   //muiAttachUIList(MAIN_UILIST);
 }
-
-int viewchoice = 0;
-int projchoice = 0;
 
 /***************************************************************/
 /***************************************************************/
@@ -764,7 +771,7 @@ void makebackui(void)
   // Clear the radio buttons and set the correct one active.
   muiClearRadio(rb2);
   viewchoice = 0;
-  // MOTE:  Cannot preset to current background because its not saved.
+  // NOTE:  Cannot preset to current background because its not saved.
 
   MUIstarted = 1;
 
@@ -774,42 +781,71 @@ void makebackui(void)
 /***************************************************************/
 void dreadbutton(muiObject *obj, enum muiReturnValue r)
 {
-  int i, enabled;
+  int i, active;
   
-  extern int qualityLines;
-
   i = muiGetID(obj);
-  enabled = muiGetEnable(obj);
+  active = muiGetActive(obj);
 
   switch (i)
   {
   case 2:
-    if (enabled)
-      ldraw_commandline_opts.F |= TYPE_F_SHADED_MODE; // zShading = 1;
+    if (active)
+      viewchoice |= TYPE_F_SHADED_MODE; // zShading = 1;
     else
-      ldraw_commandline_opts.F &= ~(TYPE_F_SHADED_MODE); // zShading = 0;
+      viewchoice &= ~(TYPE_F_SHADED_MODE); // zShading = 0;
     break;
   case 3:
-    if (enabled)
-      ldraw_commandline_opts.F &= ~(TYPE_F_NO_POLYGONS); // zWire = 0;
+    if (active)
+      viewchoice &= ~(TYPE_F_NO_POLYGONS); // zWire = 0;
     else
-      ldraw_commandline_opts.F |= TYPE_F_NO_POLYGONS; // zWire = 1;
+      viewchoice |= TYPE_F_NO_POLYGONS; // zWire = 1;
     break;
   case 4:
-    if (enabled)
-      ldraw_commandline_opts.F &= ~(TYPE_F_NO_LINES); // Edgelines
+    if (active)
+      viewchoice &= ~(TYPE_F_NO_LINES); // Edgelines
     else
-      ldraw_commandline_opts.F |= TYPE_F_NO_LINES; // no Edgelines
+      viewchoice |= TYPE_F_NO_LINES; // no Edgelines
     break;
   case 5:
-    if (enabled)
-      qualityLines = 1;
-    else
-      qualityLines = 0;
+    projchoice = active; // qualityLines
     break;
+
+  case 8:
+    // Normal studs
+    viewchoice &= ~(TYPE_F_STUDLINE_MODE); 
+    viewchoice &= ~(TYPE_F_STUDLESS_MODE); 
+    break;
+  case 9:
+    // Line studs
+    viewchoice |= TYPE_F_STUDLINE_MODE;
+    viewchoice &= ~(TYPE_F_STUDLESS_MODE); 
+    break;
+  case 10:
+    // No studs
+    viewchoice &= ~(TYPE_F_STUDLINE_MODE); 
+    viewchoice |= TYPE_F_STUDLESS_MODE;
+    break;
+
+  case 12:
+    panchoice = (TYPE_F_BBOX_MODE | TYPE_F_NO_POLYGONS);
+    break;
+  case 13:
+    panchoice = (TYPE_F_NO_POLYGONS | TYPE_F_STUDLESS_MODE);
+    break;
+  case 14:
+    panchoice = (TYPE_F_INVISIBLE);
+    break;
+  case 15:
+    panchoice = (TYPE_F_BBOX_MODE | TYPE_F_SHADED_MODE);
+    break;
+  case 16:
+    panchoice = (TYPE_F_STUDLESS_MODE | TYPE_F_SHADED_MODE);
+    break;
+  case 17:
+    panchoice = (TYPE_F_SHADED_MODE);
+    break;
+
   default:
-    //ldraw_commandline_opts.F ^= TYPE_F_STUDLESS_MODE;
-    //ldraw_commandline_opts.F |= TYPE_F_STUDLINE_MODE;
     break;
   }
 
@@ -830,13 +866,10 @@ void dbcallback(muiObject *obj, enum muiReturnValue r)
   case 3:
     muiSetActiveUIList(MAIN_UILIST);
     mui_cleanup();
-    switch (viewchoice)
-    {
-    case 2:
-      break;
-    default:
-      break;
-    }
+    if (viewchoice != ldraw_commandline_opts.F)
+      ldraw_commandline_opts.F = viewchoice;
+    qualityLines = projchoice;
+    pan_visible = panchoice;
     break;
   default:
     muiHideAll(muiGetUIList(obj), 0);
@@ -849,8 +882,8 @@ void dbcallback(muiObject *obj, enum muiReturnValue r)
 /***************************************************************/
 void makedrawui(void)
 {
-  static muiObject *rb1, *rb2, *rb3, *rb4, *rb5, *rb6, *rb7, *rb8;
-  static muiObject *rb9, *rb10, *rb11, *rb12, *rb13, *rb14, *rb15, *rb16;
+  static muiObject *rb1, *rb2, *rb3, *rb4, *rb5, *rb6, *rb7, *rb8, *rb9, *rb10;
+  static muiObject *rb11, *rb12, *rb13, *rb14, *rb15, *rb16, *rb17, *rb18, *rb19;
   static muiObject *b3, *b4;
   static muiObject *l1, *l2, *l3, *l4;
   int xmin, ymin, xmax, ymax;
@@ -884,12 +917,7 @@ void makedrawui(void)
     rb14 = muiNewTinyRadioButton(ow+dw/2, oh+dh-80);
     rb15 = muiNewTinyRadioButton(ow+dw/2, oh+dh-100);
     rb16 = muiNewTinyRadioButton(ow+dw/2, oh+dh-120);
-    //rb12 = muiNewTinyRadioButton(ow+dw/2, oh+dh-40);
-    //rb13 = muiNewTinyRadioButton(ow+dw/2, oh+dh-60);
-    //rb14 = muiNewTinyRadioButton(ow+dw/2, oh+dh-80);
-    //rb15 = muiNewTinyRadioButton(ow+dw/2, oh+dh-100);
-    //rb16 = muiNewTinyRadioButton(ow+dw/2, oh+dh-120);
-    //rb17 = muiNewTinyRadioButton(ow+dw/2, oh+dh-140);
+    rb17 = muiNewTinyRadioButton(ow+dw/2, oh+dh-140);
     //rb18 = muiNewTinyRadioButton(ow+dw/2, oh+dh-160);
     //rb19 = muiNewTinyRadioButton(ow+dw/2, oh+dh-180);
     //rb20 = muiNewTinyRadioButton(ow+dw/2, oh+dh-200);
@@ -909,6 +937,7 @@ void makedrawui(void)
     muiLoadButton(rb14, "Dragline");
     muiLoadButton(rb15, "Solid Boxes");
     muiLoadButton(rb16, "Studless");
+    muiLoadButton(rb17, "Everything");
     //muiLinkButtons(rb1, rb2);
     //muiLinkButtons(rb2, rb3);
     //muiLinkButtons(rb3, rb4);
@@ -924,6 +953,7 @@ void makedrawui(void)
     muiLinkButtons(rb13, rb14);
     muiLinkButtons(rb14, rb15);
     muiLinkButtons(rb15, rb16);
+    muiLinkButtons(rb16, rb17);
     //muiSetCallback(rb1, dreadbutton);
     muiSetCallback(rb2, dreadbutton);
     muiSetCallback(rb3, dreadbutton);
@@ -940,6 +970,7 @@ void makedrawui(void)
     muiSetCallback(rb14, dreadbutton);
     muiSetCallback(rb15, dreadbutton);
     muiSetCallback(rb16, dreadbutton);
+    muiSetCallback(rb17, dreadbutton);
     //muiSetID(rb1, 1);
     muiSetID(rb2, 2);
     muiSetID(rb3, 3);
@@ -956,6 +987,7 @@ void makedrawui(void)
     muiSetID(rb14, 14);
     muiSetID(rb15, 15);
     muiSetID(rb16, 16);
+    muiSetID(rb17, 17);
     //muiClearRadio(rb1);
 
     b3 = muiNewButton(ow+dw-60, ow+dw-34, oh+2, oh+27);
@@ -973,16 +1005,85 @@ void makedrawui(void)
     muiSetActiveUIList(DRAW_UILIST);
     muiHideAll(muiGetUIList(b3), 1);
   }
-  // Clear the radio buttons and set the correct one active.
-  //muiClearRadio(rb1);
-  // MOTE:  Cannot preset to current background because its not saved.
 
-  viewchoice = 0;
-  projchoice = 0;
+  // Clear the radio buttons and set the correct one active.
+  muiClearRadio(rb8);
+  muiClearRadio(rb12);
+  viewchoice = ldraw_commandline_opts.F;
+  projchoice = qualityLines;
+  panchoice = pan_visible;
+
+  if (viewchoice & TYPE_F_SHADED_MODE)
+    muiSetActive(rb2, 1);
+  else
+    muiSetActive(rb2, 0);
+  if (viewchoice & TYPE_F_NO_POLYGONS)
+    muiSetActive(rb3, 0);
+  else
+    muiSetActive(rb3, 1);
+  if (viewchoice & TYPE_F_NO_LINES)
+    muiSetActive(rb4, 0);
+  else
+    muiSetActive(rb4, 1);
+  if (qualityLines)
+    muiSetActive(rb5, 1);
+  else
+    muiSetActive(rb5, 0);
+
+  if (viewchoice & TYPE_F_STUDLESS_MODE)
+    muiSetActive(rb10, 1);
+  else if (viewchoice & TYPE_F_STUDLINE_MODE)
+    muiSetActive(rb9, 1);
+  else
+    muiSetActive(rb8, 1);
+
+  if (pan_visible == (TYPE_F_NO_POLYGONS | TYPE_F_STUDLESS_MODE) )
+    muiSetActive(rb13, 1);
+  else if (pan_visible == (TYPE_F_INVISIBLE) )
+    muiSetActive(rb14, 1);
+  else if (pan_visible == (TYPE_F_BBOX_MODE | TYPE_F_SHADED_MODE) )
+    muiSetActive(rb15, 1);
+  else if (pan_visible == (TYPE_F_STUDLESS_MODE | TYPE_F_SHADED_MODE) )
+    muiSetActive(rb16, 1);
+  else if (pan_visible == (TYPE_F_SHADED_MODE) )
+    muiSetActive(rb17, 1);
+  else // (pan_visible == (TYPE_F_BBOX_MODE | TYPE_F_NO_POLYGONS) )
+    muiSetActive(rb12, 1);
 
   MUIstarted = 1;
 
   muiAttachUIList(DRAW_UILIST);
+}
+
+/***************************************************************/
+void oreadbutton(muiObject *obj, enum muiReturnValue r)
+{
+  int i = -1;
+  int active;
+
+  i = muiGetID(obj);
+  active = muiGetActive(obj);
+
+  switch (i)
+  {
+  case 2:
+    if (active)
+      viewchoice = 'P'; // Pause for steps
+    else
+      viewchoice = 'C'; // Continuous
+    break;
+  case 3:
+    projchoice = active;
+    break;
+  case 9:
+    panchoice = 0;
+    break;
+  case 10:
+    panchoice = 1;
+    break;
+  }
+
+  printf("options radio callback %d, %d\n", i, r);
 }
 
 /***************************************************************/
@@ -999,7 +1100,14 @@ void obcallback(muiObject *obj, enum muiReturnValue r)
   case 3:
     muiSetActiveUIList(MAIN_UILIST);
     mui_cleanup();
-    //colormenu(viewchoice);    
+    if (viewchoice != ldraw_commandline_opts.M)
+      keyboard('s', 0, 0);
+    if (projchoice != ldraw_commandline_opts.poll)
+      keyboard('g', 0, 0);
+#ifdef USE_L3_PARSER
+    if (panchoice != parsername)
+      keyboard('r', 0, 0);
+#endif
     break;
   default:
     muiHideAll(muiGetUIList(obj), 0);
@@ -1058,8 +1166,8 @@ void makeoptsui(void)
     //muiLoadButton(rb6, "");
     //muiLoadButton(rb7, "");
     //muiLoadButton(rb8, "");
-    muiLoadButton(rb9, "L3");
-    muiLoadButton(rb10, "Ldlite");
+    muiLoadButton(rb9, "Ldlite");
+    muiLoadButton(rb10, "L3");
     //muiLoadButton(rb11, "");
     //muiLoadButton(rb12, "");
     //muiLoadButton(rb13, "");
@@ -1081,22 +1189,22 @@ void makeoptsui(void)
     //muiLinkButtons(rb13, rb14);
     //muiLinkButtons(rb14, rb15);
     //muiLinkButtons(rb15, rb16);
-    //muiSetCallback(rb1, readbutton);
-    muiSetCallback(rb2, readbutton);
-    muiSetCallback(rb3, readbutton);
-    //muiSetCallback(rb4, readbutton);
-    //muiSetCallback(rb5, readbutton);
-    //muiSetCallback(rb6, readbutton);
-    //muiSetCallback(rb7, readbutton);
-    //muiSetCallback(rb8, readbutton);
-    muiSetCallback(rb9, readbutton);
-    muiSetCallback(rb10, readbutton);
-    //muiSetCallback(rb11, readbutton);
-    //muiSetCallback(rb12, readbutton);
-    //muiSetCallback(rb13, readbutton);
-    //muiSetCallback(rb14, readbutton);
-    //muiSetCallback(rb15, readbutton);
-    //muiSetCallback(rb16, readbutton);
+    //muiSetCallback(rb1, oreadbutton);
+    muiSetCallback(rb2, oreadbutton);
+    muiSetCallback(rb3, oreadbutton);
+    //muiSetCallback(rb4, oreadbutton);
+    //muiSetCallback(rb5, oreadbutton);
+    //muiSetCallback(rb6, oreadbutton);
+    //muiSetCallback(rb7, oreadbutton);
+    //muiSetCallback(rb8, oreadbutton);
+    muiSetCallback(rb9, oreadbutton);
+    muiSetCallback(rb10, oreadbutton);
+    //muiSetCallback(rb11, oreadbutton);
+    //muiSetCallback(rb12, oreadbutton);
+    //muiSetCallback(rb13, oreadbutton);
+    //muiSetCallback(rb14, oreadbutton);
+    //muiSetCallback(rb15, oreadbutton);
+    //muiSetCallback(rb16, oreadbutton);
     //muiSetID(rb1, 1);
     muiSetID(rb2, 2);
     muiSetID(rb3, 3);
@@ -1131,8 +1239,29 @@ void makeoptsui(void)
     muiHideAll(muiGetUIList(b3), 1);
   }
   // Clear the radio buttons and set the correct one active.
-  //muiClearRadio(rb1);
-  // MOTE:  Cannot preset to current background because its not saved.
+  muiClearRadio(rb9);
+  viewchoice = ldraw_commandline_opts.M;
+  projchoice = ldraw_commandline_opts.poll;
+
+  if (ldraw_commandline_opts.M == 'C')
+    muiSetActive(rb2, 0);
+  else
+    muiSetActive(rb2, 1);
+  if (ldraw_commandline_opts.poll == 1) 
+    muiSetActive(rb3, 1);
+  else
+    muiSetActive(rb3, 0);
+#ifdef USE_L3_PARSER
+  panchoice = parsername;
+  if (parsername)
+    muiSetActive(rb10, 1);
+  else
+    muiSetActive(rb9, 1);
+#else
+  panchoice = 0;
+  muiSetActive(rb9, 1);
+  muiSetEnabled(rb10, 0);
+#endif
 
   MUIstarted = 1;
 
