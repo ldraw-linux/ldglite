@@ -1260,7 +1260,6 @@ int Inline1Part(int partnum)
 
     // Keep the color, matrix, and first LinePtr of the LinePtr.
     CurColor = LinePtr->Color;
-    printf("CurColor = %d\n", CurColor);
     memcpy(m, LinePtr->v, sizeof(LinePtr->v));
     if (LinePtr->PartPtr)
       FirstPtr = LinePtr->PartPtr->FirstLine;
@@ -1297,7 +1296,6 @@ int Inline1Part(int partnum)
       NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
       memcpy(NextPtr, LinePtr, sizeof(struct L3LineS));
 
-      printf("LineptrColor = %d\n", LinePtr->Color);
       switch (LinePtr->Color)
       {
       case 16:
@@ -1327,7 +1325,6 @@ int Inline1Part(int partnum)
 	Color = LinePtr->Color;
 	break;
       }
-      printf("NextptrColor = %d\n", Color);
       NextPtr->Color = Color;
       switch (LinePtr->LineType)
       {
