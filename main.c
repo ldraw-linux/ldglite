@@ -6965,18 +6965,49 @@ MsgSubClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
   COPYDATASTRUCT *cds;
 
-  printf("MSGSUBCLASS\n");
-
   // Intercept WM_COPYDATA and convert string to WM_KEYDOWN, WM_KEYUPs.
   if (uMsg == WM_COPYDATA)
   {
+    char *foo;
+
     cds = (COPYDATASTRUCT *) lParam;
     printf("WM_COPYDATA %s\n", cds->lpData);
-    return DLGC_WANTALLKEYS;
+
+    foo = (char *)wParam;
+    printf("WM_COPYDATA wParam %s\n", foo);
+
+    foo = (char *)lParam;
+    printf("WM_COPYDATA lParam %s\n", foo);
   }
-  // Otherwise call the original glut window proc.
-  else
-    return CallWindowProc(wpOrigMsgProc, hwnd, uMsg, wParam, lParam);
+    // convert string to WM_KEYDOWN, WM_KEYUPs.
+  else if (uMsg == WM_DROPFILES)
+  {
+    UINT  uNumFiles;
+    TCHAR szNextFile [MAX_PATH];
+    HDROP hdrop = (HDROP) wParam;
+    UINT uFile;
+
+    printf("WM_DROPFILES\n");
+
+    // Get the # of files being dropped.
+    uNumFiles = DragQueryFile ( hdrop, -1, NULL, 0 );
+
+    for ( uFile = 0; uFile < uNumFiles; uFile++ )
+    {
+      // Get the next filename from the HDROP info.
+      if ( DragQueryFile ( hdrop, uFile, szNextFile, MAX_PATH ) > 0 )
+      {
+	printf("WM_DROPFILE <%s>\n", szNextFile);
+      }
+    }
+
+    // Free up memory.
+    DragFinish ( hdrop );
+  }
+
+  // Call the original glut window proc.  
+  // It should just ignore the msg types we intercept here anyhow.
+  return CallWindowProc(wpOrigMsgProc, hwnd, uMsg, wParam, lParam);
 }
 
 #endif
@@ -6989,7 +7020,17 @@ void capturePasteEvents(void)
   HWND hwnd; 
 
   // Who has focus? 
-  hwnd = GetHwndFocus(); 
+  // hwnd = GetHwndFocus(); 
+
+  hwnd = FindWindow("GLUT", title);
+  printf("FindWindow(%d)\n", hwnd);
+  if (hwnd == NULL)
+    hwnd = FindWindow("GLUT", NULL);
+  printf("FindWindow(%d)\n", hwnd);
+  if (hwnd == NULL)
+    return;
+
+  DragAcceptFiles(hwnd, TRUE);
   
 #if 0
   wpOrigMsgProc = 
