@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.0.0      ";
+char ldgliteVersion[] = "Version 1.0.1      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -811,6 +811,10 @@ void RestoreColorBuffer(void)
     if (ldraw_commandline_opts.debug_level == 1)
       printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
     glDrawPixels(sc[2],sc[3],GL_RGBA,GL_UNSIGNED_BYTE,cbufdata);
+        // Set UNPACK back to default for glPolygonStipple()
+        glPixelStorei(GL_UNPACK_ROW_LENGTH,0); //Width
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
 #endif
 #endif
 
@@ -3494,6 +3498,10 @@ void RestoreDepthBuffer(void)
     if (ldraw_commandline_opts.debug_level == 1)
       printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
     glDrawPixels(sc[2],sc[3],GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
+        // Set UNPACK back to default for glPolygonStipple()
+        glPixelStorei(GL_UNPACK_ROW_LENGTH,0); //Width
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
 #endif
 #endif
     glPopMatrix();
