@@ -1213,6 +1213,16 @@ int edit_mode_gui()
   glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
   glDisable(GL_LIGHTING);
 
+  // Turn off any smoothing or blending modes.
+  glDisable( GL_POINT_SMOOTH ); 
+  glDisable(GL_ALPHA_TEST);
+  glDisable( GL_LINE_SMOOTH ); 
+  glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+  glDisable( GL_BLEND );
+  glDisable( GL_POLYGON_SMOOTH ); 
+  glHint( GL_POLYGON_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+  glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+
   glMatrixMode( GL_PROJECTION );
   glPushMatrix();
   glLoadIdentity();
