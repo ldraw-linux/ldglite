@@ -142,6 +142,7 @@ int buffer_swap_mode = SWAP_TYPE_UNDEFINED;
 #endif
 
 int use_stencil_for_XOR = 1;
+int NVIDIA_XOR_HACK = 0;
 
 int editing = 0;
 int curpiece = 0;
@@ -2427,6 +2428,7 @@ void SaveDepthBuffer(void)
   //NOTE:  I have to reallocate zbufdata whenever we resize the window.
 }
 
+//#define TNT2_TEST
 /***************************************************************/
 int XORcurPiece()
 {
@@ -2460,14 +2462,23 @@ int XORcurPiece()
     glStencilOp(GL_KEEP, GL_KEEP, GL_INVERT); // S-Buf write fns(sf, zf, zp)
   }
 #ifdef TNT2_TEST
+  // NOTE: since TNT has the ktx_buffer_region support I could fake the 
+  // XOR wireframe using the backup buffer to redraw instead of XORrasing.
+  // Always use SOLID_EDIT_MODE but switch to wireframe before DrawCurPart().
   else
   {
+#if 1
     glStencilMask(GL_TRUE);                  // Enable stencil buffer writes.
     glClearStencil(0x01);                     // Set stencil clear color
     glClear(GL_STENCIL_BUFFER_BIT);          // Perhaps just clear the bbox?
     glEnable(GL_STENCIL_TEST);               // Enable the stencil Test.
     glStencilFunc(GL_EQUAL, 0x1, 0x1);  // Stencil test(fn, refbits, bitmask)
     glStencilOp(GL_KEEP, GL_ZERO, GL_ZERO); // S-Buf write fns(sf, zf, zp)
+#else
+    glEnable(GL_STENCIL_TEST);
+    glStencilFunc(GL_ALWAYS, 0x0, 0x0);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+#endif
   }
 #endif
 #endif
@@ -2698,6 +2709,62 @@ void CopyStaticBuffer(void)
 }
       
 /***************************************************************/
+void DrawTNTPiece(void)
+{
+  int drawmode = ldraw_commandline_opts.F;
+  int savewire = zWire;
+  int saveshade = zShading;
+
+  //ldraw_commandline_opts.F |= STUDLESS_MODE;
+  //ldraw_commandline_opts.F = (WIREFRAME_MODE | STUDLESS_MODE);
+  ldraw_commandline_opts.F = WIREFRAME_MODE;
+  zWire = 1;
+  zShading = 0;
+
+  //glDisable(GL_LIGHTING);
+
+  glColor3f(1.0, 1.0, 1.0); // white
+  glCurColorIndex = -2;
+
+  z_line_offset += 1.0;
+
+#if 1
+  glLogicOp(GL_XOR);
+
+  glDepthFunc(GL_LESS);
+  glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
+  glEnable( GL_COLOR_LOGIC_OP ); 
+  DrawCurPart(15);
+
+  glDepthFunc(GL_EQUAL);     // New value always wins.
+  glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
+  DrawCurPart(15);
+
+  glLogicOp(GL_COPY);
+  glDepthFunc(GL_LESS);     // New value always wins.
+  glDisable( GL_COLOR_LOGIC_OP ); 
+
+  // Restore the depth buffer
+  if (buffer_swap_mode == SWAP_TYPE_KTX)
+  {
+    glDrawBuffer(staticbuffer); 
+    glDrawBufferRegion(zbuffer_region,0,0,Width,Height,0,0);
+    glDrawBuffer(screenbuffer); 
+    rendersetup();
+  }
+
+#else
+  DrawCurPart(15);
+#endif
+
+  z_line_offset -= 1.0;
+
+  zShading = saveshade;
+  zWire = savewire;
+  ldraw_commandline_opts.F = drawmode;
+}
+
+/***************************************************************/
 void DrawMovingPiece(void)
 {
   if (SOLID_EDIT_MODE)
@@ -2710,7 +2777,10 @@ void DrawMovingPiece(void)
       glEnable(GL_LIGHTING);
     else
       glDisable(GL_LIGHTING);
-    DrawCurPart(-1);
+    if (NVIDIA_XOR_HACK)
+      DrawTNTPiece();
+    else
+      DrawCurPart(-1);
   }
   else
   {
@@ -3012,7 +3082,9 @@ void TranslateCurPiece(float m[4][4])
 void UnLightCurPiece(void)
 {
   EraseCurPiece();
-  if (DrawToCurPiece)
+  if ((DrawToCurPiece)
+      || ((SOLID_EDIT_MODE) && (NVIDIA_XOR_HACK))
+      )
   {
     //if (movingpiece != curpiece)
     {
@@ -3221,7 +3293,7 @@ int edit_mode_fnkeys(int key, int x, int y)
     if ((glutModifiers & GLUT_ACTIVE_CTRL) != 0)
       SOLID_EDIT_MODE = 1;
     else 
-      SOLID_EDIT_MODE = 0;
+      SOLID_EDIT_MODE = NVIDIA_XOR_HACK; // 0
     editing ^= 1;
     // if (ldraw_commandline_opts.debug_level == 1)
     printf("Editing mode =  %d{%d}\n", editing, SOLID_EDIT_MODE);
@@ -5714,14 +5786,22 @@ main(int argc, char **argv)
     }
   }
 
+  test_ktx_buffer_region(extstr);
+
+#ifndef TNT2_TEST
   // Stencil works with Microsoft Generic and Mesa, but not with the TNT2.
   if (strstr(vendstr, "NVIDIA"))
   {
     printf("Stencil buffer disabled for XOR with NVIDIA driver.\n");
     use_stencil_for_XOR = 0;
-  }
 
-  test_ktx_buffer_region(extstr);
+    if (buffer_swap_mode == SWAP_TYPE_KTX)
+    {
+      NVIDIA_XOR_HACK = 1;
+      SOLID_EDIT_MODE = NVIDIA_XOR_HACK;
+    }
+  }
+#endif
 
   printf("Buffer Swap Mode = %d\n", buffer_swap_mode);
 
