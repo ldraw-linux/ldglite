@@ -176,6 +176,66 @@ double dotprod(float a[3], float b[3])
    return (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]);
 }
 
+#if 0
+//**********************************************************************
+// Shortcut for rendering smooth studs??? 
+//**********************************************************************
+void render_stud(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int c)
+{
+  ZPOINT p1, p2;
+  ZCOLOR zc, zs;
+  int i;
+  int j;
+  int wid;
+
+  if(ldraw_commandline_opts.F & TYPE_F_NO_LINES) {
+    return;
+  };
+
+#ifdef USE_OPENGL
+  if (ldraw_commandline_opts.M == 'P')
+  {
+    // Non-continuous output stop after each step.
+#ifndef ALWAYS_REDRAW
+   if (dirtyWindow == 0)
+   {  
+    if (stepcount != curstep) // (Or (dirty and stepcount < curstep))
+     if ((panning == 0) || (stepcount > curstep))
+      return;  // Do NOT render since we have not reached this step yet.
+   }
+   else
+#endif
+    if (stepcount > curstep)
+      return;  // Do NOT render since we have not reached this step yet.
+  }
+#endif
+
+  p1.x = (int)(0.5+vp1->x);
+  p1.y = (int)(0.5+vp1->y);
+  p1.z = (int)(0.5+Z_SCALE_FACTOR * vp1->z - Z_LINE_OFFSET);
+  p2.x = (int)(0.5+vp2->x);
+  p2.y = (int)(0.5+vp2->y);
+  p2.z = (int)(0.5+Z_SCALE_FACTOR * vp2->z - Z_LINE_OFFSET);
+  translate_color(c,&zc,&zs);
+
+  if (glCurColorIndex != -2)
+  {
+    if (glCurColorIndex != c)
+      //Glcolor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
+      glColor3ub(zc.r, zc.g, zc.b);
+    glCurColorIndex = c;
+  }
+
+  quadObj = gluNewQuadric (); 
+  gluQuadricNormals (quadObj, GLU_SMOOTH); 
+  gluQuadricOrientation(quadObj, GLU_OUTSIDE);
+  gluQuadricDrawStyle (quadObj, GLU_FILL);
+  gluCylinder (quadObj, 0.3, 0.3, 0.6, 12, 2); 
+  gluDisk (quadObj, 0.3, 0.3, 0.6, 12, 2);
+  //gluQuadricDrawStyle (quadObj, GLU_LINES);
+  gluQuadricDrawStyle (quadObj, GLU_SILHOUETTE);
+  gluCylinder (quadObj, 0.3, 0.3, 0.6, 12, 2);
+#endif
 
 //**********************************************************************
 #endif
@@ -1590,10 +1650,31 @@ void zWrite(char *message)
 
 void zClear()
 {
-	int oldrows, oldcols;
-	oldrows = zGetRowsize();
-	oldcols = zGetColsize();
-	zReset(&oldrows, &oldcols);
+  int oldrows, oldcols;
+  oldrows = zGetRowsize();
+  oldcols = zGetColsize();
+  zReset(&oldrows, &oldcols);
+
+#ifdef USE_OPENGL
+  // Got "0 CLEAR"
+  if (ldraw_commandline_opts.M == 'P')
+  {
+    // Non-continuous output stop after each step.
+#ifndef ALWAYS_REDRAW
+   if (dirtyWindow == 0)
+   {  
+    if (stepcount != curstep) // (Or (dirty and stepcount < curstep))
+     if ((panning == 0) || (stepcount > curstep))
+      return;  // Do NOT render since we have not reached this step yet.
+   }
+   else
+#endif
+    if (stepcount > curstep)
+      return;  // Do NOT render since we have not reached this step yet.
+  }
+  printf("zclear\n");
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+#endif	
 }
 
 void zSave(int step)
