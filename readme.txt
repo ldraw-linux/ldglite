@@ -151,7 +151,7 @@ Command line options (see also the original ldlite docs for more):
 -v-2 displays in fullscreen gamemode (no menus in gamemode).
 -x displays the x,y,z axis.
 -iN picks output image type. 1 = PNG, 2 = Transparent PNG, 3 = BMP8, 4 = BMP24 
--i-N turns off cropping and picks image type.
+    5 = PPM.  Use -N to turn off output image cropping.
 -eN.NN fixes polyline offset driver errors.  Try -e0.95 if lines look bad.
 -p turns on polling mode.
 -ld forces the program to use the ldlite parser.
@@ -171,8 +171,9 @@ Command line options (see also the original ldlite docs for more):
 
 
 Hot Keys (especially useful in fullscreen gamemode):
+NOTE:  A few keys were changed in 0.9.0 to accomodate LEDIT emulation mode.
 
-F10 enters fullscreen gamemode.
+F10 enters fullscreen gamemode.  (May be faster on some video cards)
 F9 exits fullscreen gamemode.
 Right Mouse button displays the popup menu.
 Left Mouse Drag will rotate the model.
@@ -183,25 +184,28 @@ Alt Arrow keys roll the camera left, right, up, down.
 Ctrl Arrow keys move the camera left, right, up, down.
 PGUP and PGDN move the camera in and out (only visible in perspective mode)
 0-9 keys pick one of the preset viewpoints.
-s shrinks the model by half.
-S scales the model up to double size.
-z zooms out 10%.
-Z sooms in 10%.
++ scales the model up to double size. (ALT +  zooms in 10%)
+- shrinks the model by half.  (ALT -  zooms out 10%)
+S attempts to scale the model to fit the window.  Needs work though.
+s toggles step/continuous mode
 g toggles polling mode.
 j picks the orthographic projection.
 J picks the perspective projection.
-l toggles the parser (LdLite or L3)
+r toggles the parser (LdLite or L3)
 n turns on normal (no) shading.
 h turns on shading.
-w turns on wireframe mode.
+l turns on line only wireframe mode.
 f toggles stud drawing.
 v toggles visible spin mode.
-p prints a BMP file.
-P prints a PNG file.
-y attempts to scale the model to fit the window.  Needs work though.
+b prints a BMP file. (use CTRL-b for 24 bit BMP)
+B prints a PNG file. (use CTRL-B for Alpha transparency)
 q toggles line quality (antialiasing)
 Esc quits.
 
+INSERT key toggles LEDIT emulation mode.  
+(use CTRL-INSERT if you want to render the moving part solid)
+
+LEDIT Hot Keys are defined in leditkeys.htm (copied from www.ldraw.org)
 
 				Notes
 
