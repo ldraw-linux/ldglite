@@ -5765,6 +5765,17 @@ main(int argc, char **argv)
   SetTitle(0);
 
   displaymode = GLUT_RGB | GLUT_DEPTH;
+#ifdef USE_ALPHA_BUFFER
+  // This is needed for the current transparent png code to work.
+  // Its somewhat wasteful though because it defaults to 8 bits of
+  // alpha on many opengl drivers.  I really only need one bit of
+  // say a stencil buffer to make this work.  Or I can try to use
+  // the depth buffer to determine if a pixel is still background.
+  // This would require no extra bitplanes, but might be slower.
+  // There may be problems with any of these approaches in LEDIT
+  // emulation mode because I use these buffers for many purposes.
+  displaymode |= GLUT_ALPHA;
+#endif
 #ifdef USE_DOUBLE_BUFFER
   displaymode |= GLUT_DOUBLE;
 #endif
