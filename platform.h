@@ -120,6 +120,7 @@ char *platform_getenv(const char *var);
 void platform_comment(char *message, int level);
 int platform_startup(int *argcp, char ***argv);
 
+int GetExecName(char *argv0, char *buf, int buflen);
 
 #endif // PLATFORM_H
 
