@@ -5712,7 +5712,7 @@ void dirmenu(int item)
 {
   int         i, j, len1;
   const int   len3 = WORDLENGTH;
-  char        myDir[len3+1];
+  char        myDir[WORDLENGTH+1];
   char filename[256];
 
   extern char modelspath[];
@@ -5790,7 +5790,7 @@ void filemenu(int item)
 {
   int         i, j, len1;
   const int   len3 = WORDLENGTH;
-  char        myDir[len3+1];
+  char        myDir[WORDLENGTH+1];
   char filename[256];
 
   extern char modelspath[];

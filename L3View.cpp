@@ -32,8 +32,8 @@
 //
 
 #ifdef USE_OPENGL
-extern "C" {
 #include "math.h"
+extern "C" {
 #include "platform.h"
 #endif
 

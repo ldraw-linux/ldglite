@@ -56,8 +56,6 @@
 
 #else  // Windows MS VC++
 
-// NOTE: Gotta differentiate between VC++ and MINGW32 (or Cygnus).
-
 #define LACKS_STRDUP 0
 #define LACKS_STRICMP 0
 #define LACKS_STRNICMP 0
@@ -74,7 +72,19 @@
 # ifdef CALLBACK
 #  undef CALLBACK
 # endif
-#include <windows.h>
+# include <windows.h>
+#endif
+
+// Differentiate between VC++ and MINGW32 (or Cygnus).
+#ifdef _MSC_VER
+#  ifndef S_ISDIR
+#    ifdef S_IFDIR
+#      define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
+#    else
+#      define S_ISDIR(m) 0
+#    endif
+#  endif /* !S_ISDIR */
+#  define sleep _sleep
 #endif
 
 #endif
