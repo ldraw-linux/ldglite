@@ -1,0 +1,49 @@
+"Sproaticus" Jeremy H. Sproat writes in lugnet.cad.dev message 7738 
+Sun, 25 Aug 2002 20:03:06 GMT
+
+> If you want an easy way to grab the latest stuff from CVS, I recently
+> put the CVS executable I use, and a batch file to fetch the entire CVS
+> archive for ldglite here:
+> ldglite.sf.net/cvswin.zip
+
+I've been taking notes on my build process.  Here's what I logged so far:
+
+download and install mingw32
+
+- download MinGW-1.1.tar.gz from http://www.mingw.org/download.shtml
+- install as directed; make sure that mingw-1.1\bin is in your PATH
+- note: I installed mine in \mingw-1.1\
+
+download, compile and install zlib
+
+- download source code from http://www.gzip.org/zlib/
+- note: I placed mine in \projects\zlib\ 
+  (rename directory zlib-1.1.4\ to zlib\)
+- make -f nt\makefile.gcc
+- copy libz.a to \mingw-1.1\lib\
+
+download, compile and install libpng
+
+- download source code from http://www.libpng.org/pub/png/libpng.html
+- note: I placed mine in \projects\lpng24\
+- make -f scripts\makefile.gcc
+- copy png.h to \mingw-1.1\include\
+- copy libpng.a to \mingw-1.1\lib\
+
+download and install glut headers and libraries
+
+- download glheaders.zip from ldglite page
+- move .lib files to \mingw-1.1\lib\
+- move .h files to \mingw-1.1\include\GL\
+
+download and compile ldglite
+
+- download ldglitesrc0_9_5.zip from ldglite page
+- note: I put mine in \projects\ldglite\
+- note: I had to recompile libpng and libz because I kept getting a linker
+  error for "__imp__iob"
+- remove glfont.c from the src list
+- not necessary, but you may want to change the "cp ldglite.exe *" commands
+  to "copy ldglite.exe *"
+- make
+
