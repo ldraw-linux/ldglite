@@ -46,6 +46,8 @@ char dirfilepath[256];
 void filemenu(int);
 
 /***************************************************************/
+extern char ldgliteVersion[];
+
 extern char progname[256];
 extern int EPS_OUTPUT_FIGURED_OUT;
 
@@ -305,7 +307,7 @@ void initializeMenus(void)
 
   helpmenunum = glutCreateMenu(menu);
   glutAddMenuEntry(progname             , '\0');
-  glutAddMenuEntry("Version 0.9.8      ", '\0');
+  glutAddMenuEntry(ldgliteVersion, '\0');
 
   mainmenunum = glutCreateMenu(menu);
   glutAddSubMenu(  "File               ", filemenunum);
