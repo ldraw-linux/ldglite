@@ -55,6 +55,11 @@
 #define WINDOWS 1
 #endif
 
+// glut 3.7 no longer includes windows.h
+#if (GLUT_XLIB_IMPLEMENTATION >= 13)
+#include <windows.h>
+#endif
+
 #endif
 
 
