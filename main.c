@@ -8130,7 +8130,7 @@ void getDisplayProperties()
 #endif
 
   // This will leave "Mesa Offscreen" with SWAP_TYPE_UNDEFINED (OK)
-  if (!strcmp(rendstr, "Mesa X11"))
+  if (!strcmp(rendstr, "Mesa X11") || !strcmp(rendstr, "Mesa GLX Indirect"))
     {
       // MESA 4.0 no longer seems to #define MESA so check GL_RENDERER instead.
       buffer_swap_mode = SWAP_TYPE_NODAMAGE;
