@@ -394,7 +394,8 @@ enum muiReturnValue vshandler(muiObject *obj, int event, int value, int x, int y
 		mfudge = vs->scenter - my;
 	    else
 		mfudge = 0;
-	    break;
+	    if (retval != MUI_SLIDER_THUMB) // Drop into motion callback
+	      break;                        // on click.
 	case MUI_DEVICE_DOWN:
 	    if (mfudge == -10000) {	/* auto - repeat the arrow keys */
                 if (retval == MUI_SLIDER_SCROLLDOWN) {
@@ -417,6 +418,9 @@ enum muiReturnValue vshandler(muiObject *obj, int event, int value, int x, int y
 
 	    /* adjust thumb */
 	    vs->scenter = my; 
+	    break;
+	default:
+	    retval = MUI_NO_ACTION;
 	    break;
     }
     x = x;	/* for lint's sake */
