@@ -28,6 +28,10 @@ RES_SRC=ldglite.rc
 #       because we lose stdin.  Perhaps I should make 2 versions
 #       or make it a makefile option.
 #
+#  -DWINTIMER -DUNDEFINED_SWAP_TEST -DSAVE_DEPTH_ALL
+#
+#  -DNOT_WARPING -DVISIBLE_SPIN_CURSOR
+#
 CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 $(PNG_FLAGS) $(TR_FLAGS) $(OFFSCREEN_FLAGS) $(GUI_FLAGS)
 #CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 $(PNG_FLAGS) $(TR_FLAGS) $(OFFSCREEN_FLAGS) $(GUI_FLAGS) -mwindows
 
@@ -43,7 +47,7 @@ OBJS = $(SRCS:.c=.o) $(RES_SRC:.rc=.o)
 all	: ldglite
 
 ldglite:   $(OBJS) $(LIBS)
-	$(CC) $(CFLAGS) $(OBJS) -o ldglite.exe -I. $(PNG_LIBS) $(OFFSCREEN_LIBS) $(GUI_LIBS) -lglut32 -lglu32 -lopengl32
+	$(CC) $(CFLAGS) $(OBJS) -o ldglite.exe -I. $(PNG_LIBS) $(OFFSCREEN_LIBS) $(GUI_LIBS) -lglut32 -lglu32 -lopengl32 -lwinmm
 	cp ldglite.exe l3glite.exe
 	cp ldglite.exe l3gledit.exe
 

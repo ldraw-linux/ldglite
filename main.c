@@ -17,9 +17,6 @@
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#define NOT_WARPING 1
-#define VISIBLE_SPIN_CURSOR 1
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 0.9.9      ";
+char ldgliteVersion[] = "Version 0.9.9b     ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -206,11 +203,7 @@ static int list_made = 0;
 #define USE_OPENGL_STENCIL
 #endif
 
-#define SAVE_DEPTH_BOX
-
-#ifdef SAVE_DEPTH_BOX
 int sc[4];
-#endif
 
 // Stuff for editing mode
 // contents of back buffer after glutSwapBuffers():
@@ -3051,9 +3044,19 @@ int NukeSavedDepthBuffer(void)
   }
 }
 
+#ifdef WINTIMER
+#include <mmsystem.h>
+int starttime, finishtime, elapsedtime;
+
+#pragma comment (lib, "winmm.lib")       /* link with Windows MultiMedia lib */
+#endif
+
 /***************************************************************/
 void SaveDepthBuffer(void)
 {
+#ifdef WINTIMER
+  starttime = timeGetTime();
+#endif
   if (buffer_swap_mode == SWAP_TYPE_KTX)
   {
     if (cbuffer_region == 0)
@@ -3067,7 +3070,7 @@ void SaveDepthBuffer(void)
   else
   {
     // Apparently there is only ONE zbuffer shared by front & back buffers.
-#ifdef SAVE_DEPTH_BOX
+#ifndef SAVE_DEPTH_ALL
     // Gotta figure out the src,dst stuff.  glTranslate()?
     //glRasterPos2i((int)sc[0], (int)sc[1]);
     Get1PartBox(curpiece, sc);
@@ -3075,26 +3078,41 @@ void SaveDepthBuffer(void)
       printf("sbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
     if (zbufdata)
       free (zbufdata);  // NOTE: gotta free this when finished editing.
-    zbufdata = (int *) malloc(sc[2] * sc[3] * sizeof(int));
+    zbufdata = (int *) malloc(sc[2] * sc[3] * sizeof(float));
     glReadBuffer(staticbuffer); // set pixel source
-    //glReadPixels(0,0, Width,Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
-    glReadPixels(sc[0],sc[1],sc[2],sc[3],
-		 GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
+    glReadPixels(sc[0],sc[1],sc[2],sc[3],GL_DEPTH_COMPONENT,GL_FLOAT,zbufdata);
 #else
-    if (zbufdata)
-      free (zbufdata);  // NOTE: gotta free this when finished editing.
-    zbufdata = (float *) malloc(Width * Height * sizeof(float));
+    glPixelStorei(GL_PACK_ALIGNMENT,4);
+    glPixelStorei(GL_PACK_ROW_LENGTH,Width);
+    glPixelStorei(GL_PACK_SKIP_ROWS,0);
+    glPixelStorei(GL_PACK_SKIP_PIXELS,0);
+
+    if (zbufdata) // NOTE: gotta free this when finished editing.
+    {
+      //zbufdata = realloc(zbufdata, Width * Height * sizeof(float));
+    }
+    else
+      zbufdata = (float *) malloc(Width * Height * sizeof(int));
     glReadBuffer(staticbuffer); // set pixel source
     //glReadPixels(0,0, Width,Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
     glReadPixels(0,0,Width,Height,GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
 #endif
   }
+#ifdef WINTIMER
+  finishtime = timeGetTime();
+  printf("Save Depth Elapsed = %d\n", finishtime-starttime);
+#endif
   //NOTE:  I have to reallocate zbufdata whenever we resize the window.
 }
 
 /***************************************************************/
 void RestoreDepthBuffer(void)
 {
+  int savedirty;
+
+#ifdef WINTIMER
+  starttime = timeGetTime();
+#endif
   // get fresh copy of static data
   if (buffer_swap_mode == SWAP_TYPE_KTX)
   {
@@ -3102,11 +3120,36 @@ void RestoreDepthBuffer(void)
   }
   else
   {
-      glDisable(GL_LIGHTING);     // Speed up copying
-      glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
-      glDepthMask(GL_TRUE); // enable updates to depth buffer
-      glEnable( GL_DEPTH_TEST ); 
-      glDepthFunc(GL_ALWAYS);
+    // Gotta fix these later because they get set only once in init().
+    //glDisable(GL_COLOR_MATERIAL);
+    //glDisable(GL_POLYGON_OFFSET_FILL);
+    //glEnable(GL_CULL_FACE);
+    //glFrontFace(GL_CW);
+    //glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
+
+    glPixelZoom(1, 1);
+    glDisable(GL_STENCIL_TEST);    
+    glDisable(GL_FOG);
+
+    glPixelTransferi(GL_DEPTH_SCALE,1);
+    glPixelTransferi(GL_DEPTH_BIAS,0);
+
+  // Turn off any smoothing or blending modes.
+    glDisable( GL_POINT_SMOOTH ); 
+    glDisable(GL_ALPHA_TEST);
+    glDisable( GL_LINE_SMOOTH ); 
+    glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+    glDisable( GL_BLEND );
+    glDisable( GL_POLYGON_SMOOTH ); 
+    glHint( GL_POLYGON_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+    glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+
+    glDisable(GL_LIGHTING);     // Speed up copying
+    glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
+    glDepthMask(GL_TRUE); // enable updates to depth buffer
+    glEnable( GL_DEPTH_TEST ); 
+    glDepthFunc(GL_ALWAYS);
+
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
     gluOrtho2D(0, Width, 0, Height);
@@ -3114,22 +3157,44 @@ void RestoreDepthBuffer(void)
     glPushMatrix();
     glLoadIdentity();
     glRasterPos2i(0, 0);
-#ifdef SAVE_DEPTH_BOX
+#ifndef SAVE_DEPTH_ALL
     // Gotta figure out the src,dst stuff.  glTranslate()?
     glRasterPos2i(sc[0], sc[1]);
     if (ldraw_commandline_opts.debug_level == 1)
       printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
-    glDrawPixels(sc[2],sc[3],GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
+    glDrawPixels(sc[2],sc[3],GL_DEPTH_COMPONENT,GL_FLOAT,zbufdata);
 #else
-    //glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+    glPixelStorei(GL_UNPACK_ALIGNMENT,4);
+    glPixelStorei(GL_PACK_ROW_LENGTH,Width);
+    glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+    glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+
+    // This is PAINFULLY slow! (almost a second on TNT)
+    // Consider this:
+    //   Allocate a vertex buffer, same size as you have pixels on screen. 
+    //   Fill in a vertex position for each pixel center 
+    //   (to prevent antialiasing issues).
+    //   Draw that with glDrawArrays(GL_POINTS,0,Width*Height);
+    // 
+    // UNSIGNED_INT is about 20% faster on Windows/TNT
+    //glDrawPixels(Width,Height,GL_DEPTH_COMPONENT,GL_FLOAT,zbufdata);
     glDrawPixels(Width,Height,GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
 #endif
     glPopMatrix();
-      glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
-      glDepthFunc(GL_LESS);
+    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
+    glDepthFunc(GL_LESS);
+
+    // Reset the projection matrix.
+    savedirty = dirtyWindow; 
     reshape(Width, Height);
+    dirtyWindow = savedirty; 
+
     rendersetup();
   }
+#ifdef WINTIMER
+  finishtime = timeGetTime();
+  printf("Restore Depth Elapsed = %d\n", finishtime-starttime);
+#endif
 }
 
 //#define TNT2_TEST
@@ -3428,9 +3493,12 @@ void DrawMovingPiece(void)
 {
   if (SOLID_EDIT_MODE)
   {
-#ifdef SAVE_DEPTH_BOX
+#ifndef SAVE_DEPTH_ALL
     // Save depth buffer BEFORE drawing the current part into it.
     SaveDepthBuffer();
+#else
+    // If not using depth box then the whole window was saved so
+    // we can skip the save here.  Its only needed if the box moves.
 #endif
     if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
       glEnable(GL_LIGHTING);
@@ -7694,6 +7762,10 @@ void getDisplayProperties()
 
 #ifdef GENERIC_MS_TEST
   buffer_swap_mode = SWAP_TYPE_COPY;
+#endif
+
+#ifdef UNDEFINED_SWAP_TEST
+  buffer_swap_mode = SWAP_TYPE_UNDEFINED;
 #endif
 
   printf("Buffer Swap Mode = %d\n", buffer_swap_mode);
