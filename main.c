@@ -722,7 +722,7 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
     if ((step == INT_MAX) && (pause == 0)) {
       // do nothing
     } 
-    else {
+    else if (level<=ldraw_commandline_opts.maxlevel) {
       // save bitmap
       platform_step_filename(step, filename);
 
@@ -5238,6 +5238,11 @@ void CldliteCommandLineInfo()
   ldraw_commandline_opts.debug_level=0;
   ldraw_commandline_opts.log_output=0;
   ldraw_commandline_opts.Z=INT_MIN;
+  ldraw_commandline_opts.clip=1;
+  ldraw_commandline_opts.image_filetype=4; // BMP24
+  ldraw_commandline_opts.center_at_origin=0;
+  ldraw_commandline_opts.emitter = 0;
+  ldraw_commandline_opts.maxlevel=32767;  // a huge number
 
   if (zShading)
     ldraw_commandline_opts.F |= TYPE_F_SHADED_MODE;
@@ -5354,6 +5359,10 @@ void ParseParams(int *argc, char **argv)
 	else
 	  sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.C));
 	break;
+      case 'D':
+      case 'd':
+	sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.maxlevel));
+	break;
       case 'E':
       case 'e':
 	if ((toupper(pszParam[1]) == 'P') && (toupper(pszParam[2]) == 'S'))
@@ -5453,6 +5462,10 @@ void ParseParams(int *argc, char **argv)
       case 'J':
       case 'j':
 	ldraw_projection_type = 1;
+	break;
+      case 'K':
+      case 'k':
+	ldraw_commandline_opts.center_at_origin=1;
 	break;
       case 'L':
       case 'l':
