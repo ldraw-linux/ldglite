@@ -683,3 +683,60 @@ int Print1Model(char *filename)
     return 0;
 }
 
+/*****************************************************************************/
+int Comment1Part(int partnum, char *Comment)
+{
+    int            i = 0;
+    struct L3LineS *LinePtr;
+    struct L3LineS *PrevPtr;
+    struct L3LineS **LinePtrPtr;
+    int            Len;
+
+    if (SelectedLinePtr)
+	LinePtr = SelectedLinePtr;
+
+    PrevPtr = NULL;
+    for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+    {
+	if (i == partnum)
+	    break;	    // Found the part
+	PrevPtr = LinePtr;
+	i++;
+    }
+
+    if (!LinePtr)
+	return 0; //partnum not found
+    
+    if (PrevPtr)
+      LinePtrPtr = &(Parts[0].FirstLine);
+    else
+      LinePtrPtr = &PrevPtr;
+
+    if (LinePtr->PartPtr)
+    {
+      //free(LinePtr->PartPtr);
+      LinePtr->PartPtr = NULL;
+    }
+
+    LinePtr->LineType = 0;
+    // SaveLine(&LinePtrPtr, LinePtr, comment);
+    Len = strlen(Comment) + 1;
+    if (Len > sizeof(LinePtr->v))
+    {
+      LinePtr->Comment = Strdup(Comment);
+      if (!LinePtr->Comment)
+      {
+	free(LinePtr);
+	return (1);
+      }
+    }
+    else
+    {
+      /* Reuse the 64 bytes of float v[4][4] */
+      LinePtr->Comment = (char *) LinePtr->v;
+      strcpy(LinePtr->Comment, Comment);
+    }
+
+    return 1;
+}
+
