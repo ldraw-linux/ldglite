@@ -2,8 +2,9 @@ CC=cc
 
 # Comment these out to disable PNG output if no PNG lib is available.
 #
-#PNG_FLAGS=-DUSE_PNG 
-#PNG_LIBS= -lpng -lz 
+PNG_FLAGS=-DUSE_PNG -I/sw/include
+#PNG_LIBS= -lpng -lz -L/sw/lib
+PNG_LIBS= /sw/lib/libpng.a -lz
 
 # Comment these out to disable tile rendering option.
 #
