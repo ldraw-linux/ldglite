@@ -62,6 +62,7 @@ extern int Skip1Line(int IsModel, struct L3LineS *LinePtr);
 extern int Init1LineCounter(void);
 
 extern int include_stack_ptr;
+extern int hardcolor;
 
 //************************************************************************
 void MakePartBox(struct L3PartS *PartPtr,float m[4][4], vector3d bb3d[8])
@@ -273,6 +274,7 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 	        if (Skip1Line(IsModel,LinePtr))
 		  continue;
 #endif
+		hardcolor = 0; // Assume color 16 or 24.
 		switch (LinePtr->Color)
 		{
 		case 16:
@@ -286,6 +288,10 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			break;
 		default:
 			Color = LinePtr->Color;
+			if ((LinePtr->LineType == 3) || 
+			    (LinePtr->LineType == 4))
+			  // Hardcoded color = printed.  Blend me!
+			  hardcolor = 1; 
 			break;
 		}
 		switch (LinePtr->LineType)
