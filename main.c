@@ -980,6 +980,16 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
 {
   char filename[256];
 
+  // Copy substep to front buffer for visual progress.
+  // This SLOWS things WAY WAY down!
+
+  if ((zDetailLevel > TYPE_P) &&
+      (!panning) && (!editing) && (!OffScreenRendering))
+  {
+    CopyColorBuffer(staticbuffer, screenbuffer);
+    glDrawBuffer(staticbuffer); // set pixel destination
+  }
+
   if (ldraw_commandline_opts.debug_level == 1)
     printf("platform_step(%d, %d, %d) %c\n", step, level, pause,
 	   ldraw_commandline_opts.M);
@@ -1468,9 +1478,7 @@ void init(void)
 
     // Set the background to white like ldlite.
     glClearColor(1.0, 1.0, 1.0, 0.0);
-    i = dirtyWindow;
-    colormenu(ldraw_commandline_opts.B);
-    dirtyWindow = i;
+    setBackgroundColor(ldraw_commandline_opts.B);
 
     // Make lines a wider than a pixel so they are not hidden by surfaces.
     // (Not needed because PolygonOffset works so much better)
@@ -3099,19 +3107,19 @@ void display(void)
   else if (!panning)        // AMesa has trouble with GL_FRONT in
     glDrawBuffer(GL_BACK);  // double buffer mode.
 #endif
-  else
-#endif
-    glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
-
-  if (res = glutLayerGet(GLUT_NORMAL_DAMAGED))
+  else if (zDetailLevel > TYPE_P)
   {
-    if (dirtyWindow == 0)
+    if (glutLayerGet(GLUT_NORMAL_DAMAGED) && (dirtyWindow == 0))
     {
       // If this is just an expose event, then restore from backup.
       CopyColorBuffer(staticbuffer, screenbuffer);
       return;
     }
+    glDrawBuffer(GL_BACK);  // double buffer mode.
   }
+  else
+#endif
+    glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
 
   if (res = glutLayerGet(GLUT_NORMAL_DAMAGED))
     dirtyWindow = 1;
@@ -3274,6 +3282,9 @@ GLUT_BITMAP_HELVETICA_18
   else                 // AMesa has trouble with GL_FRONT in
     glutSwapBuffers(); // double buffer mode.
 #endif
+  else if (zDetailLevel > TYPE_P)
+    // Get every last update (including text) into the front buffer.
+    CopyColorBuffer(staticbuffer, screenbuffer);
 #endif
 
   dirtyWindow = 0;  // The window is nice and squeaky clean now.
@@ -3287,7 +3298,25 @@ GLUT_BITMAP_HELVETICA_18
       exit(0); //quit the program
   }
 
-  CopyColorBuffer(screenbuffer, staticbuffer);
+#if 0
+  // This does NOT work.  
+  // glutLayerGet returns the SAME value as when display() starts.
+  // It does NOT get updated until after display is finished.
+  // Delaying CopyColorBuffer() until glutidle did NOT work either.
+  // So, how can I tell if the display was successful? 
+  // Draw to back buffer and then copy to front?
+  if (res = glutLayerGet(GLUT_NORMAL_DAMAGED))
+  {
+    printf("DAMAGED during redisplay\n");
+    dirtyWindow = 1;
+  }
+  else
+  {
+    printf("UNdamaged redisplay\n");
+    //CopyColorBuffer(screenbuffer, staticbuffer);    
+  }
+#endif
+
 }
 
 /***************************************************************/
@@ -5734,7 +5763,8 @@ void menu(int item)
 }
 
 /***************************************************************/
-void colormenu(int c)
+// Moved this out of colormenu, glutPostRedisplay crashes offscreen render.
+void setBackgroundColor(int c)
 {
   ZCOLOR zc, zs;
 
@@ -5758,7 +5788,12 @@ void colormenu(int c)
   glClearColor(((float)zc.r)/255.0,((float)zc.g)/255.0,((float)zc.b)/255.0,0.0);
   if (ldraw_commandline_opts.debug_level == 1)
     printf("clearcolor %d = (%d, %d, %d)\n", c, zc.r, zc.g, zc.b);
+}
 
+/***************************************************************/
+void colormenu(int c)
+{
+  setBackgroundColor(c);
   dirtyWindow = 1;  // Do not increment step counter
   glutPostRedisplay();
 }
@@ -5945,6 +5980,12 @@ void myGlutIdle( void )
     static time_t last_file_time;
     struct stat datstat;
     int ret;
+
+#if 0
+    // Can we tell here if the display went well?  It looks like we CANNOT.
+    if (glutLayerGet(GLUT_NORMAL_DAMAGED))
+      printf("DAMAGED in idle\n");
+#endif
 
 #ifdef WINDOWS
     sleep(1); // Glut is a CPU hog.  Give back a millisecond.
@@ -6409,6 +6450,16 @@ void ParseParams(int *argc, char **argv)
 	  ldraw_commandline_opts.O.z = 0.0;
 	}
 	break;
+      case 'N':
+      case 'n':
+	sscanf(pszParam,"%c%d",&type, &zDetailLevel);
+	if (zDetailLevel >= TYPE_MODEL)
+	  zDetailLevel = TYPE_MODEL;
+	else if (zDetailLevel >= TYPE_PART)
+	  zDetailLevel = TYPE_PART;
+	else 
+	  zDetailLevel = TYPE_P;
+	break;
       case 'P':
       case 'p':
 	ldraw_commandline_opts.poll= 1;
@@ -6561,8 +6612,8 @@ int InitInstance()
   // Probably should use basename(argv[0]) instead of "ldlite"
   // Big switch from ldlite.  Turn shading is on by default.
   zShading = GetProfileInt("ldlite","shading",1);
-  //	zDetailLevel = TYPE_PART; // should checkmark the menu item later!
-  zDetailLevel = GetProfileInt("ldlite","detail",TYPE_PART);
+  //	zDetailLevel = TYPE_P; // should checkmark the menu item later!
+  zDetailLevel = GetProfileInt("ldlite","detail",TYPE_P);
   zWire = GetProfileInt("ldlite","wireframe",0);
 }
 
