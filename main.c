@@ -1073,9 +1073,15 @@ void linequalitysetup()
   // Otherwise I end up with flat ends (ugly at angled intersections).
   // Apparently OpenGL has no line end style parameter?
   if (lineWidth > 1.0)
+  {
     glLineWidth( lineWidth );
+    glPointSize( lineWidth -0.5);
+  }
   else
+  {
     glLineWidth( 1.0 );
+    glPointSize( 1.0 );
+  }
 }
 
 /***************************************************************/
