@@ -216,7 +216,64 @@ void bcallback(muiObject *obj, enum muiReturnValue r)
 
 static void nonmuicallback(int x, int y)
 {
+  int i;
+  muiCons *mcons;
+  muiObject *obj = NULL;
+
+  extern int muiInObject(muiObject *obj, int x, int y);
+
   printf("nonMUI callback %d, %d\n", x, y);
+
+#if 0
+  //ActiveCons = muiGetListCons(ActiveUIList);
+  //obj = muiFastHitInList(ActiveCons, x, y);
+  i = muiGetActiveUIList();
+  mcons = muiGetListCons(i);
+    while (mcons) {
+      obj =  mcons->object;
+      switch (mcons->object->type) {
+      case MUI_BUTTON:
+	printf("MUI_BUTTON(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+	break;
+      case MUI_TEXTBOX:
+	printf("MUI_TEXTBOX(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+	break;
+      case MUI_VSLIDER:
+	printf("MUI_VSLIDER(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+	break;
+      case MUI_HSLIDER:
+	printf("MUI_HSLIDER(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+	break;
+      case MUI_TEXTLIST:
+	printf("MUI_TEXTLIST(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+	break;
+      case MUI_RADIOBUTTON:
+	printf("MUI_RADIOBUTTON(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+	break;
+      case MUI_TINYRADIOBUTTON:
+	printf("MUI_TINYRADIOBUTTON(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+	break;
+      case MUI_PULLDOWN:
+	printf("MUI_PULLDOWN(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+	break;
+      case MUI_LABEL:
+	printf("MUI_LABEL(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+	break;
+      case MUI_BOLDLABEL:
+	printf("MUI_BOLDLABEL(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+	break;
+      }
+      if (muiInObject(mcons->object, x, y))
+	break;
+      mcons = mcons->next;
+    }
+
+  if (mcons)
+    printf("Should have found  %p\n",obj);
+  else
+    printf("Found nothing\n");
+#endif
+
 }
 
 /***************************************************************/
@@ -935,6 +992,109 @@ void makefileui(char *s)
 }
 
 /***************************************************************/
+// Glut MUI callbacks.  mui_Reshape must be fixed to not be static.
+/***************************************************************/
+extern void mui_keyboard(unsigned char c, int x, int y);
+extern void mui_mouse(int b, int s, int x, int y);
+extern void mui_Reshape(int width, int height);
+extern void mui_glutmotion(int x, int y);
+extern void mui_glutpassivemotion(int x, int y);
+extern void mui_drawgeom(void);
+extern void mui_menufunc(int state);
+
+/***************************************************************/
+void unMUI_keyboard(unsigned char key, int x, int y)
+{
+  if (key == 27)
+  {
+    mui_cleanup();
+    return;
+  }
+
+  mui_keyboard(key, x, y);
+}
+
+/***************************************************************/
+void unMUI_fnkeys(int key, int x, int y)
+{
+  float sliderval;
+
+  if (!vs)
+    return;
+  if (!muiGetVisible(vs))
+    return;
+
+  sliderval = muiGetVSVal(vs);
+
+  printf("sliderval = %g\n", sliderval);
+
+  switch(key) {
+  case GLUT_KEY_PAGE_UP:
+  case GLUT_KEY_UP:
+    muiSetVSValue(vs, sliderval + 1.0);
+  case GLUT_KEY_PAGE_DOWN:
+  case GLUT_KEY_DOWN:
+    muiSetVSValue(vs, sliderval - 1.0);
+  case GLUT_KEY_RIGHT:
+  case GLUT_KEY_LEFT:
+    break;
+  }  
+}
+
+/***************************************************************/
+void unMUI_viewport()
+{
+  static int MUIstarted = 0;
+
+  // Cannot move the viewport once the widgets are created.
+  // Unless we want to move all the widget positions.
+  if (MUIstarted == 0)
+  {
+    ow = (Width-dw)/2;
+    oh = (Height-dh)/2;
+  }
+  MUIstarted = 1;
+
+  glMatrixMode( GL_PROJECTION );
+  glLoadIdentity();
+  gluOrtho2D(0, Width, 0, Height);
+  glMatrixMode( GL_MODELVIEW );
+  glLoadIdentity();
+  glRasterPos2i(0, 0);
+
+  glColor3ub(0, 0, 0);
+  glColor4ub(0, 0, 0, 0);
+  glBegin(GL_QUADS);
+  glVertex2i(ow-1, oh-1);
+  glVertex2i(ow+dw+1, oh-1);
+  glVertex2i(ow+dw+1, oh+dh+1);
+  glVertex2i(ow-1, oh+dh+1);
+  glEnd();
+
+  glEnable(GL_SCISSOR_TEST);
+  glScissor(ow, oh, dw, dh); // x,y,width,height
+}
+
+/***************************************************************/
+void unMUI_Reshape(int width, int height)
+{
+  Width = width;
+  Height = height;
+
+  mui_Reshape(width, height); // Sets glViewport();
+
+  // MUI does not know about the SCISSOR 
+  // so we need to clear the window then adjust the SCISSOR.
+  glDisable(GL_SCISSOR_TEST);
+  //muiBackgroundClear();
+  glClearColor(1.0, 1.0, 1.0, 0.0);
+  glClear(GL_COLOR_BUFFER_BIT);
+  unMUI_viewport();
+
+  glEnable(GL_SCISSOR_TEST);
+}
+
+/***************************************************************/
 void mui_test()
 {
   // Gotta consider using creating and destroying a subwindow for window mode.
@@ -988,23 +1148,25 @@ void mui_test()
   // Scissor is probably easier than viewport
   // Watch out.  Textlist widget uses Scissor in push/popviewport()
   // So we MUST go full window for any gui with a textlist widget.
-  ow = (Width-dw)/2;
-  oh = (Height-dh)/2;
-
-  glColor3ub(0, 0, 0);
-  glColor4ub(0, 0, 0, 0);
-  glBegin(GL_QUADS);
-  glVertex2i(ow-1, oh-1);
-  glVertex2i(ow+dw+1, oh-1);
-  glVertex2i(ow+dw+1, oh+dh+1);
-  glVertex2i(ow-1, oh+dh+1);
-  glEnd();
-
-  glEnable(GL_SCISSOR_TEST);
-  glScissor(ow, oh, dw, dh); // x,y,width,height
+  unMUI_viewport();
 
   makemainui();
   muiInit();
+
+  // ---------------------------------------------------------------------
+  // After muiInit() we can insert shim fns to intercept events before MUI.
+  // ---------------------------------------------------------------------
+  // glutKeyboardFunc(mui_keyboard);
+  // glutMouseFunc(mui_mouse);
+  // glutReshapeFunc(mui_Reshape);
+  // glutMotionFunc(mui_glutmotion);
+  // glutPassiveMotionFunc(mui_glutpassivemotion);
+  // glutDisplayFunc(mui_drawgeom);
+  // glutMenuStateFunc(mui_menufunc);
+  glutKeyboardFunc(unMUI_keyboard); // Shim ESC key handler before MUI.
+  glutReshapeFunc(unMUI_Reshape);
+  glutSpecialFunc(unMUI_fnkeys);
+  // ---------------------------------------------------------------------
 
   glutPostRedisplay(); // Otherwise MUI waits for mouse movement to display.
 }
