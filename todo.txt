@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------
-Convert from Glut to SDL.  SDL seems to be available on ALL platforms
+Add more MPD support to LEDIT mode.  Perhaps add a command to split 
+off part of a file as MPD.  Or a command to start a new MPD section
+with a filename.  Add a command to jump into the MPD parts and back
+into the main file.  I think I already added support for saving the 
+file as an MPD if it was one when I read it in.  This should be 
+enhanced to save a newly MPDed file.
+
+----------------------------------------------------------------------
+
+Convert from Glut to SDL?  SDL seems to be available on ALL platforms
 except perhaps MSDOS (and who cares about that anyhow).  It has better
 keyboard support so I can get keystrokes while the mouse button is 
 down (unlike in glut).  This should make the quake/freespace camera
@@ -10,6 +19,7 @@ glut pulldown menus, but it does need the few small patches from the
 base MUI source to prevent the crash problem and allow the scissor
 function.  Maybe if I make a MUI patch and run the patch as part of
 the makefile it'll solve the any license issues.
+
 ----------------------------------------------------------------------
 
 Convert offscreen rendering functions into shared library/DLL 
@@ -20,7 +30,8 @@ of main.c and ldglpr.c for this.
 ----------------------------------------------------------------------
 
 Implement some sort of part spreading algorithm for drag and drop
-of multiple parts.
+of multiple parts.  I'm thinking some sort of fractal spiral would
+look nice.
 
 ----------------------------------------------------------------------
 
