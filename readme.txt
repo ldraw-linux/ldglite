@@ -43,9 +43,13 @@ You must also install the ldraw parts files from www.ldraw.org.
 
 For ldglite to find the parts you must set the environment variable
 LDRAWDIR.  Add this line to your C:\AUTOEXEC.BAT file and reboot your
-PC.
+PC.  
 
     SET LDRAWDIR=C:\LDRAW
+
+As of version 7.1 ldglite can also use the BaseDirectory setting in 
+ldraw.ini to find the parts files.  The ldraw.ini file is created by
+LDAO and various other ldraw type programs.
 
 To use ldglite from MS Internet Explorer do this:
 
@@ -146,7 +150,7 @@ Command line options (see also the original ldlite docs for more):
 -v-1 displays in fullscreen with no decorations.
 -v-2 displays in fullscreen gamemode (no menus in gamemode).
 -x displays the x,y,z axis.
--iN picks output image type.  0 = BMP, 1 = PNG 
+-iN picks output image type. 1 = PNG, 2 = Transparent PNG, 3 = BMP8, 4 = BMP24 
 -i-N turns off cropping and picks image type.
 -eN.NN fixes polyline offset driver errors.  Try -e0.95 if lines look bad.
 -p turns on polling mode.
@@ -173,12 +177,13 @@ Ctrl Arrow keys move the camera left, right, up, down.
 PGUP and PGDN move the camera in and out (only visible in perspective mode)
 0-9 keys pick one of the preset viewpoints.
 s shrinks the model by half.
-S Scales the model up to double size.
+S scales the model up to double size.
 z zooms out 10%.
 Z sooms in 10%.
 g toggles polling mode.
 j picks the orthographic projection.
 J picks the perspective projection.
+l toggles the parser (LdLite or L3)
 n turns on normal (no) shading.
 h turns on shading.
 w turns on wireframe mode.
