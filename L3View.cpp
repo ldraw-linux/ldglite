@@ -268,6 +268,8 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 	for (LinePtr = PartPtr->FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
 	{
 #ifdef USE_OPENGL
+                char *s;
+
 	        if (Skip1Line(IsModel,LinePtr))
 		  continue;
 #endif
@@ -289,13 +291,14 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 		switch (LinePtr->LineType)
 		{
 		case 0:
-			if (strncmp(LinePtr->Comment,"STEP",4) == 0)
-			{
-				// STEP encountered, you may set some flags to enable/disable e.g. drawing
-				// (Note that I have not tested this, but this is the way it is supposed to work :-)
-			}
 #ifdef USE_OPENGL
-			if (strnicmp(LinePtr->Comment,"STEP",4) == 0)
+		        // Skip whitespace
+		        for (s = LinePtr->Comment; *s != 0; s++)
+		        {
+			  if ((*s != ' ') && (*s != '\t'))
+			    break;
+			}
+			if (strnicmp(s,"STEP",4) == 0)
 			{
 			  // if (include_stack_ptr <= ldraw_commandline_opts.output_depth )
 			  {
@@ -308,6 +311,39 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			  // Non-continuous output stop after each step.
 			}
 
+			// Parse global color change meta-commands
+			// Should?? be done by ReadMetaLine() in L3Input.cpp			
+			// Should SAVE old colors, restore after the for loop.
+			// To save space, build a linked list of saved colors.
+			// Do NOT resave a color if its already saved.
+			if (strncmp(s,"COLOR",5) == 0)
+			{
+			  printf("%s\n", s);
+			  //0 COLOR 4 red 0 196 0 38 255 196 0 38 255
+			  char name[256];
+			  int n, inverse_index;
+
+			  s += 5; // skip "COLOR"
+			  n = sscanf(s, "%d %s %d %f %f %f %f %f %f %f %f",
+				     &i, name, &inverse_index,
+				     &m1[0][0], &m1[0][1], &m1[0][2], &m1[0][3],
+				     &m1[1][0], &m1[1][1], &m1[1][2], &m1[1][3]);
+			  if (n != 11)
+			  {
+			    if (ldraw_commandline_opts.debug_level == 1)
+			      printf("Illegal COLOR syntax %d\n",n);
+			    break;
+			  }
+			  zcolor_modify(i,name,inverse_index,
+					(int)m1[0][0], (int)m1[0][1], (int)m1[0][2], (int)m1[0][3],
+					(int)m1[1][0], (int)m1[1][1], (int)m1[1][2], (int)m1[1][3]);
+			}
+#else
+			if (strncmp(LinePtr->Comment,"STEP",4) == 0)
+			{
+				// STEP encountered, you may set some flags to enable/disable e.g. drawing
+				// (Note that I have not tested this, but this is the way it is supposed to work :-)
+			}
 #endif
 			break;
 		case 1:
@@ -628,6 +664,27 @@ int Draw1Part(int partnum, int Color)
 	return 0; //partnum not found
 }
 
+/***************************************************************/
+struct L3PartS *LoadRC()
+{
+  extern struct L3PartS *FindPart(int Internal, char *DatName);
+  extern int LoadPart(struct L3PartS * PartPtr, int IsModel, char *ReferencingDatfile);
+
+  struct L3PartS *PartPtr;
+
+  PartPtr = FindPart(0, "ldliterc.dat");
+  if (!PartPtr)
+    return NULL; //partnum not found
+  //if (LoadPart(PartPtr, false, Parts[0].DatName) == 2)
+  if (LoadPart(PartPtr, false, NULL) == 2)
+  {
+    return NULL;
+  }
+
+  return(PartPtr);
+}
+
+/***************************************************************/
 #endif
 
 void DrawModel(void)
@@ -645,6 +702,15 @@ void DrawModel(void)
 	Init1LineCounter();
 
 	include_stack_ptr = 0; // Start nesting level pointer at 0.
+#ifdef USE_OPENGL
+	if (1) 
+	{
+	  struct L3PartS *RCPartPtr = LoadRC();
+	  
+	  if (RCPartPtr)
+	    DrawPart(1,RCPartPtr, 7, m_m);
+	}
+#endif
 	DrawPart(1,&Parts[0], 7, m_m);
 
 	//if (ldraw_commandline_opts.output != 1) zStep(INT_MAX, 0);
