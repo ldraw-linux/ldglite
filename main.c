@@ -1816,6 +1816,8 @@ void parse_view(char *viewMatrix)
 }
 
 /***************************************************************/
+#define TEST_MUI_GUI 1
+/***************************************************************/
 void fnkeys(int key, int x, int y)
 {
   /*
@@ -1889,6 +1891,11 @@ void fnkeys(int key, int x, int y)
   case GLUT_KEY_F2:
     rotate_about(0.0, 1.0, 0.0, 5.0 );
     break;
+#ifdef TEST_MUI_GUI
+  case GLUT_KEY_F3:
+    mui_test();
+    return;
+#endif
 #if (GLUT_XLIB_IMPLEMENTATION >= 13)
   case GLUT_KEY_F9:
     glutLeaveGameMode();
@@ -1963,6 +1970,7 @@ void keyboard(unsigned char key, int x, int y)
   glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
 
     switch(key) {
+#if 0
     case 'e':
       dirtyWindow = 1;
       glutSetCursor(GLUT_CURSOR_WAIT);
@@ -1981,6 +1989,7 @@ void keyboard(unsigned char key, int x, int y)
       outputEPS(512000, 0, NULL);
       glutSetCursor(GLUT_CURSOR_INHERIT);
       return;
+#endif
 #define AUTOSCALE_OPTION 1
 #ifdef AUTOSCALE_OPTION
     case 'y':
@@ -3225,6 +3234,13 @@ void ParseParams(int *argc, char **argv)
 #ifdef WINDOWS
       case '&':
 	FreeConsole();
+	// NOTE: Perhaps I should compile with -mwindows for no console
+	// and then add a console later with AllocConsole() if no -&
+	// Windows sucks!!!  This should be handled by the cmd line shell!
+	// Perhaps I should write a intermedite app DETACH.EXE which puts it
+	// runs its commandline as a background process.
+	// NOTE:  On win2k (and perhaps) NT you must use quotes: "-&"
+	// Apparently & means something (but not run in background) :-(
 	break;
 #endif
       case 'W':
@@ -3274,14 +3290,20 @@ int setfilename(const char *newfile)
 /***************************************************************/
 int registerGlutCallbacks()
 {
-    // I think I have to reregister all of these again for gamemode.
-    glutDisplayFunc(display);
-    glutReshapeFunc(reshape);
-    glutKeyboardFunc(keyboard);
-    glutSpecialFunc(fnkeys);
-    glutMouseFunc(mouse);
-    glutMotionFunc(motion);
-    glutIdleFunc(myGlutIdle);
+  // I think I have to reregister all of these again for gamemode.
+  glutDisplayFunc(display);
+  glutReshapeFunc(reshape);
+  glutKeyboardFunc(keyboard);
+  glutSpecialFunc(fnkeys);
+  glutMouseFunc(mouse);
+  glutMotionFunc(motion);
+  glutIdleFunc(myGlutIdle);
+#ifdef TEST_MUI_GUI
+  glutPassiveMotionFunc(NULL);
+  glutMenuStateFunc(NULL);
+  glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
+  glutAttachMenu(GLUT_RIGHT_BUTTON); // And reattach it
+#endif
 }
 
 /***************************************************************/
