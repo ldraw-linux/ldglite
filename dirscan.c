@@ -31,6 +31,7 @@
 #include <sys/stat.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "platform.h"
@@ -38,18 +39,193 @@
 #ifdef _WIN32
  #include "windows.h"
 #else
+ #include <sys/types.h>
  #include <dirent.h>  // directory operations
  #include <values.h>
+
+ #include <glob.h>
 #endif
 
 #include "dirscan.h"
 
 //=====================================================================
-// Dateien in verschiedenen Verzeichnissen suchen
+// Why are we recreating scandir?
 //=====================================================================
-//
+#if 0
+int
+scandir(const char *dirname, struct dirent ***namelist,
+	int (*select)(struct dirent *),
+	int (*compar)(const void *, const void *));
+
+int
+alphasort(const void *d1, const void *d2);
+
+EXAMPLE
+      The example program below scans the /tmp directory.  It does not
+      exclude any entries since select is NULL.  The contents of namelist
+      are sorted by alphasort().  It prints out how many entries are in /tmp
+      and the sorted entries of the /tmp directory.  The memory used by
+      scandir() is returned using free().
+
+
+extern int scandir();
+extern int alphasort();
+
+main()
+{
+  int num_entries, i;
+  struct dirent **namelist, **list;
+  
+  if ((num_entries = scandir("/tmp", &namelist, NULL, alphasort)) < 0) {
+    fprintf(stderr, "Unexpected error\n");
+    exit(1);
+  }
+  printf("Number of entries is %d\n", num_entries);
+  if (num_entries) {
+    printf("Entries are:");
+    for (i=0, list=namelist; i<num_entries; i++) {
+      printf(" %s", (*list)->d_name);
+      free(*list);
+      *list++;
+    }
+    free(namelist);
+    printf("\n");
+  }
+  printf("\n");
+  exit(0);
+}
+
+
+
+      #include <regex.h>
+
+      int regcomp(regex_t *preg, const char *pattern, int cflags);
+
+      int regexec(
+           const regex_t *preg,
+           const char *string,
+           size_t nmatch,
+           regmatch_t pmatch[],
+           int eflags
+      );
+
+      void regfree(regex_t *preg);
+
+      size_t regerror(
+           int errcode,
+           const regex_t *preg,
+           char *errbuf,
+           size_t errbuf_size
+      );
+
+
+ EXAMPLES
+           /* match string against the extended regular expression in pattern,
+           treating errors as no match.  Return 1 for match, 0 for no match.
+           Print an error message if an error occurs. */
+
+           int
+           match(string, pattern)
+           char *string;
+           char *pattern;
+           {
+               int i;
+               regex_t re;
+               char buf[256];
+
+               i=regcomp(&re, pattern, REG_EXTENDED|REG_NOSUB);
+               if (i != 0) {
+                   (void)regerror(i,&re,buf,sizeof buf);
+                   printf("%s\n",buf);
+                   return(0);                       /* report error */
+               }
+               i = regexec(&re, string, (size_t) 0, NULL, 0);
+               regfree(&re);
+               if (i != 0) {
+                   (void)regerror(i,&re,buf,sizeof buf);
+                   printf("%s\n",buf);
+                   return(0);                       /* report error */
+               }
+               return(1);
+           }
+
+
+
+#include <stdlib.h>
+#include <string.h>
+#include <glob.h>
+
+/* Convert a wildcard pattern into a list of blank-separated
+   filenames which match the wildcard.  */
+
+char * glob_pattern(char *wildcard)
+{
+  char *gfilename;
+  size_t cnt, length;
+  glob_t glob_results;
+  char **p;
+
+  glob(wildcard, GLOB_NOCHECK, 0, &glob_results);
+
+  /* How much space do we need?  */
+  for (p = glob_results.gl_pathv, cnt = glob_results.gl_pathc;
+       cnt; p++, cnt--)
+    length += strlen(*p) + 1;
+
+  /* Allocate the space and generate the list.  */
+  gfilename = (char *) calloc(length, sizeof(char));
+  for (p = glob_results.gl_pathv, cnt = glob_results.gl_pathc;
+       cnt; p++, cnt--)
+    {
+      strcat(gfilename, *p);
+      if (cnt > 1)
+        strcat(gfilename, " ");
+    }
+
+  globfree(&glob_results);
+  return gfilename;
+}
+
+
+include <glob.h>
+
+glob_t result;
+
+glob ("~homer/bin/*", GLOB_TILDE, NULL, &result);
+globfree (result);
+
+
+#include <glob.h>
+#include <stdio.h>
+#include "dinstall.h"
+
+int no_match(const char *path, const char *name, __mode_t mode){
+/* [<][>][^][v][top][bottom][index][help] */
+  int i,status;
+  glob_t globbuf;
+  struct stat statbuf;
+  snprintf(prtbuf,PRTBUFSIZE,"%s/*/%s",path,name);
+  glob( T_FILE(prtbuf), GLOB_NOSORT, NULL, &globbuf);
+  status=1;
+  if ( globbuf.gl_pathc > 0 ) {
+    for (i=0;i<globbuf.gl_pathc;i++) {
+      if ( (! stat(globbuf.gl_pathv[i],&statbuf) ) &&
+           ( (statbuf.st_mode & S_IFMT) == mode ) )  {
+        status=0;
+        break;
+      }
+    }
+  }
+  globfree(&globbuf); 
+  return status;
+}
+
+
+#endif
+
+//=====================================================================
 static const int maxDir = 10;
-static char scannedDir[10][NAMELENGTH]; // speichert die bisher genutzten Verzeichnisse
+static char scannedDir[10][NAMELENGTH];
 static int  dirCount = 0;
 
 //---------------------------------------------------------------------
@@ -59,7 +235,7 @@ int ScanDirectory(char *dir, char *pattern, int firstfile,
 {
   char  wildcard[NAMELENGTH];
   int   lenDir;
-  int   filecount;
+  int   filecount = 0;
   int   i;
 #ifdef _WIN32
   HANDLE            searchPath = NULL;
@@ -70,12 +246,11 @@ int ScanDirectory(char *dir, char *pattern, int firstfile,
   struct dirent *dataStruct;
   int            test, lenf, lenp;
   char          *file;
-#endif
-    
-#define DEBUG 1;
 
-#ifdef DEBUG
-    printf("searching %s for %s at %d\n", dir, pattern, firstfile);
+  char *gfilename;
+  size_t cnt, length;
+  glob_t glob_results;
+  char **p;
 #endif
 
   for(i = 0; i < MAX_DIR_ENTRIES; i++)
@@ -83,18 +258,7 @@ int ScanDirectory(char *dir, char *pattern, int firstfile,
 
   concat_path(dir, pattern, wildcard);
 
-#ifdef DEBUG
-    printf("wildcard = %s [%s]\n", dir, wildcard);
-#endif
-
-#if 1
-  printf("finding files [%s] from %d \n", wildcard, firstfile);
-#endif
-
-  // -----------------------
-  // nun wird's OS-abhaengig
 #ifdef _WIN32
-
   searchPath = FindFirstFile( (LPCTSTR)wildcard, &dataStruct);
   if( searchPath == INVALID_HANDLE_VALUE ) 
   {
@@ -105,9 +269,9 @@ int ScanDirectory(char *dir, char *pattern, int firstfile,
   // Skip files before our current window.
   for ( filecount = 0; filecount < firstfile; )
   { 
-    concat_path(dir, dataStruct.cFileName, filelist[filecount]);
-    if (isDir(filelist[filecount]))
-      strcpy(filelist[filecount], "");
+    concat_path(dir, dataStruct.cFileName, filelist[0]);
+    if (isDir(filelist[0]))
+      strcpy(filelist[0], "");
     else
       filecount++;
     if (FindNextFile(searchPath, &dataStruct) == 0)
@@ -120,9 +284,6 @@ int ScanDirectory(char *dir, char *pattern, int firstfile,
   while( filecount < MAX_DIR_ENTRIES )
   {  
     concat_path(dir, dataStruct.cFileName, filelist[filecount]);
-#ifdef DEBUG
-    printf("finding %s - %s\n", dir, dataStruct.cFileName);
-#endif
     if (isDir(filelist[filecount]))
       strcpy(filelist[filecount], "");
     else
@@ -132,21 +293,48 @@ int ScanDirectory(char *dir, char *pattern, int firstfile,
   }
   FindClose(searchPath);
 
-#ifdef DEBUG
-  printf("found %d files\n", filecount);
-#endif
-
 #else // Unix
-  // Verzeichnis oeffnen
+  glob(wildcard, 0, 0, &glob_results);
+
+  // Skip files before our current window.
+  filecount = 0;
+  for (p = glob_results.gl_pathv, cnt = glob_results.gl_pathc;
+       cnt; p++, cnt--)
+  {
+    if ( filecount >= firstfile )
+      break;
+    if (!isDir(*p))
+      filecount++;
+  }
+
+  /* generate the list.  */
+  for ( filecount = 0; cnt; p++, cnt--)
+  {
+    if (filecount >= MAX_DIR_ENTRIES)
+      break;
+    if (!isDir(*p))
+    {
+      strcpy(filelist[filecount], *p);
+      filecount++;
+    }
+  }
+  globfree(&glob_results);
+
+#if 0
   if( (searchPath = opendir(dir)) ) { 
     // Skip files before our current window.
-    for ( filecount = 0; filecount < firstfile; filecount++ )
+    for ( filecount = 0; filecount < firstfile; )
     { 
       if (!dataStruct = readdir(searchPath);)
       {
 	closedir(searchPath);
 	return(0);
       }
+      concat_path(dir, dataStruct->d_name, filelist[0]);
+      if (isDir(filelist[0]))
+	strcpy(filelist[0], "");
+      else
+	filecount++;
     }
     filecount = 0;
     while(    filecount < MAX_DIR_ENTRIES // Grenzen beachten
@@ -155,17 +343,22 @@ int ScanDirectory(char *dir, char *pattern, int firstfile,
       lenf = strlen(file);      
       lenp = strlen(pattern);
       test = 0;
+      // NOTE: This is LAME!  No wildcard testing!
       for(i = 1; i < 4; i++) {
 	      if( file[lenf-i] == pattern[lenp-i] )
 	        test++;
       }
       if( test == 3 ) { // Dateiendung stimmt ueberein
 	concat_path(dir, dataStruct->d_name, filelist[filecount]);
-	filecount++;
+	if (isDir(filelist[0]))
+	  strcpy(filelist[0], "");
+	else
+	  filecount++;
       }
     }
     closedir(searchPath);
   }
+#endif 
 #endif 
 
   return filecount;
@@ -178,7 +371,7 @@ int ScanFolder(char *dir, char *pattern, int firstfile,
 {
   char  wildcard[NAMELENGTH];
   int   lenDir;
-  int   filecount;
+  int   filecount = 0;
   int   i;
 #ifdef _WIN32
   HANDLE            searchPath = NULL;
@@ -189,6 +382,11 @@ int ScanFolder(char *dir, char *pattern, int firstfile,
   struct dirent *dataStruct;
   int            test, lenf, lenp;
   char          *file;
+
+  char *gfilename;
+  size_t cnt, length;
+  glob_t glob_results;
+  char **p;
 #endif
     
   for(i = 0; i < MAX_DIR_ENTRIES; i++)
@@ -196,18 +394,7 @@ int ScanFolder(char *dir, char *pattern, int firstfile,
 
   concat_path(dir, pattern, wildcard);
 
-#ifdef DEBUG
-  printf("wildcard = %s [%s]\n", dir, wildcard);
-#endif
-
-#if 1
-  printf("finding folders [%s] from %d \n", wildcard, firstfile);
-#endif
-
-  // -----------------------
-  // nun wird's OS-abhaengig
 #ifdef _WIN32
-
   searchPath = FindFirstFile( (LPCTSTR)wildcard, &dataStruct);
   if( searchPath == INVALID_HANDLE_VALUE ) 
   {
@@ -218,21 +405,11 @@ int ScanFolder(char *dir, char *pattern, int firstfile,
   // Skip files before our current window.
   for (filecount = 0; filecount < firstfile; )
   {
-    concat_path(dir, dataStruct.cFileName, filelist[filecount]);
-    if (isDir(filelist[filecount]))
-    {
-#if 1
-      printf("skipping dir %d %s - %s\n", filecount, dir, dataStruct.cFileName);
-#endif
+    concat_path(dir, dataStruct.cFileName, filelist[0]);
+    if (isDir(filelist[0]))
       filecount++;
-    }
     else
-    {
-#if 1
-      printf("skipping %d %s - %s\n", filecount, dir, dataStruct.cFileName);
-#endif
-      strcpy(filelist[filecount], "");
-    }
+      strcpy(filelist[0], "");
     if (FindNextFile(searchPath, &dataStruct) == 0)
     {
       FindClose(searchPath);
@@ -244,16 +421,8 @@ int ScanFolder(char *dir, char *pattern, int firstfile,
   while( filecount < MAX_DIR_ENTRIES )
   {
     concat_path(dir, dataStruct.cFileName, filelist[filecount]);
-#if 1
-    printf("checking %s - %s\n", dir, dataStruct.cFileName);
-#endif
     if (isDir(filelist[filecount]))
-    {
       filecount++;
-#if 1
-      printf("found dir %s - %s\n", dir, dataStruct.cFileName);
-#endif
-    }
     else
       strcpy(filelist[filecount], "");
     if (FindNextFile(searchPath, &dataStruct) == 0)
@@ -261,12 +430,34 @@ int ScanFolder(char *dir, char *pattern, int firstfile,
   }
   FindClose(searchPath);
 
-#if 1
-  printf("found %d folders\n", filecount);
-#endif
-
 #else // Unix
-  // Verzeichnis oeffnen
+  glob(wildcard, GLOB_PERIOD, 0, &glob_results);
+
+  // Skip files before our current window.
+  filecount = 0;
+  for (p = glob_results.gl_pathv, cnt = glob_results.gl_pathc;
+       cnt; p++, cnt--)
+  {
+    if ( filecount >= firstfile )
+      break;
+    if (isDir(*p))
+      filecount++;
+  }
+
+  /* generate the list.  */
+  for ( filecount = 0; cnt; p++, cnt--)
+  {
+    if (filecount >= MAX_DIR_ENTRIES)
+      break;
+    if (isDir(*p))
+    {
+      strcpy(filelist[filecount], *p);
+      filecount++;
+    }
+  }
+  globfree(&glob_results);
+
+#if 0
   if( (searchPath = opendir(dir)) ) { 
     // Skip files before our current window.
     for ( filecount = 0; filecount < firstfile; filecount++ )
@@ -280,85 +471,19 @@ int ScanFolder(char *dir, char *pattern, int firstfile,
     filecount = 0;
     while(    filecount < MAX_DIR_ENTRIES // Grenzen beachten
 	   && (dataStruct = readdir(searchPath)) ) {
-      file = dataStruct->d_name;
-      lenf = strlen(file);      
-      lenp = strlen(pattern);
-      test = 0;
-      for(i = 1; i < 4; i++) {
-	      if( file[lenf-i] == pattern[lenp-i] )
-	        test++;
-      }
-      if( test == 3 ) { // Dateiendung stimmt ueberein
-	concat_path(dir, dataStruct->d_name, filelist[filecount]);
+      concat_path(dir, dataStruct->d_name, filelist[filecount]);
+      // NOTE: This is LAME!  No wildcard testing!
+      if (isDir(filelist[filecount]))
 	filecount++;
-      }
+      else
+	strcpy(filelist[filecount], "");
     }
     closedir(searchPath);
   }
 #endif 
+#endif 
 
   return filecount;
-}
-
-//---------------------------------------------------------------------
-// Verzeichnis und Dateiname trennen
-static void extractDir(char *complete, char *directory, char *file)
-{
-  char    tempName[NAMELENGTH];
-  int     len, i, j;
-  boolean haveDir = false;
-
-  strcpy(directory, complete);
-  len = strlen(directory);
-
-  // falls kein Vezeichnis angegeben, den Rest ueberspringen
-  for(i = 0; i < len; i++) {
-    if( directory[i] == '/' ) {
-      haveDir = true;
-      break;
-    }
-  }
-
-  if(!haveDir) {
-    directory[0] = '\0';
-    strcpy(file, complete);
-  }
-  else {
-    // Verzeichnis und Dateinamen trennen
-    i = len-1; 
-    j = 0;
-    while( i && directory[i] != '/' ) {
-      tempName[j]  = directory[i];  // vor dem Loeschen noch speichern
-      j++;
-      directory[i] = '\0';
-      i--;
-    }
-
-    // Dateiname muss noch in die richtige Reihenfolge gebracht werden
-    tempName[j] = '\0'; // String zuende
-    len = strlen(tempName);
-    for(i = 0; i < len; i++) 
-      file[i] = tempName[len-i-1];
-    file[i] = '\0';
-  
-    // Verzeichnis fuer spaeteres Durchsuchen speichern
-    if(!dirCount) { // erstmaliger Aufruf
-      strcpy(scannedDir[dirCount], directory);
-      dirCount++;
-    }
-    else if(dirCount < maxDir) {
-      i = 0;
-      j = 0;  
-      while(i < dirCount) {
-        j += strcmp(scannedDir[i], directory); // Verzeichnis schon bekannt ?
-        i++;
-      }
-      if(j) {                                  // Antwort ist: nein
-        strcpy(scannedDir[dirCount], directory);
-        dirCount++;
-      }
-    }
-  }
 }
 
 //---------------------------------------------------------------------
@@ -382,11 +507,11 @@ boolean CheckFile(char *file, char *modus)
 {
   FILE    *Input = NULL;
   boolean  found = false;
-  char     dirName[NAMELENGTH], fileName[NAMELENGTH];
+  char     fileName[NAMELENGTH];
   char     searchFile[NAMELENGTH];
   int      i;
 
-  extractDir(file, dirName, fileName);
+  strcpy(fileName, basename(file));
   i = 0;
   while( (Input == NULL) && (i < dirCount) ) {
     searchFile[0] = '\0'; // String loeschen
@@ -409,55 +534,3 @@ boolean CheckFile(char *file, char *modus)
   return found;
 }
 
-#ifdef testing
-//=====================================================================
-// Main Function: reads subdirectories for *.wrl files
-//=====================================================================
-//
-int main(int argc, char **argv)
-{  
-  int         i, len1;
-  const int   len3 = WORDLENGTH;
-  char        myDir[len3+1];
-  char        pattern[] = {"*.wrl"};
-  int         DateiCount    = 0;
-  char        DateiListe[MAX_DIR_ENTRIES][NAMELENGTH];
-  char        StandardDir[] = {"VRML/"};
-
-
-  // Einstellmoeglichkeiten per Tastatur
-  printf("\n======================================\n");
-  printf("This prog shows how to scan a directory with various OS\n");
-  printf("======================================\n");
-  fflush(stdout);
-
-  // Verzeichnisnamen ermitteln
-  if(argc > 2 && !strcmp(argv[1],"-dir") ) {
-    len1 = strlen(argv[1]);
-    if( argv[2][len1-1] != '/' )
-      sprintf(myDir, "%s/", argv[2]);
-    else
-      sprintf(myDir, "%s", argv[2]);
-  }
-  else
-    sprintf(myDir, "%s", StandardDir); // prog dir
-
-  // Dateinamen ermitteln
-  ScanDirectory(myDir, pattern, DateiListe, DateiCount);
-  if(!DateiCount) { // Verzeichnis enthielt keine Dateien
-    strcpy(myDir, "./");
-    ScanDirectory(myDir, pattern, DateiListe, DateiCount);
-  }
-
-  // print the filenames
-  printf("found %d files which matched %s-pattern:\n", DateiCount, pattern);
-  for(i = 0; i < DateiCount; i++) {
-    if( CheckFile(DateiListe[i], "r") ) {// file > 0 byte ??
-      printf("file %d:\t %s\n", i+1, DateiListe[i]);
-    }
-  }
-
-  return 0;
-}
-
-#endif 
