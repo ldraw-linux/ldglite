@@ -1,4 +1,22 @@
 ----------------------------------------------------------------------
+Should mklist be available as a plugin?
+
+----------------------------------------------------------------------
+I wonder if Drag and Drop could be implemented in a wrapper app on
+OSX which sends a ctrl-v to the app and then passes the data in
+some way compatible with GLUT.  The same wrapper app could pass in
+default commandline args.  (Or I could use an LDGLITEARGS env var)
+
+Or maybe I can register an event handler (category method in cocoa?)
+after GLUT does, and filter out Drop (open document?) events before 
+passing things on to GLUT.
+
+----------------------------------------------------------------------
+Hey, for antialiased lines perhaps I could use a depth test of 
+GL_LEQUAL to allow edge lines from adjacent quads to blend with
+each other instead of just rendomly letting one supercede the other.
+
+----------------------------------------------------------------------
 Now that I've expanded the glut menus beyond the 255 choices allowed
 in the glut keyboard callback, perhaps I can add more image output
 choices than just bitmap.  Maybe a whole picture submenu.
@@ -32,7 +50,14 @@ to set the directory path of the executable.
 
 Oh, Oh, I know.  This could be a plugin.  The registerme plugin.
 That way I can distribute it with the windows binary only, and it'll
-already know what directory the executable is installed in.
+already know what directory the executable is installed in.  And it
+should also know the name of the executable to register.  However it
+should provide a GUI to change it, and add command line arguments.
+This could get really fancy and incorporate the ldrawinfotip DLL and
+registry settings.  Would this be useful to the lddp folks?
+
+Hmm, maybe it could also create or add the ldraw.ini setting for 
+the LDRAWDIR if it can't find it.
 
 Hey, I wonder if that OSX bundle junk can be used to register the .LDR
 extension on a Mac to make it launch ldglite on a .LDR file by clicking
