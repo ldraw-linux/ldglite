@@ -4085,8 +4085,9 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	break;
       case 'S':
 	// Save as filename
-	printf("Save as: %s\n", &(ecommand[1]));
-	sscanf(&(ecommand[1]),"%s", &datfilename);
+	for (i = 1; ecommand[i] == ' '; i++); // Strip leading spaces
+	printf("Save as: %s\n", &(ecommand[i]));
+	sscanf(&(ecommand[i]),"%s", &datfilename);
 	Print1Model(datfilename);
 	SetTitle(1); // Change the title of the window.
 	edit_mode_gui();
@@ -5525,6 +5526,10 @@ void myGlutIdle( void )
     {
       init = 1;
       printf("Polling %s = %d\n", filename, datstat.st_mtime);
+    }
+    else if (ret == -1)
+    {
+      // printf("Polling %s = error\n", filename);
     }
     else if (datstat.st_mtime != last_file_time)
     {
