@@ -33,7 +33,6 @@ extern int panning;
 extern int dirtyWindow;
 extern int use_quads;
 extern float lineWidth;
-extern int zSolid;
 
 // Ambient and diffusion properties for front and back faces.
 extern GLfloat full_mat[];
@@ -226,10 +225,6 @@ void render_line(vector3d *vp1, vector3d *vp2, int c)
 	};
 
 #ifdef USE_OPENGL
-  if(zSolid) {
-    return;
-  };
-
   if (ldraw_commandline_opts.M == 'P')
   {
     // Non-continuous output stop after each step.
@@ -330,7 +325,7 @@ void render_line(vector3d *vp1, vector3d *vp2, int c)
   else zc.r = zc.g = zc.b = 65;
 #endif
   //glDepthFunc(GL_ALWAYS);
-  if (zShading )
+  if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
     if (glCurLighting) glDisable(GL_LIGHTING);
   glCurLighting = 0;
   if (glCurColorIndex != -2)
@@ -441,7 +436,7 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
       glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, hi_shininess);
     //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
   }
-  if (zShading)
+  if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
     if (!glCurLighting) glEnable(GL_LIGHTING);
   glCurLighting = 1;
   if (glCurColorIndex != -2)
@@ -453,7 +448,7 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
   }
   glBegin(GL_TRIANGLES);
   // LDRAW has the y value reversed, so negate the y.
-  if (zShading)
+  if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
   {
     getnormal(vp1, vp2, vp3, surf_norm);
     glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
@@ -630,7 +625,7 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
       glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, hi_shininess);
     //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
   }
-  if (zShading)
+  if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
     if (!glCurLighting) glEnable(GL_LIGHTING);
   glCurLighting = 1;
   if (glCurColorIndex != -2)
@@ -644,7 +639,7 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
   if (use_quads)
   {
     glBegin(GL_QUADS);
-    if (zShading)
+    if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
     {
       getnormal(vp1, vp2, vp3, surf_norm);
       glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
@@ -661,7 +656,7 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
     // Either find the convex hull or 
     // Calculate turn direction with dot product of sequential cross products.
     glBegin(GL_TRIANGLES);
-    if (zShading)
+    if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
     {
       getnormal(vp1, vp2, vp3, surf_norm);
 #if 0
@@ -674,7 +669,7 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
     glVertex3f(vp1->x, -vp1->y, -vp1->z);
     glVertex3f(vp2->x, -vp2->y, -vp2->z);
     glVertex3f(vp4->x, -vp4->y, -vp4->z);
-    if (zShading)
+    if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
     {
       getnormal(vp2, vp3, vp4, surf_norm);
       glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
@@ -682,7 +677,7 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
     glVertex3f(vp2->x, -vp2->y, -vp2->z);
     glVertex3f(vp3->x, -vp3->y, -vp3->z);
     glVertex3f(vp4->x, -vp4->y, -vp4->z);
-    if (zShading)
+    if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
     {
       getnormal(vp1, vp3, vp4, surf_norm);
       glNormal3f(surf_norm[0], -surf_norm[1], -surf_norm[2]);
@@ -718,21 +713,19 @@ void render_five(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
 	int j;
 	int wid;
 
-	if(ldraw_commandline_opts.F & TYPE_F_NO_LINES) {
-		return;
-	};
-
 #ifdef USE_OPENGL
   // Gotta convert to screen coords first for opengl.
   GLdouble s1x, s1y, s1z;
   GLdouble s2x, s2y, s2z;
   GLdouble s3x, s3y, s3z;
   GLdouble s4x, s4y, s4z;
+#endif
 
-  if(zSolid) {
-    return;
-  };
+	if(ldraw_commandline_opts.F & TYPE_F_NO_LINES) {
+		return;
+	};
 
+#ifdef USE_OPENGL
   if (ldraw_commandline_opts.M == 'P')
   {
     // Non-continuous output stop after each step.
@@ -800,7 +793,7 @@ void render_five(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
   }
 
   //glDepthFunc(GL_ALWAYS);
-  if (zShading)
+  if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
     if (glCurLighting) glDisable(GL_LIGHTING);
   glCurLighting = 0;
   if (glCurColorIndex != -2)
