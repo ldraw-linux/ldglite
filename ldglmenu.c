@@ -269,7 +269,7 @@ void initializeMenus(void)
 #ifdef USE_L3_PARSER
   glutAddMenuEntry("Parser          ", 'r');
 #endif
-  glutAddMenuEntry("Editing         ", 4);
+  glutAddMenuEntry("Editing         ", 6);
   glutAddMenuEntry("                ", '\0');
   glutAddMenuEntry("Enlarge         ", 3);
   glutAddMenuEntry("Reduce          ", 2);
@@ -336,7 +336,7 @@ void initializeMenus(void)
 #else
   glutAddMenuEntry("Open               ", 4);
   glutAddMenuEntry("Save               ", 5);
-  glutAddMenuEntry("Tools              ", 1);
+  glutAddMenuEntry("Settings           ", 1);
 #endif
   glutAddMenuEntry("                   ", '\0');
   glutAddSubMenu(  "View               ", view);
