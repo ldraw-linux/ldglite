@@ -162,8 +162,9 @@ Command line options (see also the original ldlite docs for more):
 -p turns on polling mode.
 -ld forces the program to use the ldlite parser.
 -l3 forces the program to use the l3 parser.
--le starts the program in LEDIT emulation mode.
+-le starts the program in LEDIT emulation mode. 
 -lE starts the program in LEDIT emulation mode with solid moving pieces.
+-ledit or -LEDIT do the same but with draw-to-current and stud-as-line on.
 -wN sets linewidth to N.
 -q quality lines (antialiased)
 -uX,Y saves a huge output image from window sized tiles.  (see notes below)
@@ -204,7 +205,7 @@ n turns on normal (no) shading.
 h turns on shading.
 l turns on line only wireframe mode.
 f toggles stud drawing.
-v toggles visible spin mode.
+V toggles visible spin mode.
 b prints a BMP file. (use CTRL-b for 24 bit BMP)
 B prints a PNG file. (use CTRL-B for Alpha transparency)
 q toggles line quality (antialiasing)
@@ -216,6 +217,8 @@ INSERT key toggles LEDIT emulation mode.
 An excellent description of the LEDIT Hot Keys can be found at:
 http://www.library.thinkquest.com/20551/keys.html
 
+			   LEDIT extensions
+
 The LEDIT emulation currently contains an extension to the linetype menu
 to allow adding primitive linetypes 2-5.  The parser for this ignores
 commas and parenthesis so you can enter the points for a type 2 line
@@ -224,6 +227,21 @@ like this if you wish:
 Enter Coords for Type 2 Primitive: (0.0, 0.0, 0.0) (10.0, 10.0, 10.0)
 
 The color defaults to 16 for filled primitives and 24 for line primitives.
+
+Also, in addition to the x,y,z keys to translate the piece along an axis,
+you can now use the v key to translate by an (x,y,z) vector.
+
+The Piece menu now also contains:
+  an (x,y,z) location option 
+  an (x,y,z) scale option (use negative numbers to mirror)
+  a matrix replacement option.
+  an part inliner option.
+
+			LEDIT emulation quirks
+
+Part lookup is not currently supported.
+
+Empty lines are discarded by the L3 parser.  Use a blank comment instead.
 
 
 				Notes
