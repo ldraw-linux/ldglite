@@ -345,6 +345,9 @@ void printModelMat(char *name)
 }
 
 /***************************************************************/
+void parse_view(char *viewMatrix);
+
+/***************************************************************/
 void printPOVMatrix()
 {
   float m[4][4] = {
@@ -353,32 +356,62 @@ void printPOVMatrix()
     {0.0,0.0,1.0,0.0},
     {0.0,0.0,0.0,1.0}
   };
-  float r[4];
+  float cc[4];
+  float cla[4];
+  float sky[4];
   float from[4];
   float toward[4];
+  float up[4] = {0, -1, 0, 0}; // up/sky is straight up in ldraw coords.
   double dist[4];
   double angle;
+  double scale = 1.0;
+  double pct = 0.0;
   int i;
+  char orthographicstr[] = "\torthographic\n";
+  char perspectivestr[] = "\t//orthographic\n";
+  char *projectionstr = orthographicstr;
 
-  //NOTE: should convert ldraw_oblique to just plain oblique.
+  if (1) //(ldraw_projection_type)
+  {
+    // For the perspective projection we can zoom in/out by scaling the 
+    // Camera and look_at points by 1/opts.S.
+    scale = ldraw_commandline_opts.S;
+  }
+  else if (ldraw_commandline_opts.S != 1.0)
+  {
+    // NOTE: this is not quite right.  PCT scales from the look_at point,
+    // but ldraw_commandline_opts.S scales from the origin.
+    // Oh well.  Close enough.
+    pct = 100.0 * ((1.0/ldraw_commandline_opts.S) - 1.0);
+  }
 
   printf("\ncamera {\n");
-  printf("\t#declare PCT = 0; // Percentage further away\n");
+  printf("\t#declare PCT = %g; // Percentage further away\n",pct);
   printf("\t#declare STEREO = 0; // Normal view\n");
   printf("\t//#declare STEREO =  degrees(atan2(1,12))/2; // Left view\n");
   printf("\t//#declare STEREO = -degrees(atan2(1,12))/2; // Right view\n");
 
+  // The LdrawOblique matrix is a projection matrix NOT supported by POV.
+  // Substitute Oblique view matrix.
+  if (m_viewMatrix == LdrawOblique)
+    parse_view(Oblique);
+
   // Use the TRANSPOSE of the opts.A matrix to rotate view point in the
   // opposite direction than the model would rotate.  This = INVERSE rotation.
-  m[0][0] = ldraw_commandline_opts.A.a;
-  m[1][0] = ldraw_commandline_opts.A.b;
-  m[2][0] = ldraw_commandline_opts.A.c;
-  m[0][1] = ldraw_commandline_opts.A.d;
-  m[1][1] = ldraw_commandline_opts.A.e;
-  m[2][1] = ldraw_commandline_opts.A.f;
-  m[0][2] = ldraw_commandline_opts.A.g;
-  m[1][2] = ldraw_commandline_opts.A.h;
-  m[2][2] = ldraw_commandline_opts.A.i;
+  // Also sneak in the opts.S scaling.
+  m[0][0] = ldraw_commandline_opts.A.a / scale;
+  m[1][0] = ldraw_commandline_opts.A.b / scale;
+  m[2][0] = ldraw_commandline_opts.A.c / scale;
+  m[0][1] = ldraw_commandline_opts.A.d / scale;
+  m[1][1] = ldraw_commandline_opts.A.e / scale;
+  m[2][1] = ldraw_commandline_opts.A.f / scale;
+  m[0][2] = ldraw_commandline_opts.A.g / scale;
+  m[1][2] = ldraw_commandline_opts.A.h / scale;
+  m[2][2] = ldraw_commandline_opts.A.i / scale;
+
+  // Restore LdrawOblique view matrix if needed.
+  if (m_viewMatrix == LdrawOblique)
+    parse_view(LdrawOblique);
 
   from[0] = projection_fromx;
   from[1] = projection_fromy;
@@ -396,39 +429,60 @@ void printPOVMatrix()
   toward[2] = -toward[2]; // Switch to ldraw coords
   //printf("\t//look_at <%g,%g,%g>\n",toward[0],toward[1],toward[2]);
 
-  for (i = 0; i < 3; i++)
-    dist[i] = from[i] - toward[i];
-  dist[3] = sqrt((dist[0]*dist[0]) + (dist[1]*dist[1]) + (dist[2]*dist[2]));
+  // Rotate from, toward, and up vectors by inverse of ldraw model matrix.
+  M4V3Mul(cc,m,from);
+  M4V3Mul(cla,m,toward);
+  M4V3Mul(sky,m,up);
 
-  M4V3Mul(r,m,from);
+  for (i = 0; i < 3; i++)
+    dist[i] = cc[i] - cla[i]; // dist[i] = from[i] - toward[i];
+  dist[3] = sqrt((dist[0]*dist[0]) + (dist[1]*dist[1]) + (dist[2]*dist[2]));
+  dist[3] *= scale; // Undo scaling so angle is calculated correctly.
+
 #if 0
-  printf("\tlocation <%g,%g,%g>\n",r[0],r[1],r[2]);
+  printf("\tlocation <%g,%g,%g>\n",cc[0],cc[1],cc[2]);
 #else
   printf("\tlocation <%g,%g,%g> +PCT/100.0*<%g,%g,%g>\n",
-	 r[0],r[1],r[2], dist[0],dist[1],dist[2]);
+	 cc[0],cc[1],cc[2], dist[0],dist[1],dist[2]);
   // NOTE: what is the axis to rotate about for l3p STEREO?
   // Is it the perpendicular bisector at the look_from point?
   // figure it out and switch to vaxis_rotate() for location.
 #endif
-  printf("\tsky      -y\n");
+  //printf("\tsky      -y\n");
+  printf("\tsky <%g,%g,%g>\n",sky[0],sky[1],sky[2]);
   printf("\tright    -4/3*x\n");
-  M4V3Mul(r,m,toward);
-  printf("\tlook_at <%g,%g,%g>\n",r[0],r[1],r[2]);
+  printf("\tlook_at <%g,%g,%g>\n",cla[0],cla[1],cla[2]);
 
   if (ldraw_projection_type)
   {
-    printf("\tangle %g\n",projection_fov);
-    printf("\t//orthographic\n");
+    // POV uses x for Field Of View, GluPerspective() uses y.
+    angle = projection_fov * Width / Height;
+    projectionstr = perspectivestr;
   }
   else
   {
     angle = 2.0 * atan(((double)Width / 2.0) / dist[3]);
     angle /= PI_180;
-    printf("\tangle %g\n", angle);
-    printf("\torthographic\n");
   }
 
+  printf("\tangle %g\n", angle);
+  printf("\trotate   <0,1e-5,0> // Prevent gap between adjecent quads\n");
+  printf(projectionstr);
   printf("}\n\n");
+
+  {
+    char filename[256];
+    char *s;
+
+    concat_path(datfilepath, datfilename, filename);
+    if (filename[0] == '.') // I hate the ./filename thing.
+      strcpy(filename, datfilename);
+
+    printf("l3p -cc%g,%g,%g -cla%g,%g,%g -ca%g %s -b%d\n\n", 
+	   cc[0],cc[1],cc[2], cla[0],cla[1],cla[2], angle,
+	   filename, ldraw_commandline_opts.B);
+  }
+
 }
 
 /***************************************************************/
@@ -443,6 +497,11 @@ void printLdrawMatrix()
     strcpy(filename, datfilename);
 
   s = matrix_string;
+  if(ldraw_commandline_opts.B != 15)
+  {
+    sprintf(s,"-b% ", ldraw_commandline_opts.S);
+    s = matrix_string + strlen(matrix_string);
+  }
   if (lineWidth > 1.0)
   {
     sprintf(s,"-w%g ", lineWidth);
