@@ -246,9 +246,10 @@ int DrawToCurPiece = 0;
 char editingprevmode = 'C';
 int editingkey = -1;
 int SOLID_EDIT_MODE = 0;
-static char eprompt[4][100];
-static char ecommand[100] = "";
-static char eresponse[100] = "";
+#define EDIT_LINE_LEN 512
+static char eprompt[4][EDIT_LINE_LEN];
+static char ecommand[EDIT_LINE_LEN] = "";
+static char eresponse[EDIT_LINE_LEN] = "";
 float moveXamount = 10.0;
 float moveYamount = 8.0;
 float moveZamount = 10.0;
@@ -1443,7 +1444,7 @@ void clear_edit_mode_gui()
 /***************************************************************/
 int edit_mode_gui()
 {
-  static char eline[4][100];
+  static char eline[4][EDIT_LINE_LEN];
   int savedirty;
   int lineheight = 14.0;
   int charwidth = 9.0;
