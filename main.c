@@ -6198,7 +6198,7 @@ main(int argc, char **argv)
 
   helpmenunum = glutCreateMenu(menu);
   glutAddMenuEntry(progname             , '\0');
-  glutAddMenuEntry("Version 0.9.1c     ", '\0');
+  glutAddMenuEntry("Version 0.9.1d     ", '\0');
 
   mainmenunum = glutCreateMenu(menu);
   glutAddSubMenu(  "File               ", filemenunum);
