@@ -224,8 +224,10 @@ char                *Strdup(const char *Str)
    return (Copy);
 }
 
-
-static void          FreePart(struct L3PartS * PartPtr);
+#ifndef USE_OPENGL
+static 
+#endif
+void          FreePart(struct L3PartS * PartPtr);
 
 static void          FreeLines(struct L3PartS * PartPtr)
 {
@@ -246,7 +248,10 @@ static void          FreeLines(struct L3PartS * PartPtr)
    }
 }
 
-static void          FreePart(struct L3PartS * PartPtr)
+#ifndef USE_OPENGL
+static 
+#endif
+void          FreePart(struct L3PartS * PartPtr)
 {
    free(PartPtr->DatName);
    FreeLines(PartPtr);
