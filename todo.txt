@@ -1,11 +1,19 @@
 ----------------------------------------------------------------------
+When I try to display datfiles\foo.dat ldglite will instead display
+%LDRAWDIR%\models\foo.dat if it exists (overriding my explicit path
+on the command line).  This is perhaps OK for parts, but for the top 
+level file it should look in the specified path first.  Both parsers
+have this problem.  I should probably wait for the new Ldraw.ini 
+configurable search strategy to happen before fixing this though.
+
+----------------------------------------------------------------------
 I should probably make an LSYNTH plugin.
 
 ----------------------------------------------------------------------
 Fix the LD parser to handle Mac line endings on whatever platform I 
 might run it on.  In ldlite.l it seems to do something for [\n] but
 treats the chars [ \t\r] as whitespace.  I suppose a cheap hack would
-be to trean [\r] the same as [\n] even though that would mean extra
+be to treat [\r] the same as [\n] even though that would mean extra
 parsing for DOS/Windows files which use \r\n.
 
 Change this:
@@ -36,7 +44,7 @@ passing things on to GLUT.
 ----------------------------------------------------------------------
 Hey, for antialiased lines perhaps I could use a depth test of 
 GL_LEQUAL to allow edge lines from adjacent quads to blend with
-each other instead of just rendomly letting one supercede the other.
+each other instead of just randomly letting one supercede the other.
 
 ----------------------------------------------------------------------
 Now that I've expanded the glut menus beyond the 255 choices allowed
