@@ -28,6 +28,27 @@ extern float m_m[4][4];
 
 static struct L3LineS *SelectedLinePtr = NULL;
 
+static struct L3PartS Parts0 = {0};
+
+/*****************************************************************************/
+int RestorePart0(void)
+{
+  memcpy(&Parts[0], &Parts0, sizeof(struct L3PartS));
+  memset(&Parts0, 0, sizeof(struct L3PartS));
+}
+
+/*****************************************************************************/
+int StashPart0(void)
+{
+  if (Parts0.DatName)
+  {
+    RestorePart0();
+    return;
+  }
+  memcpy(&Parts0, &Parts[0], sizeof(struct L3PartS));
+  memset(&Parts[0], 0, sizeof(struct L3PartS));
+}
+
 /*****************************************************************************/
 int Find1Part(int partnum)
 {
