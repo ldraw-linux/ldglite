@@ -444,6 +444,7 @@ void pasteCommand(int x, int y)
     
     if (token && strlen(token))
     {
+      // If subsequent part, insert last part and start this one.
       if (i > 0)
       {
 	edit_mode_keyboard('\n', x, y);
@@ -451,6 +452,10 @@ void pasteCommand(int x, int y)
 	edit_mode_keyboard('p', x, y);
       }
       strcat(dst, token);
+
+      // Only do more than one if it's a part.
+      if (ecommand[0] != 'p') 
+	break;
     }
   }
   
@@ -4848,7 +4853,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
   case 127: // Delete
     DelCurPiece();
     return 1;
-  case 22:
+  case 22: // Paste on Windows (CTRL-V) 
     edit_mode_keyboard('i', x, y);
     edit_mode_keyboard('p', x, y);
     pasteCommand(x, y);
@@ -5339,6 +5344,16 @@ void keyboard(unsigned char key, int x, int y)
     case '\r':
     case ' ':
 	break;
+    case 22: // Paste on Windows (CTRL-V)
+      // Consider doing something special here if they drag in multiple files.
+      // Perhaps I could make an MPD file out of it?
+      // For now, just load the first file.
+      strcpy(ecommand, "L");
+      pasteCommand(x, y);
+      if (ecommand[1])
+	loadnewdatfile(dirname(ecommand+1),basename(ecommand+1));
+      ecommand[0] = 0;
+      break;
     default:
 	return;
     }
