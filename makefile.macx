@@ -17,9 +17,10 @@ OFFSCREEN_LIBS= -framework AGL
 
 # Comment these out to disable the test GUI made with MUI.
 #
-#GUI_FLAGS=-DTEST_MUI_GUI
-#GUI_SRC=ldglgui.c
-#GUI_LIBS=-lmui
+GUI_FLAGS=-DTEST_MUI_GUI -I./mui/include
+GUI_SRC=ldglgui.c
+GUI_LIBS=-L./mui/lib/mui -lmui
+LIBS = libmui.a
 
 #GL_LIBS=-L/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries
 #GLUT_LIBS=-L/System/Library/Frameworks/GLUT.framework/Versions/A/Libraries
@@ -37,7 +38,7 @@ OBJS = $(SRCS:.c=.o)
 
 all	: ldglite
 
-ldglite:   $(OBJS)
+ldglite:   $(OBJS) $(LIBS)
 	$(CC) $(CFLAGS) $(OBJS) -o ldglite $(GL_LIBS) $(PNG_LIBS) $(GUI_LIBS) -lm
 	rm -rf l3glite
 	ln -s ldglite l3glite
