@@ -19,7 +19,6 @@
 // ldlite.h : main header file for the ldlite application
 //
 
-#if 0
 #if !defined(AFX_ldlite_H__A4E41405_245B_11D2_A945_0080ADB46730__INCLUDED_)
 #define AFX_ldlite_H__A4E41405_245B_11D2_A945_0080ADB46730__INCLUDED_
 
@@ -32,7 +31,6 @@
 #endif
 
 #include "resource.h"       // main symbols
-#endif
 
 /////////////////////////////////////////////////////////////////////////////
 // CldliteApp:
