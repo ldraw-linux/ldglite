@@ -46,7 +46,7 @@ ldglite:   $(OBJS) $(LIBS)
 	ln -s ldglite l3gledit
 
 libmui.a:
-	if [ -d mui/lib/mui ] ; then cd mui/lib/mui ; $(MAKE) -f Makefile $@ ; fi
+	if [ -d mui/lib/mui ] ; then cd mui/lib/mui ; $(MAKE) -f Makefile.macx $@ ; fi
 
 l3glite:   ldglite
 
