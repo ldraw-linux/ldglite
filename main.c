@@ -8266,8 +8266,20 @@ int getDisplayProperties()
   buffer_swap_mode = SWAP_TYPE_UNDEFINED;
 #endif
 
+  /*
+    NOTE:  DRI libGL used in in indirect mode sends GLX protocol messages
+    to the X server which are executed by the GLcore renderer.  Stand-alone
+    Mesa's non-DRI libGL doesn't know anything about GLX.  It effectively
+    translates OpenGL calls into Xlib calls.
+
+    You can force indirect rendering mode by setting the
+    LIBGL_ALWAYS_INDIRECT environment variable.  
+
+    Hmmm, so maybe I should NOT make assumptions about SWAP for indirect.  
+  */
+
   // This will leave "Mesa Offscreen" with SWAP_TYPE_UNDEFINED (OK)
-  if (!strcmp(rendstr, "Mesa X11") || !strcmp(rendstr, "Mesa GLX Indirect"))
+  if (!strcmp(rendstr, "Mesa X11")) // || !strcmp(rendstr,"Mesa GLX Indirect"))
     {
       // MESA 4.0 no longer seems to #define MESA so check GL_RENDERER instead.
       buffer_swap_mode = SWAP_TYPE_NODAMAGE;
