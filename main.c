@@ -8709,23 +8709,34 @@ main(int argc, char **argv)
   InitInstance();
   platform_setpath();
   CldliteCommandLineInfo();
-  ParseParams(&argc, argv);
 
 #if !defined(MAC)
-  // Get params first so we can skip this if rendering in OSMesa
+#  ifdef MACOS_X
+  // I hope OSX glutinit() will ADD the filename of a dropped file to argv.
+  // (I know it removes some things.)
+  // So I call glutInit ahead of ParseParams.
   if (OffScreenRendering == 0)
   {
-#  ifdef MACOS_X
     //The GLUT framework will chdir to the Resources folder of your 
     // application bundle on glutInit!  Ouch!
     char cwdpath[512];
     getcwd(cwdpath, 512);
     glutInit(&argc, argv);
     chdir(cwdpath); // problem with chdir to dir with spaces in win32.
-#  else
-    glutInit(&argc, argv);
-#  endif
   }
+#  endif
+#endif
+
+  ParseParams(&argc, argv);
+
+#if !defined(MAC)
+#  ifndef MACOS_X
+  // Get params first so we can skip this if rendering in OSMesa
+  if (OffScreenRendering == 0)
+  {
+    glutInit(&argc, argv);
+  }
+#  endif
 #endif
 
   Width = ldraw_commandline_opts.V_x;
