@@ -17,7 +17,7 @@ all	: ldglite
 
 ldglite:   ldliteVR_main.o platform.o dirscan.o camera.o f00QuatC.o quant.o stub.o y.tab.o lex.yy.o qbuf.o main.o L3Math.o L3Input.o L3View.o
 	$(CC) $(CFLAGS) ldliteVR_main.o platform.o dirscan.o camera.o f00QuatC.o quant.o stub.o y.tab.o lex.yy.o qbuf.o main.o L3Math.o L3Input.o L3View.o -o ldglite.exe -I. $(PNG_LIBS) -lglut32 -lglu32 -lopengl32
-	cp ldglite.exe l3glite.exe
+	copy ldglite.exe l3glite.exe
 
 l3glite:   ldglite
 
