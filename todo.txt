@@ -1,4 +1,11 @@
 ----------------------------------------------------------------------
+Now that I've expanded the glut menus beyond the 255 choices allowed
+in the glut keyboard callback, perhaps I can add more image output
+choices than just bitmap.  Maybe a whole picture submenu.
+
+How about a spinmode submenu?  What else in the menus can be fixed now?
+
+----------------------------------------------------------------------
 Reread Karim's Artemis project pages and see how ldglite fits into
 that particular vision now that it supports plugins and all.
 
@@ -18,6 +25,10 @@ Make some way to register ldglite since win2k and winXP do not allow
 creation of new MIME types via explorer.  Either do something like
 ldglite -reg or distribute a ldglite.reg file with instructions on how 
 to set the directory path of the executable. 
+
+Oh, Oh, I know.  This could be a plugin.  The registerme plugin.
+That way I can distribute it with the windows binary only, and it'll
+already know what directory the executable is installed in.
 
 Hey, I wonder if that OSX bundle junk can be used to register the .LDR
 extension on a Mac to make it launch ldglite on a .LDR file by clicking
