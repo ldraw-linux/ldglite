@@ -897,3 +897,173 @@ int Switch1Part(int partnum)
     return 1;
 }
 
+/*****************************************************************************/
+// This can be used to free any parts temporarily loaded for parts.lst
+// Just save nParts, load & show a part, then FreeSomeParts(oldnParts, nParts)
+/*****************************************************************************/
+extern void FreePart(struct L3PartS * PartPtr);
+
+/*****************************************************************************/
+void FreeSomeParts(firstpart, lastpart)
+{
+   register int         i;
+   for (i = firstpart; i < lastpart; i++)
+      FreePart(&Parts[i]);
+   //nParts = firstpart;
+}
+
+/*****************************************************************************/
+#include <GL/Glut.h>
+
+extern GLdouble model_mat[4*4];
+extern GLdouble proj_mat[4*4];
+extern GLint view_mat[4];
+
+extern GLint Width;
+extern GLint Height;
+
+typedef struct vector3d_struct {
+	float x;
+	float y;
+	float z;
+} vector3d;
+
+/*****************************************************************************/
+void GetPartBox(struct L3LineS *LinePtr, int sc[4])
+{
+  float          r[4];
+  int            i;
+  float          r2[4];
+  vector3d       bb3d[8];
+  float m[4][4];
+  struct L3PartS *PartPtr = LinePtr->PartPtr;
+
+  GLdouble s0x, s0y, s0z;
+  GLdouble s1x, s1y, s1z;
+  GLdouble s2x, s2y, s2z;
+
+  M4M4Mul(m,m_m,LinePtr->v); // Adjust center point of part by view matrix.
+
+  r2[0]=PartPtr->BBox[0][0]; //bb[0]
+  r2[1]=PartPtr->BBox[0][1];
+  r2[2]=PartPtr->BBox[0][2];
+  M4V3Mul(r,m,r2);
+  bb3d[0].x=r[0];
+  bb3d[0].y=r[1];
+  bb3d[0].z=r[2];
+  r2[0]=PartPtr->BBox[0][0]; //bb[1]
+  r2[1]=PartPtr->BBox[1][1];
+  r2[2]=PartPtr->BBox[0][2];
+  M4V3Mul(r,m,r2);
+  bb3d[1].x=r[0];
+  bb3d[1].y=r[1];
+  bb3d[1].z=r[2];
+  r2[0]=PartPtr->BBox[1][0]; //bb[2]
+  r2[1]=PartPtr->BBox[1][1];
+  r2[2]=PartPtr->BBox[0][2];
+  M4V3Mul(r,m,r2);
+  bb3d[2].x=r[0];
+  bb3d[2].y=r[1];
+  bb3d[2].z=r[2];
+  r2[0]=PartPtr->BBox[1][0]; //bb[3]
+  r2[1]=PartPtr->BBox[0][1];
+  r2[2]=PartPtr->BBox[0][2];
+  M4V3Mul(r,m,r2);
+  bb3d[3].x=r[0];
+  bb3d[3].y=r[1];
+  bb3d[3].z=r[2];
+  r2[0]=PartPtr->BBox[0][0]; //bb[4]
+  r2[1]=PartPtr->BBox[0][1];
+  r2[2]=PartPtr->BBox[1][2];
+  M4V3Mul(r,m,r2);
+  bb3d[4].x=r[0];
+  bb3d[4].y=r[1];
+  bb3d[4].z=r[2];
+  r2[0]=PartPtr->BBox[0][0]; //bb[5]
+  r2[1]=PartPtr->BBox[1][1];
+  r2[2]=PartPtr->BBox[1][2];
+  M4V3Mul(r,m,r2);
+  bb3d[5].x=r[0];
+  bb3d[5].y=r[1];
+  bb3d[5].z=r[2];
+  r2[0]=PartPtr->BBox[1][0]; //bb[6]
+  r2[1]=PartPtr->BBox[1][1];
+  r2[2]=PartPtr->BBox[1][2];
+  M4V3Mul(r,m,r2);
+  bb3d[6].x=r[0];
+  bb3d[6].y=r[1];
+  bb3d[6].z=r[2];
+  r2[0]=PartPtr->BBox[1][0]; //bb[7]
+  r2[1]=PartPtr->BBox[0][1];
+  r2[2]=PartPtr->BBox[1][2];
+  M4V3Mul(r,m,r2);
+  bb3d[7].x=r[0];
+  bb3d[7].y=r[1];
+  bb3d[7].z=r[2];
+
+  // Gotta convert to screen coords first for opengl.
+  s2x = s1y = 0.0;
+  s0x = Width;
+  s0y = Height;
+
+  for (i = 0; i < 8; i++)
+  {
+    gluProject((GLdouble)bb3d[i].x, (GLdouble)-bb3d[i].y, (GLdouble)-bb3d[i].z,
+	       model_mat, proj_mat, view_mat,
+	       &s1x, &s1y, &s1z);
+
+    if (s1x < s0x)
+      s0x = s1x;
+    if (s1y < s0y)
+      s0y = s1y;
+
+    if (s1x > s2x)
+      s2x = s1x;
+    if (s1y > s2y)
+      s2y = s1y;
+  }
+  // FUDGE FACTOR.
+  s0x -= 8;
+  s0y -= 8;
+  s2x += 8;
+  s2y += 8;
+
+  if (s0x < 0.0) s0x = 0.0;
+  if (s0y < 0.0) s0y = 0.0;
+  if (s2x > Width) s2x = Width;
+  if (s2y > Height) s2y = Height;
+
+  sc[0] = (int)s0x;
+  sc[1] = (int)s0y;
+  sc[2] = (int)(s2x - s0x);
+  sc[3] = (int)(s2y - s0y);
+
+  if (sc[2] <= 0) sc[2] = 1;
+  if (sc[3] <= 0) sc[3] = 1;
+}
+
+/*****************************************************************************/
+int Get1PartBox(int partnum, int sc[4])
+{
+    int            i = 0;
+    struct L3LineS *LinePtr;
+
+    if (SelectedLinePtr)
+	LinePtr = SelectedLinePtr;
+
+    else 
+      for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+    {
+	if (i == partnum)
+	    break;	    // Found the part
+	i++;
+    }
+
+    if (!LinePtr)
+	return 0; //partnum not found
+
+    GetPartBox(LinePtr, sc);
+
+    return 1;
+}
+
