@@ -116,8 +116,10 @@ static int list_made = 0;
 #define SHADED_MODE 	0x0004
 #define BBOX_MODE 	0x0008
 #define INVISIBLE_MODE 	0x0010
+#define STUDONLY_MODE 	0x0020
 
 #define USE_DOUBLE_BUFFER
+#define USE_OPENGL_STENCIL
 
 // Stuff for editing mode
 // contents of back buffer after glutSwapBuffers():
@@ -133,9 +135,13 @@ int buffer_swap_mode = SWAP_TYPE_NODAMAGE;
 int buffer_swap_mode = SWAP_TYPE_UNDEFINED;
 #endif
 
+int use_stencil_for_XOR = 1;
+
 int editing = 0;
 int curpiece = 0;
 int movingpiece = -1;
+int StartLineNo = -1;
+int DrawToCurPiece = 0;
 char editingprevmode = 'C';
 int editingkey = -1;
 int SOLID_EDIT_MODE = 0;
@@ -151,13 +157,14 @@ int staticbuffer = GL_BACK;
 int screenbuffer = GL_FRONT; 
 // Buffer pointers and IDs for speedier opengl extension functions.
 
+GLint DepthBits = 0;
 GLuint cbuffer_region = 0;
 GLuint zbuffer_region = 0;
 static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
 extern int Find1PartMatrix(int partnum, float m[4][4]);
 extern int Find1Part(int partnum);
 extern int Draw1Part(int partnum, int Color);
-extern int Move1Part(int partnum, float m[4][4]);
+extern int Move1Part(int partnum, float m[4][4], int premult);
 extern int Rotate1Part(int partnum, float m[4][4]);
 extern int Translate1Part(int partnum, float m[4][4]);
 extern int Color1Part(int partnum, int Color);
@@ -1208,6 +1215,17 @@ void platform_fixcase(char *path_str)
 }
 
 /***************************************************************/
+#ifndef WINDOWS
+int _strlwr(char *str)
+{
+  int i;
+
+  for(i=0; i<strlen(str); i++) 
+    str[i] = tolower(str[i]);
+}
+#endif
+
+/***************************************************************/
 /*  Global vars for GLUT event handlers
 /***************************************************************/
 GLfloat zoom = 0.0;
@@ -1817,16 +1835,26 @@ render(void)
   if (qualityLines && (zWire == 0))
   {
     zSolid = 1;
-  }
-  DrawModel();
-  if (qualityLines && (zWire == 0))
-  {
+    DrawModel();
     zSolid = 0;
     zWire = 1;
     stepcount = 0; // NOTE: Not sure what effect this will have...
     DrawModel();
     zWire = 0;
   }
+#ifdef USE_OPENGL_OCCLUSION
+  else if (editing && !(ldraw_commandline_opts.F & STUDLESS_MODE))
+  {
+    ldraw_commandline_opts.F |= STUDLESS_MODE;
+    DrawModel();
+    ldraw_commandline_opts.F &= (!STUDLESS_MODE);
+    ldraw_commandline_opts.F |= STUDONLY_MODE;
+    DrawModel();
+    ldraw_commandline_opts.F &= (!STUDONLY_MODE);
+  }
+#endif
+  else 
+    DrawModel();
 #endif
   }
   else
@@ -2395,14 +2423,71 @@ int XORcurPiece()
 
   rendersetup();
 
+#ifdef USE_OPENGL_STENCIL
+  // Too many lines cancel out in wireframe mode when viewed head on.
+  // I could make sure I only XOR each pixel once by setting
+  // the stencil buffer at each write but only passing when it's zero.
+  if (use_stencil_for_XOR)
+  {
+    glStencilMask(GL_TRUE);                  // Enable stencil buffer writes.
+    glClearStencil(0x0);                     // Set stencil clear color
+    glClear(GL_STENCIL_BUFFER_BIT);          // Perhaps just clear the bbox?
+    glEnable(GL_STENCIL_TEST);               // Enable the stencil Test.
+    glStencilFunc(GL_EQUAL, 0x0, 0x1);  // Stencil test(fn, refbits, bitmask)
+    glStencilOp(GL_KEEP, GL_KEEP, GL_INVERT); // S-Buf write fns(sf, zf, zp)
+  }
+#ifdef TNT2_TEST
+  else
+  {
+    glStencilMask(GL_TRUE);                  // Enable stencil buffer writes.
+    glClearStencil(0x01);                     // Set stencil clear color
+    glClear(GL_STENCIL_BUFFER_BIT);          // Perhaps just clear the bbox?
+    glEnable(GL_STENCIL_TEST);               // Enable the stencil Test.
+    glStencilFunc(GL_EQUAL, 0x1, 0x1);  // Stencil test(fn, refbits, bitmask)
+    glStencilOp(GL_KEEP, GL_ZERO, GL_ZERO); // S-Buf write fns(sf, zf, zp)
+  }
+#endif
+#endif
+
   glDisable(GL_LIGHTING); // No need for lighting
-  glDisable( GL_DEPTH_TEST ); // don't test for depth -- just put in front
+  if (movingpiece == curpiece)
+  {
+    z_line_offset += 1.0;
+    glDepthMask(GL_FALSE); // keep depth test, just disable depth writes
+
+  }
+#ifdef TNT2_TEST
+  else if (!use_stencil_for_XOR)
+  {
+    z_line_offset += 1.0;
+    //glDepthFunc(GL_ALWAYS);     // New value always wins.
+    glDepthMask(GL_FALSE); // keep depth test, just disable depth writes
+  }
+#endif
+  else
+    glDisable( GL_DEPTH_TEST ); // don't test for depth -- just put in front
   glEnable( GL_COLOR_LOGIC_OP ); 
   glLogicOp(GL_XOR);
   glColor3f(1.0, 1.0, 1.0); // white
-  glCurColorIndex = -1;
+  glCurColorIndex = -2;
   retval = Draw1Part(curpiece, 15);
   glLogicOp(GL_COPY);
+  if (movingpiece == curpiece)
+  {
+    z_line_offset -= 1.0;
+  }
+#ifdef TNT2_TEST
+  else if (!use_stencil_for_XOR)
+  {
+    z_line_offset -= 1.0;
+    glDepthFunc(GL_LESS);     // New value always wins.
+  }
+#endif
+#ifdef USE_OPENGL_STENCIL
+  glDisable(GL_STENCIL_TEST);
+  glStencilMask(GL_FALSE);
+#endif
+  glDepthMask(GL_TRUE); // keep depth test, just disable depth writes
   glEnable( GL_DEPTH_TEST ); 
   glDisable( GL_COLOR_LOGIC_OP ); 
 
@@ -2610,17 +2695,17 @@ void display(void)
 
     if (panning || dirtyWindow)
     {
+      if (panning)
+      {
+	glDrawBuffer(staticbuffer); 
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	render();
+	glutSwapBuffers();
+	glDrawBuffer(screenbuffer); 
+      }
       if (SOLID_EDIT_MODE)
       {
-	if (panning)
-	{
-	  glDrawBuffer(staticbuffer); 
-	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	  render();
-	  glutSwapBuffers();
-	  glDrawBuffer(screenbuffer); 
-	}
-	else 
+	if (!panning)
 	{
 	  if (movingpiece == curpiece)
 	  {
@@ -2645,25 +2730,22 @@ void display(void)
       }
       else
       {
-	if (movingpiece == curpiece)
+	if (!panning)
 	{
-	  Select1Part(curpiece);
-	  if (panning)
-	    glDrawBuffer(staticbuffer); 
-	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	  render();
-	  if (panning)
+	  if (movingpiece == curpiece)
 	  {
-	    glutSwapBuffers();
-	    glDrawBuffer(screenbuffer); 
+	    Select1Part(curpiece);
+	    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	    render();
+	    UnSelect1Part(curpiece);
 	  }
-	  UnSelect1Part(curpiece);
+	  else
+	  {
+	    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	    render();
+	  }
 	}
-	else
-	{
-	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	  render();
-	}
+	rendersetup();
 	XORcurPiece();
       }
       if (!panning)
@@ -2885,6 +2967,14 @@ void TranslateCurPiece(float m[4][4])
 void HiLightCurPiece(int piecenum)
 {
   EraseCurPiece();
+  if (DrawToCurPiece)
+  {
+    //if (movingpiece != curpiece)
+    {
+      rendersetup();
+      Draw1Part(curpiece, -1);
+    }
+  }
   curpiece = Find1Part(piecenum);
   if (movingpiece >= 0)
   {
@@ -2936,6 +3026,14 @@ void InsertNewPiece(void)
   }
   else 
     EraseCurPiece();
+  if (DrawToCurPiece)
+  {
+    //if (movingpiece != curpiece)
+    {
+      rendersetup();
+      Draw1Part(curpiece, -1);
+    }
+  }
   curpiece = Add1Part(curpiece);
   if (SOLID_EDIT_MODE)
   {
@@ -2981,6 +3079,61 @@ void SetTitle(int showit)
 
   if (showit)
     glutSetWindowTitle(title);
+}
+
+/***************************************************************/
+move1matrix(float m[4][4], float dx, float dy, float dz)
+{
+#if 0
+  // Consider projecting (dx,dy,dz) from modelview to world coords.
+  // Whichever component is largest is the axis to move along.
+  // Or use dot product of (dx,dy,dz) with projected(1,1,1) ???
+  M4M4Mul(m,m_m,LinePtr->v); // Adjust center point of part by view matrix.
+  printf("Project(%.3f, %.3f, %.3f)\n", x, y, z);
+#endif
+  
+  if (m_viewMatrix == Back)
+  {
+    m[0][3] -= (dx * moveXamount);
+    m[1][3] -= (dy * moveYamount);
+    m[2][3] -= (dz * moveZamount);
+  }
+  else if (m_viewMatrix == Left)
+  {
+    m[0][3] -= (dz * moveXamount);
+    m[1][3] -= (dy * moveYamount);
+    m[2][3] += (dx * moveZamount);
+  }
+  else if (m_viewMatrix == Right)
+  {
+    m[0][3] += (dz * moveXamount);
+    m[1][3] -= (dy * moveYamount);
+    m[2][3] -= (dx * moveZamount);
+  }
+  else if (m_viewMatrix == Above)
+  {
+    m[0][3] -= (dy * moveXamount);
+    m[1][3] += (dz * moveYamount);
+    m[2][3] += (dx * moveZamount);
+  }
+  else if (m_viewMatrix == Beneath)
+  {
+    m[0][3] += (dy * moveXamount);
+    m[1][3] -= (dz * moveYamount);
+    m[2][3] += (dx * moveZamount);
+  }
+  else if (m_viewMatrix == Front)
+  {
+    m[0][3] += (dx * moveXamount);
+    m[1][3] -= (dy * moveYamount);
+    m[2][3] += (dz * moveZamount);
+  }
+  else
+  {
+    m[0][3] += (dx * moveXamount);
+    m[1][3] -= (dz * moveYamount);
+    m[2][3] += (dy * moveZamount);
+  }
 }
 
 /***************************************************************/
@@ -3080,27 +3233,33 @@ int edit_mode_fnkeys(int key, int x, int y)
     HiLightCurPiece(curpiece+1);
     break;
   case GLUT_KEY_RIGHT:
-    m[0][3] += moveXamount;
+    move1matrix(m, 1.0, 0.0, 0.0);
+    //    m[0][3] += moveXamount;
     TranslateCurPiece(m);
     break;
   case GLUT_KEY_LEFT:
-    m[0][3] -= moveXamount;
+    move1matrix(m, -1.0, 0.0, 0.0);
+    //    m[0][3] -= moveXamount;
     TranslateCurPiece(m);
     break;
   case GLUT_KEY_UP:
-    m[2][3] += moveZamount;
+    move1matrix(m, 0.0, 1.0, 0.0);
+    //    m[2][3] += moveZamount;
     TranslateCurPiece(m);
     break;
   case GLUT_KEY_DOWN:
-    m[2][3] -= moveZamount;
+    move1matrix(m, 0.0, -1.0, 0.0);
+    //    m[2][3] -= moveZamount;
     TranslateCurPiece(m);
     break;
   case GLUT_KEY_HOME:
-    m[1][3] -= moveYamount;
+    move1matrix(m, 0.0, 0.0, 1.0);
+    //    m[1][3] -= moveYamount;
     TranslateCurPiece(m);
     break;
   case GLUT_KEY_END:
-    m[1][3] += moveYamount;
+    move1matrix(m, 0.0, 0.0, -1.0);
+    //    m[1][3] += moveYamount;
     TranslateCurPiece(m);
     break;
   default:
@@ -3207,7 +3366,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	break;
       case 'o':
 	sprintf(eprompt[0], "Options: ");
-	sprintf(eprompt[1], "Line-as-stud(on) Start-at-line");
+	sprintf(eprompt[1], "Line-as-stud(on) Start-at-line Draw-to-current");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
@@ -3328,8 +3487,13 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	return 1;
       case 's':
 	EraseCurPiece();
+	movingpiece = -1;
 	Comment1Part(curpiece, "STEP");
-	HiLightCurPiece(i);
+	glDepthMask(GL_TRUE); // enable updates to depth buffer
+	dirtyWindow = 1;
+	glutPostRedisplay();
+	Print1Part(curpiece, stdout) == 0;
+	clear_edit_mode_gui();
 	return 1;
       }
       return 1;
@@ -3444,6 +3608,13 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	return 1;
       case 's':
 	// Start display at curpiece
+	StartLineNo = curpiece;
+	clear_edit_mode_gui();
+	edit_mode_gui();
+	return 1;
+      case 'd':
+	// Toggle draw to curpiece
+	DrawToCurPiece ^= 1;
 	clear_edit_mode_gui();
 	edit_mode_gui();
 	return 1;
@@ -3475,7 +3646,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	edit_mode_gui();
 	break;
       case 'p':
-	sscanf(&(ecommand[1]),"%s", partname);
+	//sscanf(&(ecommand[1]),"%s", partname);
+	strcpy(partname, &(ecommand[1]));
 	CopyStaticBuffer();
 	movingpiece = curpiece;
 	if (strrchr(partname, '.') == NULL)
@@ -3532,27 +3704,11 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	CopyStaticBuffer();
 	angle *= PI_180;
 	m[1][1] = (float)cos(angle);
-	m[1][2] = (float)sin(angle);
-	m[2][1] = (float)(-1.0*sin(angle));
+	m[1][2] = (float)(-1.0*sin(angle));
+	m[2][1] = (float)sin(angle);
 	m[2][2] = (float)cos(angle);
 	movingpiece = curpiece;
-	Move1Part(curpiece, m);
-	DrawMovingPiece();
-	Print1Part(curpiece, stdout);
-	edit_mode_gui();
-	break;
-      case 'Z':
-	sscanf(&(ecommand[1]),"%f", &f);
-	angle = f;
-	printf("Rotate about %c by %f\n",c,angle);
-	CopyStaticBuffer();
-	angle *= PI_180;
-	m[0][0] = (float)cos(angle);
-	m[1][0] = (float)sin(angle);
-	m[0][1] = (float)(-1.0*sin(angle));
-	m[1][1] = (float)cos(angle);
-	movingpiece = curpiece;
-	Move1Part(curpiece, m);
+	Move1Part(curpiece, m, 0);
 	DrawMovingPiece();
 	Print1Part(curpiece, stdout);
 	edit_mode_gui();
@@ -3568,7 +3724,23 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	m[2][0] = (float)(-1.0*sin(angle));
 	m[2][2] = (float)cos(angle);
 	movingpiece = curpiece;
-	Move1Part(curpiece, m);
+	Move1Part(curpiece, m, 0);
+	DrawMovingPiece();
+	Print1Part(curpiece, stdout);
+	edit_mode_gui();
+	break;
+      case 'Z':
+	sscanf(&(ecommand[1]),"%f", &f);
+	angle = f;
+	printf("Rotate about %c by %f\n",c,angle);
+	CopyStaticBuffer();
+	angle *= PI_180;
+	m[0][0] = (float)cos(angle);
+	m[1][0] = (float)sin(angle);
+	m[0][1] = (float)(-1.0*sin(angle));
+	m[1][1] = (float)cos(angle);
+	movingpiece = curpiece;
+	Move1Part(curpiece, m, 0);
 	DrawMovingPiece();
 	Print1Part(curpiece, stdout);
 	edit_mode_gui();
@@ -3589,10 +3761,15 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	edit_mode_gui();
 	break;
       case 'C':
-	sscanf(&(ecommand[1]),"%s", partname);
+	strcpy(partname, &(ecommand[1]));
 	EraseCurPiece();
+	movingpiece = -1;
 	Comment1Part(curpiece, partname);
-	HiLightCurPiece(i);
+	glDepthMask(GL_TRUE); // enable updates to depth buffer
+	dirtyWindow = 1;
+	glutPostRedisplay();
+	Print1Part(curpiece, stdout) == 0;
+	clear_edit_mode_gui();
 	break;
       default:
 	edit_mode_gui();
@@ -3635,7 +3812,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     m[2][0] = -1.0; //(float)(-1.0*sin(angle));
     m[2][2] = 0.0;  //(float)cos(angle);
     movingpiece = curpiece;
-    Move1Part(curpiece, m);
+    Move1Part(curpiece, m, 1);
     DrawMovingPiece();
     Print1Part(curpiece, stdout);
     edit_mode_gui();
@@ -3644,7 +3821,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     InsertNewPiece();
     return 1;
   case 'e':
-    // printf("Erase and redraw screen (Shouldn't be needed)\n");
+    // printf("Erase and redraw screen.\n");
     dirtyWindow = 1;
     glutPostRedisplay();
     return 1;
@@ -4189,6 +4366,7 @@ void keyboard(unsigned char key, int x, int y)
     {
       parse_view(m_viewMatrix);
       initCamera(); // Reset the camera position for any stock views.
+      dirtyWindow = 1;
     }
 
     glutPostRedisplay();
@@ -5143,10 +5321,20 @@ void ParseParams(int *argc, char **argv)
 	  parsername = L3_PARSER;
 	  use_quads = 1;
 	}
-	else if ((pszParam[1] == 'd') || (pszParam[1] == 'D'))
+	else if (toupper(pszParam[1]) == 'D')
 	{
 	  parsername = LDLITE_PARSER;
 	  use_quads = 0;
+	}
+	else if (pszParam[1] == 'e')
+	{
+	  SOLID_EDIT_MODE = 0;
+	  editing = 1;
+	}
+	else if (pszParam[1] == 'E')
+	{
+	  SOLID_EDIT_MODE = 1;
+	  editing = 1;
 	}
 	else 
 	  ldraw_commandline_opts.log_output = 1;
@@ -5322,6 +5510,7 @@ main(int argc, char **argv)
   int opts, view, colors, helpmenunum;
   int exitcode;
   char *str, *verstr, *extstr, *vendstr, *rendstr;
+  unsigned int displaymode;
   
   platform_startup(&argc, &argv);
 	
@@ -5391,17 +5580,20 @@ main(int argc, char **argv)
   }
 #endif
 
-  //glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL);
+  displaymode = GLUT_RGB | GLUT_DEPTH;
 #ifdef USE_DOUBLE_BUFFER
+  displaymode |= GLUT_DOUBLE;
+#endif
+#ifdef USE_OPENGL_STENCIL
+  displaymode |= GLUT_STENCIL;
+#endif
 #ifdef TILE_RENDER_OPTION
   if (tiledRendering)
-    glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH);
-  else
+    displaymode = GLUT_RGB | GLUT_DEPTH;
 #endif
-  glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
-#else
-  glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH);
-#endif
+
+  glutInitDisplayMode(displaymode);
+
 
 #if (GLUT_XLIB_IMPLEMENTATION >= 13)
   if (ldraw_commandline_opts.V_x < -1)
@@ -5438,6 +5630,9 @@ main(int argc, char **argv)
   printf("GL_VENDOR ='%s'\n", (vendstr = (char *)glGetString(GL_VENDOR)));
   printf("GL_RENDERER ='%s'\n", (rendstr = (char *)glGetString(GL_RENDERER)));
   
+  glGetIntegerv(GL_DEPTH_BITS, &DepthBits);
+  printf("GL_DEPTH_BITS = %d\n", DepthBits);
+
   if (strstr(extstr, "GL_WIN_swap_hint"))
   {
     if ((!strcmp(verstr, "1.1.0")) &&
@@ -5448,6 +5643,13 @@ main(int argc, char **argv)
       // Assume Microsoft software opengl which blits rather than page flips.
       buffer_swap_mode = SWAP_TYPE_COPY;
     }
+  }
+
+  // Stencil works with Microsoft Generic and Mesa, but not with the TNT2.
+  if (strstr(vendstr, "NVIDIA"))
+  {
+    printf("Stencil buffer disabled for XOR with NVIDIA driver.\n");
+    use_stencil_for_XOR = 0;
   }
 
   test_ktx_buffer_region(extstr);
@@ -5592,6 +5794,33 @@ main(int argc, char **argv)
   initCamera();
   init();
 
+  // Check if this is l3gledit or ldgledit or -le.  If so then editing = 1.
+  strcpy(filename, progname);
+  _strlwr(filename);
+  if ((editing == 1) || (strstr(filename, "ledit")))
+  {
+    editing = 1;
+    //SOLID_EDIT_MODE = 0;
+
+    // if (ldraw_commandline_opts.debug_level == 1)
+    printf("Editing mode =  %d{%d}\n", editing, SOLID_EDIT_MODE);
+    
+    // Switch to continuous mode.
+    editingprevmode = ldraw_commandline_opts.M;
+    ldraw_commandline_opts.M = 'C';
+    ldraw_commandline_opts.poll = 0; // Disable polling 
+    
+    curstep = 0; // Reset to first step
+    dirtyWindow = 1;
+
+    curpiece = 0;
+    movingpiece = -1;
+
+    parsername = L3_PARSER;
+    use_quads = 1;
+    list_made = 0; // Gotta reparse the file.
+  }
+   
   glutMainLoop();
 
   exitcode = 0; // no error
