@@ -1451,6 +1451,54 @@ extern void hoser(float m[4][4], int color, int steps, int drawline,
 #define PI 3.1415927
 
 /*****************************************************************************/
+int hoseends(char *segname, int color, float m[4][4])
+{
+    struct L3LineS *NextPtr;
+    struct L3LineS *FirstPtr;
+    struct L3LineS *LastPtr;
+    struct L3PartS *PartPtr;
+
+    FirstPtr = SelectedLinePtr;
+    LastPtr = FirstPtr->NextLine;
+
+    // Add a segname part at far end of the hose.
+    NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+    memcpy(NextPtr, LastPtr, sizeof(struct L3LineS));
+    PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
+    memcpy(PartPtr, LastPtr->PartPtr, sizeof(struct L3PartS));
+    NextPtr->PartPtr = PartPtr;
+    NextPtr->Color = color;
+    // Link it in
+    NextPtr->NextLine = FirstPtr->NextLine; 
+    FirstPtr->NextLine = NextPtr;
+    // Switch to part 755.dat
+    SelectedLinePtr = NextPtr;
+    Swap1Part(0, segname);
+    //rotate it 180 degrees around X.
+    Move1Part(0, m, 1);
+    //Rotate1Part(i, m);
+    
+    // Add a segname part at far end of the hose.
+    NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+    memcpy(NextPtr, FirstPtr, sizeof(struct L3LineS));
+    PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
+    memcpy(PartPtr, FirstPtr->PartPtr, sizeof(struct L3PartS));
+    NextPtr->PartPtr = PartPtr;
+    NextPtr->Color = color;
+    // Link it in
+    NextPtr->NextLine = FirstPtr->NextLine; 
+    FirstPtr->NextLine = NextPtr;
+    // Switch to part 755.dat
+    SelectedLinePtr = NextPtr;
+    Swap1Part(0, segname);
+    //rotate it 180 degrees around X.
+    Move1Part(0, m, 1);
+    //Rotate1Part(i, m);
+    
+    return 0;
+}
+      
+/*****************************************************************************/
 int Hose1Part(int partnum, int steps)
 {
     float m[4][4] = {
@@ -1477,13 +1525,6 @@ int Hose1Part(int partnum, int steps)
     char *parttext = NULL;
     char *firstparttext = NULL;
     double         angle;
-
-    angle = PI;
-    m[1][1] = (float)cos(angle);
-    m[1][2] = (float)(-1.0*sin(angle));
-    m[2][1] = (float)sin(angle);
-    m[2][2] = (float)cos(angle);
-    // m[1][3] = 8.0;
 
     if (SelectedLinePtr)
 	LinePtr = SelectedLinePtr;
@@ -1517,54 +1558,28 @@ int Hose1Part(int partnum, int steps)
 
     // Backup SelectedLinePtr
     PrevPtr = SelectedLinePtr;
+    // Position the segment insertion point after the plug.
+    SelectedLinePtr = FirstPtr;
 
     if ((stricmp(SubPartDatName, "750.dat") == 0) ||
 	(stricmp(SubPartDatName, "752.dat") == 0))
     {
-      // Add a 755.dat plug part at far end of the hose.
-      NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
-      memcpy(NextPtr, LastPtr, sizeof(struct L3LineS));
-      PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
-      memcpy(PartPtr, LastPtr->PartPtr, sizeof(struct L3PartS));
-      NextPtr->PartPtr = PartPtr;
-      // Link it in
-      NextPtr->NextLine = FirstPtr->NextLine; 
-      FirstPtr->NextLine = NextPtr;
-      // Switch to part 755.dat
-      SelectedLinePtr = NextPtr;
-      Swap1Part(i, "755.dat");
-      //rotate it 180 degrees around X.
-      Move1Part(i, m, 1);
-      //Rotate1Part(i, m);
+      // Add some 755.dat plug parts at the ends of the hose.
+      // rotate them 180 degrees around X.
+      angle = PI;
+      m[1][1] = (float)cos(angle);
+      m[1][2] = (float)(-1.0*sin(angle));
+      m[2][1] = (float)sin(angle);
+      m[2][2] = (float)cos(angle);
+      // m[1][3] = 8.0;
+      hoseends("755.dat", CurColor, m);
 
-      // Add a 755.dat plug part at near end of the hose.
-      NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
-      memcpy(NextPtr, FirstPtr, sizeof(struct L3LineS));
-      PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
-      memcpy(PartPtr, FirstPtr->PartPtr, sizeof(struct L3PartS));
-      NextPtr->PartPtr = PartPtr;
-      // Link it in
-      NextPtr->NextLine = FirstPtr->NextLine; 
-      FirstPtr->NextLine = NextPtr;
-      // Switch to part 755.dat
-      SelectedLinePtr = NextPtr;
-      Swap1Part(i, "755.dat");
-      //rotate it 180 degrees around X.
-      Move1Part(i, m, 1);
-      //Rotate1Part(i, m);
-      
       FirstPtr = LinePtr->NextLine; 
       if (!FirstPtr)
 	return i;
       if (FirstPtr->LineType != 1)
 	return i;
       
-      NextPtr = FirstPtr->NextLine;
-      if (!NextPtr)
-	return i;
-      if (NextPtr->LineType != 1)
-	return i;
-
       // Get the names of the hose parts.
       firstparttext = strdup("756.dat");
       FixDatName(firstparttext);
@@ -1601,7 +1616,8 @@ int Hose1Part(int partnum, int steps)
       parttext = strdup("80.dat");
       FixDatName(parttext);
 
-      v1[1] = 0; // Offset in y of intermediate control points.
+      steps -=2;  // Subtract the end ribs from the total.
+      v1[1] = -4; // Offset in y of intermediate control points.
     }
     else if (stricmp(SubPartDatName, "stud3a.dat") == 0)
     {
@@ -1621,7 +1637,7 @@ int Hose1Part(int partnum, int steps)
       parttext = strdup("80.dat");
       FixDatName(parttext);
 
-      v1[1] = 0; // Offset in y of intermediate control points.
+      v1[1] = -3; // Move the end ribs up 3 to fit on the studs
     }
 
     // Get the 4 control points from the part locations.
@@ -1649,31 +1665,6 @@ int Hose1Part(int partnum, int steps)
     m[3][1] = r[1];
     m[3][2] = r[2];
     m[3][3] = 0;
-
-#if 0
-    // Convert LinePtr into comments.
-    strcpy(Comment, "Hosed: ");
-    n = strlen(Comment);
-    Print1LinePtr(LinePtr, i, &(Comment[n]));
-
-    //Start the inlined part with a blank comment.
-    Comment1LinePtr(LinePtr, " "); 
-
-    //Make 3 more comments.
-    NextPtr = LinePtr; 
-    for (i=0; i<3; i++)
-    {
-      LinePtr = NextPtr; 
-      NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
-      memcpy(NextPtr, LinePtr, sizeof(struct L3LineS));
-      NextPtr->Comment = NULL;
-      if (i == 0) //Then add the "Inlined" comment.
-	Comment1LinePtr(NextPtr, Comment);
-      else
-	Comment1LinePtr(NextPtr, " ");
-      LinePtr->NextLine = NextPtr; 
-    }
-#endif
 
     // Position the segment insertion point after the plug.
     SelectedLinePtr = FirstPtr;
