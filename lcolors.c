@@ -255,7 +255,7 @@ void zcolor_init()
 		  ZCOLOR *zcp = &(zcolor_table[i].primary);
 		  ZCOLOR *zcs = &(zcolor_table[i].dither);
 
-		  zcolor_table[i].inverse_index = 0;
+		  zcolor_table[i].inverse_index = zcolor_table[(i & 0xf0)>>4].inverse_index;
 		  *zcp = zcolor_table[(i & 0xf0)>>4].primary;
 		  *zcs = zcolor_table[i & 0xf].primary;
 
