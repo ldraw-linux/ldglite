@@ -6881,6 +6881,98 @@ void getDisplayProperties()
 #endif
 }
 
+#ifdef WINDOWS
+/***************************************************************/
+HWND GetHwndFocus()
+{ 
+  DWORD foregroundThreadID; // foreground window thread
+  DWORD ourThreadID; // our active thread 
+  HWND hwndFocus; 
+
+  // Check to see if we are the foreground thread 
+  foregroundThreadID = GetWindowThreadProcessId(GetForegroundWindow(), NULL); 
+  ourThreadID = GetCurrentThreadId(); 
+
+  // If not, attach our thread's 'input' to the foreground thread's 
+  if (foregroundThreadID != ourThreadID) 
+    AttachThreadInput(foregroundThreadID, ourThreadID, TRUE); 
+
+  // Who has focus? 
+  hwndFocus = GetFocus(); 
+
+  // If we attached our thread, detach it now 
+  if (foregroundThreadID != ourThreadID) 
+    AttachThreadInput(foregroundThreadID, ourThreadID, FALSE); 
+
+  return hwndFocus;
+}
+  
+/***************************************************************/
+void SendKeyToCurrentApp( int key ) 
+{ 
+  HWND hwndFocus; 
+
+  // Who has focus? 
+  hwndFocus = GetHwndFocus(); 
+  
+  // Send desired keystroke to whoever has focus 
+  if (key) 
+  { 
+    PostMessage(hwndFocus, WM_KEYDOWN, VK_PRIOR, 0x8001); 
+    PostMessage(hwndFocus, WM_KEYUP, VK_PRIOR, 0xc001); 
+  } 
+  else 
+  { 
+    PostMessage(hwndFocus, WM_KEYDOWN, VK_NEXT, 0x8001); 
+    PostMessage(hwndFocus, WM_KEYUP, VK_NEXT, 0xc001); 
+  } 
+} 
+
+WNDPROC  wpOrigMsgProc;
+
+/***************************************************************/
+LRESULT APIENTRY 
+MsgSubClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+  COPYDATASTRUCT *cds;
+
+  printf("MSGSUBCLASS\n");
+
+  // Intercept WM_COPYDATA and convert string to WM_KEYDOWN, WM_KEYUPs.
+  if (uMsg == WM_COPYDATA)
+  {
+    cds = (COPYDATASTRUCT *) lParam;
+    printf("WM_COPYDATA %s\n", cds->lpData);
+    return DLGC_WANTALLKEYS;
+  }
+  // Otherwise call the original glut window proc.
+  else
+    return CallWindowProc(wpOrigMsgProc, hwnd, uMsg, wParam, lParam);
+}
+
+#endif
+
+/***************************************************************/
+void capturePasteEvents(void)
+{
+#ifdef WINDOWS
+
+  HWND hwnd; 
+
+  // Who has focus? 
+  hwnd = GetHwndFocus(); 
+  
+#if 0
+  wpOrigMsgProc = 
+    (WNDPROC) SetWindowLong(NULL, GWL_WNDPROC, (long) MsgSubClassProc);
+#else
+  wpOrigMsgProc = 
+    (WNDPROC) SetWindowLong(hwnd, GWL_WNDPROC, (long) MsgSubClassProc);
+#endif
+
+#endif
+}
+
 /***************************************************************/
 int 
 main(int argc, char **argv)
@@ -7286,6 +7378,8 @@ main(int argc, char **argv)
       }
     }
   }
+
+  capturePasteEvents();
    
   glutMainLoop();
 
