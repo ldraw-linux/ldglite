@@ -315,6 +315,13 @@ int TILE_IMAGE_WIDTH = 2000;
 int TILE_IMAGE_HEIGHT = 1500;
 #endif
 
+#ifdef OSMESA_OPTION
+#include "GL/osmesa.h"
+int OffScreenRendering = 0;
+void *OSbuffer = NULL;
+OSMesaContext ctx;
+#endif
+
 // Camera movement variables
 #define MOVE_SPEED 10.0
 #define PI 3.1415927
@@ -775,6 +782,45 @@ void write_ppm(char *filename)
   fclose(fp);
 }
 
+/***************************************************************/
+static void
+write_targa(const char *filename, const GLubyte *buffer, int width, int height)
+{
+   FILE *f = fopen( filename, "w" );
+   if (f) {
+      int i, x, y;
+      const GLubyte *ptr = buffer;
+      printf ("osdemo, writing tga file \n");
+      fputc (0x00, f);	/* ID Length, 0 => No ID	*/
+      fputc (0x00, f);	/* Color Map Type, 0 => No color map included	*/
+      fputc (0x02, f);	/* Image Type, 2 => Uncompressed, True-color Image */
+      fputc (0x00, f);	/* Next five bytes are about the color map entries */
+      fputc (0x00, f);	/* 2 bytes Index, 2 bytes length, 1 byte size */
+      fputc (0x00, f);
+      fputc (0x00, f);
+      fputc (0x00, f);
+      fputc (0x00, f);	/* X-origin of Image	*/
+      fputc (0x00, f);
+      fputc (0x00, f);	/* Y-origin of Image	*/
+      fputc (0x00, f);
+      fputc (Width & 0xff, f);      /* Image Width	*/
+      fputc ((Width>>8) & 0xff, f);
+      fputc (Height & 0xff, f);     /* Image Height	*/
+      fputc ((Height>>8) & 0xff, f);
+      fputc (0x18, f);		/* Pixel Depth, 0x18 => 24 Bits	*/
+      fputc (0x20, f);		/* Image Descriptor	*/
+      fclose(f);
+      f = fopen( filename, "ab" );  /* reopen in binary append mode */
+      for (y=height-1; y>=0; y--) {
+         for (x=0; x<width; x++) {
+            i = (y*width + x) * 4;
+            fputc(ptr[i+2], f); /* write blue */
+            fputc(ptr[i+1], f); /* write green */
+            fputc(ptr[i], f);   /* write red */
+         }
+      }
+   }
+}
 
 #ifdef USE_PNG
 /***************************************************************/
@@ -2176,7 +2222,6 @@ render(void)
 
 }
 
-#ifdef TILE_RENDER_OPTION
 /***************************************************************/
 void DrawScene(void)
 {
@@ -2195,6 +2240,7 @@ void DrawScene(void)
   dirtyWindow = 0;  // The window is nice and squeaky clean now.
 }
 
+#ifdef TILE_RENDER_OPTION
 /***************************************************************/
 void TiledDisplay(void)
 {
@@ -2456,6 +2502,28 @@ void TiledDisplay(void)
      curstep++; // Move on to next step
      glutPostRedisplay();
    }
+}
+#endif
+
+#ifdef OSMESA_OPTION
+/***************************************************************/
+int OffScreenDisplay()
+{
+   char filename[256];
+
+   DrawScene();
+
+   platform_step_filename(curstep, filename);
+
+   write_targa(filename, OSbuffer, Width, Height);
+
+   /* free the image buffer */
+   free( OSbuffer );
+
+   /* destroy the context */
+   OSMesaDestroyContext( ctx );
+
+   return 0;
 }
 #endif
 
@@ -3013,6 +3081,13 @@ void display(void)
   if (tiledRendering == 1)
   {
     TiledDisplay();
+    return;
+  }
+#endif
+#ifdef OSMESA_OPTION
+  if (OffScreenRendering == 1)
+  {
+    OffScreenDisplay();
     return;
   }
 #endif
@@ -6018,6 +6093,11 @@ void ParseParams(int *argc, char **argv)
       case 'M':
       case 'm':
 	sscanf(pszParam,"%c%c",&type,&(ldraw_commandline_opts.M));
+#ifdef OSMESA_OPTION
+	// Uppercase S means save file AND render it offscreen if possible.
+	if (ldraw_commandline_opts.M == 'S')
+	  OffScreenRendering = 1;
+#endif	
 	ldraw_commandline_opts.M = toupper(ldraw_commandline_opts.M);
 	break;
       case 'O':
@@ -6245,7 +6325,7 @@ main(int argc, char **argv)
 #endif
 
   strcpy(progname, basename(argv[0]));
-  SetTitle(0);
+  // SetTitle(0);
 
 #ifdef USE_L3_PARSER
   // If the parser type is not specified on the commandline 
@@ -6265,6 +6345,30 @@ main(int argc, char **argv)
     }
   }
 #endif
+
+#ifdef OSMESA_OPTION
+  if (OffScreenRendering == 1)
+  {
+    /* Create an RGBA-mode context */
+    ctx = OSMesaCreateContext( GL_RGBA, NULL );
+
+    /* Allocate the image buffer */
+    OSbuffer = malloc( Width * Height * 4 );
+
+    /* Bind the buffer to the context and make it current */
+    OSMesaMakeCurrent( ctx, OSbuffer, GL_UNSIGNED_BYTE, Width, Height );
+
+    initCamera();
+    init();
+
+    // NOTE:  Use display() instead when I add offscreen tiled rendering.
+    OffScreenDisplay();
+
+    exit(0);
+  }
+#endif
+
+  SetTitle(0);
 
   displaymode = GLUT_RGB | GLUT_DEPTH;
 #ifdef USE_DOUBLE_BUFFER
