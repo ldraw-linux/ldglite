@@ -89,7 +89,7 @@ char *qbufGetPtr(QBUF_ID *qbuf_id)
   if (qbuf_id->index_head == qbuf_id->index_tail) {
 	// use standard malloc as a fallback
     next_free_ptr = (char *)malloc(qbuf_id->buffer_size);
-#if 1
+#if 0 // turn off, since decision to stop caching should be made elsewhere.
 	{
 		char buf[256];
 		extern void stop_caching();
