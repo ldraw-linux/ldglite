@@ -125,10 +125,14 @@ int movingpiece = -1;
 char editingprevmode = 'C';
 int editingkey = -1;
 int SOLID_EDIT_MODE = 0;
+static char eprompt[3][100];
+static char ecommand[100] = "";
+static char eresponse[100] = "";
 // staticbuffer is where our non-moving background goes
 // screenbuffer is where the final composite goes
 int staticbuffer = GL_BACK;
 int screenbuffer = GL_FRONT; 
+extern int Find1Part(int partnum);
 extern int Draw1Part(int partnum, int Color);
 extern int Move1Part(int partnum, float m[4][4]);
 extern int Rotate1Part(int partnum, float m[4][4]);
@@ -240,6 +244,15 @@ DoRasterString( float x, float y, char *s )
 }
 
 /***************************************************************/
+void clear_edit_mode_gui()
+{
+  ecommand[0] = 0;
+  eprompt[0][0] = 0;
+  eprompt[1][0] = 0;
+  eprompt[2][0] = 0;
+}
+
+/***************************************************************/
 int edit_mode_gui()
 {
   static char eline[3][100];
@@ -247,7 +260,15 @@ int edit_mode_gui()
   int lineheight = 14.0;
   int charwidth = 14.0;
 
-  Print3Parts(curpiece, eline[0], eline[1], eline[2]);
+  if (strlen(ecommand))
+  {
+    strcpy(eline[0], eprompt[0]);
+    strcat(eline[0], &(ecommand[1]));
+    strcpy(eline[1], eprompt[1]);
+    strcpy(eline[2], "");
+  }
+  else
+    Print3Parts(curpiece, eline[0], eline[1], eline[2]);
 
   glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
 
@@ -2569,6 +2590,47 @@ void EraseCurPiece(void)
 }
 
 /***************************************************************/
+void TranslateCurPiece(float m[4][4])
+{
+  CopyStaticBuffer();
+  Translate1Part(curpiece, m);
+  movingpiece = curpiece;
+  DrawMovingPiece();
+  Print1Part(curpiece, stdout);
+  edit_mode_gui();
+}
+
+/***************************************************************/
+void HiLightCurPiece(int piecenum)
+{
+  EraseCurPiece();
+  curpiece = Find1Part(piecenum);
+  if (movingpiece >= 0)
+  {
+    movingpiece = -1;
+    if (SOLID_EDIT_MODE)
+    {
+      dirtyWindow = 1;
+      glutPostRedisplay();
+      Print1Part(curpiece, stdout) == 0;
+      edit_mode_gui();
+      return;
+    }
+    else
+    {
+      glDrawBuffer(staticbuffer); 
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      render();
+      glutSwapBuffers();
+      glDrawBuffer(screenbuffer); 
+    }
+  }
+  XORcurPiece();
+  Print1Part(curpiece, stdout);
+  edit_mode_gui();
+}
+
+/***************************************************************/
 void fnkeys(int key, int x, int y)
 {
   glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
@@ -2576,12 +2638,25 @@ void fnkeys(int key, int x, int y)
 #ifdef USE_L3_PARSER
   if (editing) 
   {
+    int i;
     float m[4][4] = {
       {1.0,0.0,0.0,0.0},
       {0.0,1.0,0.0,0.0},
       {0.0,0.0,1.0,0.0},
       {0.0,0.0,0.0,1.0}
     };
+
+    // If we have a command going then work on that.
+    if (i = strlen(ecommand))
+    {
+      switch(key) {
+      default:
+	printf("fnkey = %d = '%c'\n",key,key);
+	edit_mode_gui(); // Redisplay the GUI
+	break;
+      }
+      return;
+    }
 
     switch(key) {
     case GLUT_KEY_INSERT:
@@ -2606,125 +2681,34 @@ void fnkeys(int key, int x, int y)
       glutPostRedisplay();
       break;
     case GLUT_KEY_PAGE_UP:
-      EraseCurPiece();
-      curpiece--;
-      if (curpiece < 0) curpiece = 0;
-      if (movingpiece >= 0)
-      {
-	movingpiece = -1;
-	if (SOLID_EDIT_MODE)
-	{
-	  dirtyWindow = 1;
-	  glutPostRedisplay();
-	  if (Print1Part(curpiece, stdout) == 0)
-	  {
-	    curpiece--;
-	    Print1Part(curpiece, stdout);
-	  }
-	  edit_mode_gui();
-	  return;
-	}
-	else
-	{
-	  glDrawBuffer(staticbuffer); 
-	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	  render();
-	  glutSwapBuffers();
-	  glDrawBuffer(screenbuffer); 
-	}
-      }
-      XORcurPiece();
-      Print1Part(curpiece, stdout);
-      edit_mode_gui();
+      HiLightCurPiece(curpiece-1);
       break;
     case GLUT_KEY_PAGE_DOWN:
-      EraseCurPiece();
-      curpiece++;
-      if (movingpiece >= 0)
-      {
-	movingpiece = -1;
-	if (SOLID_EDIT_MODE)
-	{
-	  dirtyWindow = 1;
-	  glutPostRedisplay();
-	  if (Print1Part(curpiece, stdout) == 0)
-	  {
-	    curpiece--;
-	    Print1Part(curpiece, stdout);
-	  }
-	  edit_mode_gui();
-	  return;
-	}
-	else
-	{
-	  glDrawBuffer(staticbuffer); 
-	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	  render();
-	  glutSwapBuffers();
-	  glDrawBuffer(screenbuffer); 
-	}
-      }
-      if (XORcurPiece() == 0) // if past last piece...
-      {
-	curpiece--;
-	XORcurPiece();
-      }
-      Print1Part(curpiece, stdout);
-      edit_mode_gui();
+      HiLightCurPiece(curpiece+1);
       break;
     case GLUT_KEY_RIGHT:
-      CopyStaticBuffer();
       m[0][3] += 10.0;
-      Translate1Part(curpiece, m);
-      movingpiece = curpiece;
-      DrawMovingPiece();
-      Print1Part(curpiece, stdout);
-      edit_mode_gui();
+      TranslateCurPiece(m);
       break;
     case GLUT_KEY_LEFT:
-      CopyStaticBuffer();
       m[0][3] -= 10.0;
-      movingpiece = curpiece;
-      Translate1Part(curpiece, m);
-      DrawMovingPiece();
-      Print1Part(curpiece, stdout);
-      edit_mode_gui();
+      TranslateCurPiece(m);
       break;
     case GLUT_KEY_UP:
-      CopyStaticBuffer();
       m[2][3] += 10.0;
-      movingpiece = curpiece;
-      Translate1Part(curpiece, m);
-      DrawMovingPiece();
-      Print1Part(curpiece, stdout);
-      edit_mode_gui();
+      TranslateCurPiece(m);
       break;
     case GLUT_KEY_DOWN:
-      CopyStaticBuffer();
       m[2][3] -= 10.0;
-      movingpiece = curpiece;
-      Translate1Part(curpiece, m);
-      DrawMovingPiece();
-      Print1Part(curpiece, stdout);
-      edit_mode_gui();
+      TranslateCurPiece(m);
       break;
     case GLUT_KEY_HOME:
-      CopyStaticBuffer();
       m[1][3] -= 8.0;
-      movingpiece = curpiece;
-      Translate1Part(curpiece, m);
-      DrawMovingPiece();
-      Print1Part(curpiece, stdout);
-      edit_mode_gui();
+      TranslateCurPiece(m);
       break;
     case GLUT_KEY_END:
-      CopyStaticBuffer();
       m[1][3] += 8.0;
-      movingpiece = curpiece;
-      Translate1Part(curpiece, m);
-      DrawMovingPiece();
-      Print1Part(curpiece, stdout);
-      edit_mode_gui();
+      TranslateCurPiece(m);
       break;
     default:
       return;
@@ -2773,6 +2757,7 @@ void fnkeys(int key, int x, int y)
     if (parsername == LDLITE_PARSER)
     {
       parsername = L3_PARSER;
+      use_quads = 1;
       list_made = 0; // Gotta reparse the file.
       glutPostRedisplay();
     }
@@ -2925,14 +2910,198 @@ void keyboard(unsigned char key, int x, int y)
     {0.0,0.0,0.0,1.0}
   };
   double angle;
-  int color;
+  float f;
+  int i, color;
   char partname[256];
 
   glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
 
   if (editing)
   {
+    // If we have a command going then work on that.
+    if (i = strlen(ecommand))
+    {
+      if (key == 27)
+      {
+	// Abort the command
+	ecommand[0] = 0;
+	clear_edit_mode_gui();
+	edit_mode_gui();
+	return;
+      }
+      if (ecommand[0] == '/')
+      {
+	// Try to get submenu command
+	switch(key) {
+	case 'f':
+	case 'e':
+	case 'v':
+	case 'p':
+	case 'o':
+	  sprintf(eprompt[0], "%c: ", key);
+	  ecommand[0] = key;
+	  ecommand[1] = 0;
+	  edit_mode_gui();
+	  break;
+	case 't':
+	  sprintf(eprompt[0], "Turn: ");
+	  sprintf(eprompt[1], "X-axis Y-axis Z-axis Center-set");
+	  ecommand[0] = key;
+	  ecommand[1] = 0;
+	  edit_mode_gui();
+	  break;
+	case 'g':
+	  sprintf(eprompt[0], "Goto Line: ");
+	  ecommand[0] = key;
+	  ecommand[1] = 0;
+	  edit_mode_gui();
+	  break;
+	default:
+	  break;
+	}
+      return;
+      }
+      if (ecommand[0] == 't') // Turn Menu
+      {
+	// Try to get submenu command
+	switch(key) {
+	case 'x':
+	case 'y':
+	case 'z':
+	  clear_edit_mode_gui();
+	  sprintf(eprompt[0], "Turn %c-axis angle: ", toupper(key));
+	  ecommand[0] = toupper(key);
+	  ecommand[1] = 0;
+	  edit_mode_gui();
+	  return;
+	}
+	return;
+      }
+      switch(key) {
+      case '\n':
+      case '\r':
+	// Process the command
+	c = ecommand[0]; // get the command char
+	ecommand[0] = 0; // wipe the command char
+	clear_edit_mode_gui();
+	switch (c){
+	case 'g':
+	  sscanf(&(ecommand[1]),"%d", &i);
+	  HiLightCurPiece(i);
+	  break;
+	case 'c':
+	  sscanf(&(ecommand[1]),"%d", &color);
+	  CopyStaticBuffer();//It would be nice to recolor without "moving" it.
+	  movingpiece = curpiece;
+	  Color1Part(curpiece, color);
+	  DrawMovingPiece();
+	  Print1Part(curpiece, stdout);
+	  edit_mode_gui();
+	  break;
+	case 'p':
+	  sscanf(&(ecommand[1]),"%s", partname);
+	  CopyStaticBuffer();
+	  movingpiece = curpiece;
+	  if (strrchr(partname, '.') == NULL)
+	    strcat(partname, use_uppercase ? ".DAT" : ".dat");
+	  Swap1Part(curpiece, partname);
+	  DrawMovingPiece();
+	  Print1Part(curpiece, stdout);
+	  edit_mode_gui();
+	  break;
+	case 'x':
+	  sscanf(&(ecommand[1]),"%f", &f);
+          m[0][3] += f;
+	  TranslateCurPiece(m);
+	  break;
+	case 'z':
+	  sscanf(&(ecommand[1]),"%f", &f);
+	  m[2][3] += f;
+	  TranslateCurPiece(m);
+	  break;
+	case 'y':
+	  sscanf(&(ecommand[1]),"%f", &f);
+	  m[1][3] += f;
+	  TranslateCurPiece(m);
+	  break;
+	case 'X':
+	  sscanf(&(ecommand[1]),"%f", &f);
+	  angle = f;
+	  printf("Rotate about %c by %f\n",c,angle);
+	  CopyStaticBuffer();
+	  angle *= PI_180;
+	  m[1][1] = (float)cos(angle);
+	  m[1][2] = (float)sin(angle);
+	  m[2][1] = (float)(-1.0*sin(angle));
+	  m[2][2] = (float)cos(angle);
+	  movingpiece = curpiece;
+	  Move1Part(curpiece, m);
+	  DrawMovingPiece();
+	  Print1Part(curpiece, stdout);
+	  edit_mode_gui();
+	  break;
+	case 'Z':
+	  sscanf(&(ecommand[1]),"%f", &f);
+	  angle = f;
+	  printf("Rotate about %c by %f\n",c,angle);
+	  CopyStaticBuffer();
+	  angle *= PI_180;
+	  m[0][0] = (float)cos(angle);
+	  m[1][0] = (float)sin(angle);
+	  m[0][1] = (float)(-1.0*sin(angle));
+	  m[1][1] = (float)cos(angle);
+	  movingpiece = curpiece;
+	  Move1Part(curpiece, m);
+	  DrawMovingPiece();
+	  Print1Part(curpiece, stdout);
+	  edit_mode_gui();
+	  break;
+	case 'Y':
+	  sscanf(&(ecommand[1]),"%f", &f);
+	  angle = f;
+	  printf("Rotate about %c by %f\n",c,angle);
+	  CopyStaticBuffer();
+	  angle *= PI_180;
+	  m[0][0] = (float)cos(angle);
+	  m[0][2] = (float)sin(angle);
+	  m[2][0] = (float)(-1.0*sin(angle));
+	  m[2][2] = (float)cos(angle);
+	  movingpiece = curpiece;
+	  Move1Part(curpiece, m);
+	  DrawMovingPiece();
+	  Print1Part(curpiece, stdout);
+	  edit_mode_gui();
+	  break;
+	default:
+	  edit_mode_gui();
+	  break;
+	}
+	break;
+      case 8: // Backspace
+      case 127: // Delete
+	if (i > 1) // Don't backspace past the command char.
+	  ecommand[i-1] = 0;
+	edit_mode_gui(); // Redisplay the GUI
+	break;
+      default:
+	// printf("key = %d = '%c'\n",key,key);
+	// Just add to the command
+	ecommand[i] = key;
+	ecommand[i+1] = 0;
+	edit_mode_gui(); // Redisplay the GUI
+	break;
+      }
+      return;
+    }
+
     switch(key) {
+    case 27:
+    case '/':
+      sprintf(eprompt[0], "File Edit View Turn Piece Options Goto");
+      ecommand[0] = '/';
+      ecommand[1] = 0;
+      edit_mode_gui();
+      return;
     case 'a':
       CopyStaticBuffer();
       angle = (3.1415927/2.0);
@@ -2974,10 +3143,28 @@ void keyboard(unsigned char key, int x, int y)
       Print1Part(curpiece, stdout);
       edit_mode_gui();
       return;
+    case 'x':
+    case 'y':
+    case 'z':
+      sprintf(eprompt[0], "%c: ", key);
+      ecommand[0] = key;
+      ecommand[1] = 0;
+      edit_mode_gui();
+      return;
+    case 'm':
+      printf("Toggle Movement Mode between fine and normal\n");
+      return;
     case 'c':
-      CopyStaticBuffer(); // It would be nice to recolor without "moving" it.
+#if 1
+      sprintf(eprompt[0], "New Color: ");
+      ecommand[0] = 'c';
+      ecommand[1] = 0;
+      edit_mode_gui();
+      return;
+#endif
       printf("New Color: ");
       scanf("%d", &color);
+      CopyStaticBuffer(); // It would be nice to recolor without "moving" it.
       movingpiece = curpiece;
       Color1Part(curpiece, color);
       DrawMovingPiece();
@@ -2985,9 +3172,16 @@ void keyboard(unsigned char key, int x, int y)
       edit_mode_gui();
       return;
     case 'p':
-      CopyStaticBuffer();
+#if 1
+      sprintf(eprompt[0], "New Part: ");
+      ecommand[0] = 'p';
+      ecommand[1] = 0;
+      edit_mode_gui();
+      return;
+#endif
       printf("New Part: ");
       scanf("%s", partname);
+      CopyStaticBuffer();
       movingpiece = curpiece;
       Swap1Part(curpiece, partname);
       DrawMovingPiece();
@@ -2998,6 +3192,7 @@ void keyboard(unsigned char key, int x, int y)
       Print1Model(datfilename);
       return;
     case 'd':
+    case 127: // Delete
       CopyStaticBuffer(); 
       if (SOLID_EDIT_MODE)
       {
@@ -3081,10 +3276,12 @@ void keyboard(unsigned char key, int x, int y)
 	dirtyWindow = 1; //reshape(Width, Height);
 	break;
     case 's':
+    case '-':
         ldraw_commandline_opts.S *= 0.5;
 	dirtyWindow = 1; //reshape(Width, Height);
 	break;
     case 'S':
+    case '+':
         ldraw_commandline_opts.S *= (1.0 / 0.5);
 	dirtyWindow = 1; //reshape(Width, Height);
 	break;
@@ -3218,9 +3415,15 @@ void keyboard(unsigned char key, int x, int y)
 #ifdef USE_L3_PARSER
     case 'l':
       if (parsername == LDLITE_PARSER)
+      {
 	parsername = L3_PARSER;
+	use_quads = 1;
+      }
       else
+      {
 	parsername = LDLITE_PARSER;
+	use_quads = 0;
+      }
       list_made = 0; // Gotta reparse the file.
       curstep = 0; // Reset to first step
       dirtyWindow = 1;
@@ -4212,9 +4415,15 @@ void ParseParams(int *argc, char **argv)
       case 'l':
 	// -l3 forces l3 parser, -ld forces ldlite parser, -l sets logging.
 	if (pszParam[1] == '3')
+	{
 	  parsername = L3_PARSER;
+	  use_quads = 1;
+	}
 	else if ((pszParam[1] == 'd') || (pszParam[1] == 'D'))
+	{
 	  parsername = LDLITE_PARSER;
+	  use_quads = 0;
+	}
 	else 
 	  ldraw_commandline_opts.log_output = 1;
 	break;
