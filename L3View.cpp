@@ -598,7 +598,7 @@ void InitViewMatrix(void)
 int Draw1PartPtr(struct L3LineS *LinePtr, int Color)
 {
 	float          m1[4][4];
-	int CurColor = 7;
+	int CurColor = ldraw_commandline_opts.C;
 	int SaveColor = LinePtr->Color;
 
 	int            i;
@@ -729,7 +729,7 @@ int Draw1Part(int partnum, int Color)
 	struct L3LineS *LinePtr;
 	int SaveColor;
 
-	int CurColor = 7;
+	int CurColor = ldraw_commandline_opts.C;
 
 	InitViewMatrix();
 
@@ -792,10 +792,10 @@ void DrawModel(void)
 	  struct L3PartS *RCPartPtr = LoadRC();
 	  
 	  if (RCPartPtr)
-	    DrawPart(1,RCPartPtr, 7, m_m);
+	    DrawPart(1,RCPartPtr, ldraw_commandline_opts.C, m_m);
 	}
 #endif
-	DrawPart(1,&Parts[0], 7, m_m);
+	DrawPart(1,&Parts[0], ldraw_commandline_opts.C, m_m);
 
 	//if (ldraw_commandline_opts.output != 1) zStep(INT_MAX, 0);
 	// if (include_stack_ptr <= ldraw_commandline_opts.output_depth )
