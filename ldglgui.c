@@ -86,8 +86,6 @@ extern char *m_viewMatrix;
 
 extern int mui_singlebuffered;
 
-extern void keyboard(unsigned char key, int x, int y);
-
 muiObject *b1, *b2, *b3, *b4, *b5, *b6, *b7, *b8;
 muiObject *b9, *b10, *b11, *b12, *b13, *b14, *b15, *b16;
 muiObject *l1, *l2, *l3, *l4, *l5, *l6, *l7, *l8;
@@ -479,9 +477,9 @@ void vbcallback(muiObject *obj, enum muiReturnValue r)
     muiSetActiveUIList(MAIN_UILIST);
     mui_cleanup();
     if (viewchoice)
-      keyboard(viewchoice, 0, 0);    
+      menuKeyEvent(viewchoice, 0, 0);    
     if (projchoice)
-      keyboard(projchoice, 0, 0);    
+      menuKeyEvent(projchoice, 0, 0);    
     break;
   default:
     muiHideAll(muiGetUIList(obj), 0);
@@ -1150,12 +1148,12 @@ void obcallback(muiObject *obj, enum muiReturnValue r)
     muiSetActiveUIList(MAIN_UILIST);
     mui_cleanup();
     if (viewchoice != ldraw_commandline_opts.M)
-      keyboard('s', 0, 0);
+      menuKeyEvent('s', 0, 0);
     if (projchoice != ldraw_commandline_opts.poll)
-      keyboard('g', 0, 0);
+      menuKeyEvent('g', 0, 0);
 #ifdef USE_L3_PARSER
     if (panchoice != parsername)
-      keyboard('r', 0, 0);
+      menuKeyEvent('r', 0, 0);
 #endif
     break;
   default:
