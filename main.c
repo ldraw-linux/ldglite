@@ -83,7 +83,7 @@ double twirl_increment = 10.0;
 static int list_made = 0;
 
 int curstep = 0;
-int clipping = 1;
+int cropping = 1;
 int panning = 0;
 GLdouble pan_start_x = 0.0;
 GLdouble pan_start_y = 0.0;
@@ -152,19 +152,21 @@ void write_bmp(char *filename)
   char *p, c;
   FILE *fp;
 
-  UINT width = Width;
-  UINT height = Height;
+  int width = Width;
+  int height = Height;
   GLint xoff = 0;
   GLint yoff = 0;
 
-  if (clipping)
+  if (cropping)
   {
     xoff = max(0, z.extent_x1);
     yoff = max(0, z.extent_y1);
     width = min((z.extent_x2 - xoff), (Width - xoff));
     height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
-    width = ((width + 31)/32) * 32; // round to a multiple of 32.
+    //width = ((width + 31)/32) * 32; // round to a multiple of 32.
+    width = ((width + 3)/4) * 4; // round to a multiple of 4.
     printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
+    if ((width <= 0) || (height <= 0)) return;
   }
   
   printf("Write BMP %s\n", filename);
@@ -284,19 +286,20 @@ void write_png(char *filename)
   png_text text_ptr[1];
   FILE *fp;
 
-  UINT width = Width;
-  UINT height = Height;
+  int width = Width;
+  int height = Height;
   GLint xoff = 0;
   GLint yoff = 0;
 
-  if (clipping)
+  if (cropping)
   {
     xoff = max(0, z.extent_x1);
     yoff = max(0, z.extent_y1);
     width = min((z.extent_x2 - xoff), (Width - xoff));
     height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
-    width = ((width + 31)/32) * 32; // round to a multiple of 32.
+    width = ((width + 3)/4) * 4; // round to a multiple of 4.
     printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
+    if ((width <= 0) || (height <= 0)) return;
   }
   
   if ((p = strrchr(filename, '.')) != NULL)
@@ -367,7 +370,7 @@ void write_png(char *filename)
 #endif
 
 #ifdef WINDOWS
-//#define USE_BMP8 1
+#define USE_BMP8 1
 #endif
 
 #ifdef USE_BMP8
@@ -554,8 +557,8 @@ static BOOL SaveBMP8(char* fileName, BYTE* colormappedbuffer, UINT width, UINT h
 /***************************************************************/
 void write_bmp8(char *filename)
 {
-  UINT width = Width;
-  UINT height = Height;
+  int width = Width;
+  int height = Height;
   GLint xoff = 0;
   GLint yoff = 0;
   BYTE* data;
@@ -564,14 +567,16 @@ void write_bmp8(char *filename)
   BYTE *colormappedBuffer;
   UINT col;
   
-  if (clipping)
+  if (cropping)
   {
     xoff = max(0, z.extent_x1);
     yoff = max(0, z.extent_y1);
     width = min((z.extent_x2 - xoff), (Width - xoff));
     height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
-    width = ((width + 31)/32) * 32; // round to a multiple of 32.
+    //width = ((width + 31)/32) * 32; // round to a multiple of 32.
+    width = ((width + 3)/4) * 4; // round to a multiple of 4.
     printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
+    if ((width <= 0) || (height <= 0)) return;
   }
   
   colormappedBuffer = (BYTE*) malloc (width*height);
@@ -597,6 +602,17 @@ void write_bmp8(char *filename)
   free(data);
 }
 #endif
+
+/***************************************************************/
+int platform_step_comment(char *comment_string)
+{
+  //glMatrixMode( GL_MODELVIEW );
+  //glPushMatrix();
+  //glLoadIdentity();
+  glColor3f( 0.3, 0.3, 0.3 );		/* grey  	*/
+  DoRasterString( 40.0, 40.0, comment_string );
+  //glPopMatrix();
+}
 
 /***************************************************************/
 void platform_step(int step, int level, int pause, ZIMAGE *zp)
@@ -1343,7 +1359,23 @@ GLUT_BITMAP_HELVETICA_18
   //int glutStrokeLength(void *font, const unsigned char *string);
 #endif
 
-  
+  if (ldraw_commandline_opts.M == 'P')
+  {
+    printf("stepcount = %d of %d\n", curstep, stepcount);
+    sprintf(buf,"Step %d of %d.  ",curstep, stepcount);
+    // Non-continuous output stop after each step.
+    if (stepcount == curstep)
+    {
+      strcat(buf, "Finished.");
+      curstep = 0; // Reset to first step
+    }
+    else 
+    {
+      strcat(buf, "Click on drawing to continue.");
+      curstep++; // Move on to next step
+    }
+    platform_step_comment(buf);
+  }
 
   glFlush();
 
@@ -1360,19 +1392,11 @@ GLUT_BITMAP_HELVETICA_18
   if ((ldraw_commandline_opts.output == 1) ||
        (ldraw_commandline_opts.M == 'S')) 
   {
-    //quit the program
-    exit(0);
+    // Do NOT quit just yet if we need to twirl.
+    if (ldraw_commandline_opts.rotate != 1) 
+      exit(0); //quit the program
   }
 
-  if (ldraw_commandline_opts.M == 'P')
-  {
-    printf("stepcount = %d of %d\n", curstep, stepcount);
-    // Non-continuous output stop after each step.
-    if (stepcount == curstep)
-      curstep = 0; // Reset to first step
-    else 
-      curstep++; // Move on to next step
-  }
 }
 
 /***************************************************************/
@@ -1958,7 +1982,12 @@ void myGlutIdle( void )
 	// All done rotating
 	ldraw_commandline_opts.rotate = 0;
 	twirl_angle = 0.0;
-	return;
+	// If we just want the output files then quit when idle.
+	if ((ldraw_commandline_opts.output == 1) ||
+	    (ldraw_commandline_opts.M == 'S')) 
+	  exit(0); //quit the program
+	else
+	  return;
       }
     //stepcount = 0;
     // This looks funny (not orthogonal) 
