@@ -68,7 +68,7 @@ int EPS_OUTPUT_FIGURED_OUT = 0;
 char datfilename[256];
 char title[256];
 
-char buf[10240];
+char buf[16*1024]; // sizeof buf copied from render_file() in ldliteView.cpp
 int use_uppercase = 0;
 
 #define IMAGE_TYPE_PNG_RGB 1
@@ -1424,6 +1424,41 @@ void rendersetup(void)
 }
 
 /***************************************************************/
+int ldlite_parse_with_rc(char *filename)
+{
+  // Partly copied from render_file() in ldliteView.cpp
+  // NOTE: I also need to find a way to add this to l3Input.cpp or l3View.cpp
+  // Although the L3 parser seems to ignore 0 COLOR metacommands anyways.
+  // I guess I would have to add the metacommands to L3Input.cpp first.
+  FILE *fp;
+  int bytes = 0;
+
+  fp = fopen("ldliterc.dat","rb");
+  if (fp != NULL) {
+    bytes += fread(buf,1,15*1024,fp);
+    fclose(fp);
+  }
+#if 0
+  // NOTE:  I should check the whole search path for this (see lugnet thread)
+  // This does NOT work.  Must paste LINES from ldliterc.dat directly into 
+  // top level buf.  Otherwise color changes etc are NOT global.
+  else
+  {
+    sprintf(buf,"\n1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n", "ldliterc.dat");
+    bytes = strlen(buf);
+  }
+#endif
+
+#ifndef WINDOWS
+  // NOTE:  I'm a bit suspicious of quoted filenames on other OSs.  Test it.
+  sprintf(&(buf[bytes]),"\n1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n", filename);
+#else
+  sprintf(&(buf[bytes]),"\n1 16 0 0 0 1 0 0 0 1 0 0 0 1 \"%s\"\n", filename);
+#endif
+  ldlite_parse(buf);
+}
+
+/***************************************************************/
 /* render gets called both by "display" (in OpenGL render mode)
    and by "outputEPS" (in OpenGL feedback mode). */
 void
@@ -1538,9 +1573,7 @@ render(void)
   {
     glNewList(1, GL_COMPILE);
     znamelist_push();
-    //ldlite_parse(datfilename, buf);
-    sprintf(buf,"1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n", datfilename);
-    ldlite_parse(buf);
+    ldlite_parse_with_rc(datfilename);
     znamelist_pop();
     glEndList();
     list_made = 1;
@@ -1554,9 +1587,7 @@ render(void)
   linequalitysetup();
   mpd_subfile_name = NULL; // potential memory leak
   znamelist_push();
-  //ldlite_parse(datfilename, buf);
-  sprintf(buf,"1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n", datfilename);
-  ldlite_parse(buf);
+  ldlite_parse_with_rc(datfilename);
   if (mpd_subfile_name != NULL) 
   {
     // set file name to first subfile
@@ -1583,10 +1614,7 @@ render(void)
     // Perhaps this is why ldliteView.cpp ALWAYS uses the NULL filename way.
     // FIXED??  See my "weak attempt to fix" this in ldlite_parse().
     //**********************************************************************
-    //ldlite_parse(mpd_subfile_name,NULL);
-    sprintf(buf,"1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n", mpd_subfile_name);
-    //ldlite_parse(NULL,buf);
-    ldlite_parse(buf);
+    ldlite_parse_with_rc(mpd_subfile_name);
     znamelist_pop();
   }
   if (qualityLines && ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) == 0))
@@ -1607,9 +1635,7 @@ render(void)
 
     mpd_subfile_name = NULL; // potential memory leak
     znamelist_push();
-    //ldlite_parse(datfilename, buf);
-    sprintf(buf,"1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n", datfilename);
-    ldlite_parse(buf);
+    ldlite_parse_with_rc(datfilename);
     znamelist_pop();
     if (mpd_subfile_name != NULL) 
     {
@@ -1626,9 +1652,7 @@ render(void)
       }
 
       znamelist_push();
-      sprintf(buf,"1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n", mpd_subfile_name);
-      //ldlite_parse(NULL,buf);
-      ldlite_parse(buf);
+      ldlite_parse_with_rc(mpd_subfile_name);
       znamelist_pop();
     }
 
