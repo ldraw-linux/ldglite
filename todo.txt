@@ -1,8 +1,17 @@
 ----------------------------------------------------------------------
+
+Add a fn to highlight (in dark red) the first char of each LEDIT menu
+line and every char that follows a space char.  This would be a nice
+hint about the menu keyboard accelerators.  If it's easier, I could
+code up the menu strings with embedded & chars and replace them with
+the color hints.
+
+----------------------------------------------------------------------
 Add an option to the LEDIT menu to hide it when not in use to maximize
 screen space for the model and to minimize the annoyance of the flashing
 menu when I'm not really looking at it.  I think it's just a matter of
-checking that the first char of the command is a null.
+checking that the first char of the command is a null.  This would fit
+as "Hide" on either the main menu, or the options ment.
 
 ----------------------------------------------------------------------
 Add mklist to the makefile, or at least make instructions for how to
