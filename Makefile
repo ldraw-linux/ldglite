@@ -1,34 +1,38 @@
 CC=gcc
 
-CFLAGS=-ggdb -DUSE_OPENGL 
-#CFLAGS=-ggdb -DUSE_OPENGL -mwindows
+# Comment these out to disable PNG output if no PNG lib is available.
+#
+PNG_FLAGS=-DUSE_PNG 
+PNG_LIBS=-L. -lpng -lz 
 
 # NOTE: -mwindows makes it detach from the console.
 #       This is good for gui apps but bad if launched from dos
 #       because we lose stdin.  Perhaps I should make 2 versions
 #       or make it a makefile option.
 #
+CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS)
+#CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS) -mwindows
+
+all	: ldglite
 
 ldglite:   ldliteVR_main.o platform.o dirscan.o camera.o f00QuatC.o quant.o stub.o y.tab.o lex.yy.o qbuf.o main.o L3Math.o L3Input.o L3View.o
-	$(CC) $(CFLAGS) ldliteVR_main.o platform.o dirscan.o camera.o f00QuatC.o quant.o stub.o y.tab.o lex.yy.o qbuf.o main.o L3Math.o L3Input.o L3View.o -o ldglite.exe -I. -lglut32 -lglu32 -lopengl32
-	cp ldglite.exe l3glite.exe
-
-ldglitepng:   ldliteVR_main.o platform.o dirscan.o camera.o f00QuatC.o quant.o stub.o y.tab.o lex.yy.o qbuf.o pngMain.o L3Math.o L3Input.o L3View.o
-	$(CC) $(CFLAGS) ldliteVR_main.o platform.o dirscan.o camera.o f00QuatC.o quant.o stub.o y.tab.o lex.yy.o qbuf.o pngMain.o L3Math.o L3Input.o L3View.o -o ldglite.exe -I. -L. -lpng -lz -lglut32 -lglu32 -lopengl32
+	$(CC) $(CFLAGS) ldliteVR_main.o platform.o dirscan.o camera.o f00QuatC.o quant.o stub.o y.tab.o lex.yy.o qbuf.o main.o L3Math.o L3Input.o L3View.o -o ldglite.exe -I. $(PNG_LIBS) -lglut32 -lglu32 -lopengl32
 	cp ldglite.exe l3glite.exe
 
 l3glite:   ldglite
 
-l3glitepng:   ldglitepng
+ldglitepng:   ldglite
+
+l3glitepng:   ldglite
 
 ldliteVR_main.o: ldliteVR_main.c
 	$(CC) -c $(CFLAGS) ldliteVR_main.c
 
 main.o: main.c
-	$(CC) -c $(CFLAGS) -DUSE_L3_PARSER main.c
+	$(CC) -c $(CFLAGS) main.c
 
 stub.o: stub.c
-	$(CC) -c $(CFLAGS) -DUSE_L3_PARSER stub.c
+	$(CC) -c $(CFLAGS) stub.c
 
 platform.o: platform.c
 	$(CC) -c $(CFLAGS) platform.c
@@ -53,10 +57,6 @@ qbuf.o: qbuf.c
 
 dirscan.o: dirscan.c
 	$(CC) -c $(CFLAGS) dirscan.c
-
-# Experimental stuff: png output
-pngMain.o: main.c
-	$(CC) -c $(CFLAGS) -DUSE_PNG -DUSE_L3_PARSER main.c -o pngMain.o
 
 L3Math.o: L3Math.cpp
 	$(CC) -c $(CFLAGS) L3Math.cpp
