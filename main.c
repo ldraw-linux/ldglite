@@ -306,12 +306,10 @@ int TILE_IMAGE_WIDTH = 2000;
 int TILE_IMAGE_HEIGHT = 1500;
 #endif
 
-#ifdef OSMESA_OPTION
-#include "GL/osmesa.h"
 int OffScreenRendering = 0;
-void *OSbuffer = NULL;
-OSMesaContext ctx;
-#endif
+extern int SetOffScreenRendering();
+extern int OffScreenDisplay();
+extern int OffScreenRender();
 
 // Camera movement variables
 #define MOVE_SPEED 10.0
@@ -1954,28 +1952,6 @@ void TiledDisplay(void)
 }
 #endif
 
-#ifdef OSMESA_OPTION
-/***************************************************************/
-int OffScreenDisplay()
-{
-   char filename[256];
-
-   DrawScene();
-
-   platform_step_filename(curstep, filename);
-
-   write_targa(filename, OSbuffer, Width, Height);
-
-   /* free the image buffer */
-   free( OSbuffer );
-
-   /* destroy the context */
-   OSMesaDestroyContext( ctx );
-
-   return 0;
-}
-#endif
-
 /***************************************************************/
 // These symbols are defined in the MAX gfx.h header file
 #define GL_KTX_FRONT_REGION 0x0000
@@ -2530,13 +2506,12 @@ void display(void)
     return;
   }
 #endif
-#ifdef OSMESA_OPTION
+
   if (OffScreenRendering == 1)
   {
     OffScreenDisplay();
     return;
   }
-#endif
 
   if (editing) 
   {
@@ -5275,7 +5250,7 @@ void CldliteCommandLineInfo()
 void ParseParams(int *argc, char **argv)
 {
   char *pszParam;
-  int i;
+  int i, x, y;
 
   char type;
   int mode;
@@ -5547,11 +5522,9 @@ void ParseParams(int *argc, char **argv)
       case 'M':
       case 'm':
 	sscanf(pszParam,"%c%c",&type,&(ldraw_commandline_opts.M));
-#ifdef OSMESA_OPTION
 	// Uppercase S means save file AND render it offscreen if possible.
 	if (ldraw_commandline_opts.M == 'S')
-	  OffScreenRendering = 1;
-#endif	
+	  OffScreenRendering = SetOffScreenRendering();
 	ldraw_commandline_opts.M = toupper(ldraw_commandline_opts.M);
 	break;
       case 'O':
@@ -5597,6 +5570,16 @@ void ParseParams(int *argc, char **argv)
 #endif
       case 'V':
       case 'v':
+	if (strstr(pszParam, ","))
+	{
+	  sscanf(pszParam,"%c%d,%d", &type, &x, &y);
+	  if ((x > 0) && (y > 0))
+	  {
+	    ldraw_commandline_opts.V_x = x;
+	    ldraw_commandline_opts.V_y = y;
+	  }
+	  break;
+	}
 	sscanf(pszParam,"%c%d",&type, &mode);
 	switch(mode) {
 	case -2:
@@ -5634,6 +5617,12 @@ void ParseParams(int *argc, char **argv)
 	case 6:
 	  ldraw_commandline_opts.V_x=1280;
 	  ldraw_commandline_opts.V_y=1024;
+	case 7:
+	  ldraw_commandline_opts.V_x=1600;
+	  ldraw_commandline_opts.V_y=1024;
+	case 8:
+	  ldraw_commandline_opts.V_x=1600;
+	  ldraw_commandline_opts.V_y=1200;
 	  break;
 	}
 	break;
@@ -5878,47 +5867,11 @@ main(int argc, char **argv)
   }
 #endif
 
-#ifdef OSMESA_OPTION
   if (OffScreenRendering == 1)
   {
-    /* Create an RGBA-mode context */
-#if OSMESA_MAJOR_VERSION * 100 + OSMESA_MINOR_VERSION >= 305
-   /* specify Z, stencil, accum sizes */
-    ctx = OSMesaCreateContextExt( OSMESA_RGBA, 16, 0, 0, NULL );
-#else
-    ctx = OSMesaCreateContext( OSMESA_RGBA, NULL );
-#endif
-
-    /* Allocate the image buffer */
-    OSbuffer = malloc( Width * Height * 4 * sizeof(GLubyte) );
-    if (!OSbuffer) {
-      printf("Alloc image buffer failed!\n");
-      exit(0);
-    }
-
-
-    /* Bind the buffer to the context and make it current */
-    if (!OSMesaMakeCurrent( ctx, OSbuffer, GL_UNSIGNED_BYTE, Width, Height )) {
-      printf("OSMesaMakeCurrent failed!\n");
-      exit(0);
-    }
-
-    getDisplayProperties();
-
-    initCamera();
-    init();
-
-    reshape(Width, Height);
-
-    // Set the background to white like ldlite.
-    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-    // NOTE:  Use display() instead when I add offscreen tiled rendering.
-    OffScreenDisplay();
-
+    OffScreenRender();
     exit(0);
   }
-#endif
 
   SetTitle(0);
 

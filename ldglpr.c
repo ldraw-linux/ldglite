@@ -44,11 +44,17 @@ extern GLint Height;
 extern int cropping;
 extern char progname[256];
 
+extern int curstep;
+extern int OffScreenRendering;
+
 #ifdef OSMESA_OPTION
 #include "GL/osmesa.h"
-extern int OffScreenRendering;
-extern void *OSbuffer;
-extern OSMesaContext ctx;
+void *OSbuffer = NULL;
+OSMesaContext ctx;
+#endif
+#ifdef WIN_DIB_OPTION
+HGLRC hGLRC;
+HBITMAP m_dibSection;           // memory DIB for offscreen rendering
 #endif
 
 char *pix;
@@ -807,3 +813,185 @@ void write_bmp8(char *filename)
 }
 #endif
 
+/***************************************************************/
+// Platform dependent OffScreen rendering section.
+/***************************************************************/
+// This is here because its used to generate picture files.
+// Probably should also move tiled rendering code here
+// and merge with offscreen code so I can do offscreen tiles.
+//
+// OSmesa is really only useful if you increase the buffer size
+// in mesa_config.h and recompile mesalib.
+// Otherwise you might as well use xvfb.
+/***************************************************************/
+extern void DrawScene(void);
+extern void platform_step_filename(int step, char *filename);
+extern void getDisplayProperties();
+extern void initCamera(void);
+extern void init(void);
+extern void reshape(int width, int height);
+
+/***************************************************************/
+int SetOffScreenRendering()
+{
+#ifdef OSMESA_OPTION
+  return 1;
+#else
+#ifdef WIN_DIB_OPTION
+  return 1;
+#else
+  return 0;
+#endif
+#endif
+}
+
+/***************************************************************/
+int OffScreenDisplay()
+{
+   char filename[256];
+
+#ifdef OSMESA_OPTION
+   DrawScene();
+
+   platform_step_filename(curstep, filename);
+
+   write_targa(filename, OSbuffer, Width, Height);
+#endif
+#ifdef WIN_DIB_OPTION
+   DrawScene();
+
+   //platform_step_filename(curstep, filename);
+#endif
+   return 0;
+}
+
+#ifdef WIN_DIB_OPTION
+//************************************************************************
+int winOffScreenStart()
+{
+  BITMAPINFO bitmapInfo;
+  LPBYTE dib_bits = NULL;         // Pointer to the bits.
+  HDC hDC;
+  PIXELFORMATDESCRIPTOR pfd;
+  int pixelformat;
+
+  // Initialize the bitmapInfo structure
+  memset (&bitmapInfo, 0, sizeof(BITMAPINFO));
+
+  bitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+  bitmapInfo.bmiHeader.biWidth = Width;
+  bitmapInfo.bmiHeader.biHeight = Height;
+  bitmapInfo.bmiHeader.biPlanes = 1; // Not used, but must be 1
+  bitmapInfo.bmiHeader.biBitCount = 24;
+  bitmapInfo.bmiHeader.biCompression = BI_RGB;
+  bitmapInfo.bmiHeader.biSizeImage = ((Width*3) + 3)/4*4*Height;
+
+  // Create the DIBSection. We can also get direct access to the
+  // pixels from here
+  m_dibSection = CreateDIBSection (NULL, &bitmapInfo, DIB_RGB_COLORS,
+				   (void**)&dib_bits, NULL, 0);
+
+  // We can directly write into this buffer!
+  if (dib_bits == NULL)
+    return (0);
+  
+  // Create a DC
+  hDC = CreateCompatibleDC (NULL);
+  if (hDC == NULL)
+    return (0);
+  
+  // Select the DIB into the DC
+  if (!SelectObject (hDC, m_dibSection))
+    return (0);
+  
+  // and then create the OpenGL context
+  memset (&pfd, 0, sizeof(PIXELFORMATDESCRIPTOR));
+  pfd.nVersion = 1 ;
+  pfd.dwFlags = PFD_DRAW_TO_BITMAP | PFD_SUPPORT_OPENGL | PFD_SUPPORT_GDI;
+  pfd.iPixelType = PFD_TYPE_RGBA ; 
+  pfd.cColorBits = 24;
+  pfd.cDepthBits = 32;                // 32-bit z-buffer
+  pfd.iLayerType = PFD_MAIN_PLANE;
+
+  // This part of the code is the same for creating both window contexts
+  // and bitmap contexts
+  pixelformat = ChoosePixelFormat(hDC, (const PIXELFORMATDESCRIPTOR *) &pfd);
+  // pixelformat returns a valid index of one (1)
+  if (pixelformat == 0) 
+    return (0);
+
+  if (!SetPixelFormat(hDC, pixelformat, &pfd))
+    return (0);
+
+  hGLRC = wglCreateContext (hDC);
+  
+  wglMakeCurrent(hDC, hGLRC);
+
+  return(1);
+}
+#endif
+
+/***************************************************************/
+int OffScreenRender()
+  {
+#ifdef OSMESA_OPTION
+    /* Create an RGBA-mode context */
+#if OSMESA_MAJOR_VERSION * 100 + OSMESA_MINOR_VERSION >= 305
+   /* specify Z, stencil, accum sizes */
+    ctx = OSMesaCreateContextExt( OSMESA_RGBA, 16, 0, 0, NULL );
+#else
+    ctx = OSMesaCreateContext( OSMESA_RGBA, NULL );
+#endif
+
+    /* Allocate the image buffer */
+    OSbuffer = malloc( Width * Height * 4 * sizeof(GLubyte) );
+    if (!OSbuffer) {
+      printf("Alloc image buffer failed!\n");
+      exit(0);
+    }
+
+
+    /* Bind the buffer to the context and make it current */
+    if (!OSMesaMakeCurrent( ctx, OSbuffer, GL_UNSIGNED_BYTE, Width, Height )) {
+      printf("OSMesaMakeCurrent failed!\n");
+      exit(0);
+    }
+#endif
+#ifdef WIN_DIB_OPTION
+    if (!winOffScreenStart())
+    {
+      printf("Problem with DIB\n");
+      exit (0);
+    }
+#endif
+
+    getDisplayProperties();
+
+    initCamera();
+    init();
+
+    reshape(Width, Height);
+
+    // Set the background to white like ldlite.
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+    // NOTE:  Use display() instead when I add offscreen tiled rendering.
+    OffScreenDisplay();
+
+#ifdef OSMESA_OPTION
+   /* free the image buffer */
+   free( OSbuffer );
+
+   /* destroy the context */
+   OSMesaDestroyContext( ctx );
+#endif
+#ifdef WIN_DIB_OPTION
+    DeleteObject(m_dibSection);
+    
+    wglMakeCurrent(NULL,NULL);
+    
+    wglDeleteContext(hGLRC);
+
+#endif
+    return 0;
+  }

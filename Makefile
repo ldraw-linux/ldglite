@@ -10,6 +10,10 @@ PNG_LIBS=-L. -lpng -lz
 TR_FLAGS=-DTILE_RENDER_OPTION
 TR_SRC=tr.c
 
+# UnComment this to build in support for Mesa Offscreen rendering
+OFFSCREEN_FLAGS=-DWIN_DIB_OPTION
+OFFSCREEN_LIBS= -lgdi32
+
 # Comment these out to disable the test GUI made with MUI.
 #
 #GUI_FLAGS=-DTEST_MUI_GUI
@@ -23,8 +27,8 @@ RES_SRC=ldglite.rc
 #       because we lose stdin.  Perhaps I should make 2 versions
 #       or make it a makefile option.
 #
-CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 $(PNG_FLAGS) $(TR_FLAGS) $(GUI_FLAGS)
-#CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 $(PNG_FLAGS) $(TR_FLAGS) $(GUI_FLAGS) -mwindows
+CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 $(PNG_FLAGS) $(TR_FLAGS) $(OFFSCREEN_FLAGS) $(GUI_FLAGS)
+#CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 $(PNG_FLAGS) $(TR_FLAGS) $(OFFSCREEN_FLAGS) $(GUI_FLAGS) -mwindows
 
 AR = ar
 RANLIB = ranlib
@@ -38,7 +42,7 @@ OBJS = $(SRCS:.c=.o) $(RES_SRC:.rc=.o)
 all	: ldglite
 
 ldglite:   $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o ldglite.exe -I. $(PNG_LIBS) $(GUI_LIBS) -lglut32 -lglu32 -lopengl32
+	$(CC) $(CFLAGS) $(OBJS) -o ldglite.exe -I. $(PNG_LIBS) $(OFFSCREEN_LIBS) $(GUI_LIBS) -lglut32 -lglu32 -lopengl32
 	cp ldglite.exe l3glite.exe
 	cp ldglite.exe l3gledit.exe
 
