@@ -1409,7 +1409,12 @@ static int           ReadDatFile(FILE *fp, struct L3PartS * PartPtr,
 #endif
       s = IInfo.InputStr;
       /* double: n = sscanf(IInfo.InputStr,"%d %d %lf %lf... */
+#ifndef USE_OPENGL
       n = sscanf(IInfo.InputStr, "%d %d %f %f %f %f %f %f %f %f %f %f %f %f %s",
+#else
+      /* Allow hex notation for extended colors */
+      n = sscanf(IInfo.InputStr, "%d %i %f %f %f %f %f %f %f %f %f %f %f %f %s",
+#endif
                  &Data.LineType, &Data.Color,
                  &Data.v[0][0], &Data.v[0][1], &Data.v[0][2],
                  &Data.v[1][0], &Data.v[1][1], &Data.v[1][2],

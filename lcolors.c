@@ -632,7 +632,9 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
 	        zcp->r = (c & 0x00ff0000) >> 16;
 		zcp->g = (c & 0x0000ff00) >> 8;
 		zcp->b = (c & 0x000000ff) >> 0;
-                zcs = zcp;
+                zcs->r = zcp->r;
+                zcs->g = zcp->g;
+                zcs->b = zcp->b;
 		if (c & 0x1000000) {
 		  zcs->a = 0x0;
 		} else {
@@ -656,7 +658,9 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
 		zcp->r = (unsigned char) (((int)zcp->r + (int)zcs->r) / 2);
 		zcp->g = (unsigned char) (((int)zcp->g + (int)zcs->g) / 2);
 		zcp->b = (unsigned char) (((int)zcp->b + (int)zcs->b) / 2);
-                zcs = zcp;
+                zcs->r = zcp->r;
+                zcs->g = zcp->g;
+                zcs->b = zcp->b;
 		if (c & 0x2000000) {
 		  zcs->a = 0x0;
 		} else {
