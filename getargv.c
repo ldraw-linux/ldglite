@@ -95,6 +95,7 @@ get_folder_parent (FSSpec * fss, FSSpec * parent)
 }
 
 
+#if 0
 /* Given an FSSpec return a full, colon-separated pathname */
 
 static OSErr
@@ -134,7 +135,24 @@ FTMac_GetFullPath (FSSpec *fss, char *buf)
         }
         return 0;
 }
+#else
+/* Given an FSSpec return a full, slash-separated UNIX (POSIX) pathname */
 
+static OSErr
+FTMac_GetFullPath (FSSpec *fss, char *buf)
+{
+  FSRef fsr;
+  OSErr err;
+  OSStatus status;
+	
+  *buf = '\0';
+  err = FSpMakeFSRef(fss, &fsr);
+  if ( err ) 
+    return err;
+  status = FSRefMakePath(&fsr, buf, 256);
+  return (OSErr)status;
+}
+#endif
 
 /* Initialize name of current application */
 
