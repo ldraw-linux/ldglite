@@ -1645,6 +1645,48 @@ GLfloat mid_shininess[] = { 15.0 }; // Seems nice for plastic chrome and gold.
 GLfloat hi_shininess[] = { 50.0 }; // { 100.0 };
 
 /***************************************************************/
+void
+linequalitysetup(int Solid)
+{
+  //NOTE: This only works well if I draw all the polys first, 
+  // then antialias the lines on top of them in a 2nd pass.
+
+  // Also note: I need to separate zSolid (used by stub.c) from 
+  // the commandline options -fr or -fe for edgeless rendering.
+  // Does the new ldlite use opts.f for this?  Maybe I should too.
+  if (qualityLines && !(Solid))
+  {
+    glEnable( GL_LINE_SMOOTH ); 
+    glHint( GL_LINE_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
+    glEnable( GL_BLEND );
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+#if 0
+    if (lineWidth > 1.0)
+    {
+      // This does NOT seem to work as well as I thought it would.
+      // Instead, just draw the points (unantialiased) BEFORE the lines.
+      glEnable( GL_POINT_SMOOTH ); 
+      glHint( GL_POINT_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
+    }
+#endif
+  }
+  else
+  {
+    glDisable( GL_LINE_SMOOTH ); 
+    glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+    glDisable( GL_BLEND );
+  }
+
+  //NOTE:  I should draw round points at the ends of all lines (in stub.c).
+  // Otherwise I end up with flat ends (ugly at angled intersections).
+  // Apparently OpenGL has no line end style parameter?
+  if (lineWidth > 1.0)
+    glLineWidth( lineWidth );
+  else
+    glLineWidth( 1.0 );
+}
+
+/***************************************************************/
 /*  GLUT event handlers
 /***************************************************************/
 void init(void)
@@ -1722,35 +1764,7 @@ void init(void)
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0, 1.0);
 
-    //NOTE: This only works well if I draw all the polys first, 
-    // then antialias the lines on top of them in a 2nd pass.
-    if (qualityLines)
-    {
-      glEnable( GL_LINE_SMOOTH ); 
-      glHint( GL_LINE_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
-      glLineWidth( 1.0 );
-      glEnable( GL_BLEND );
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    }
-
-    if (lineWidth > 1.0)
-    {
-      glLineWidth( lineWidth );
-
-      //NOTE:  I should draw round points at the ends of all lines (in stub.c).
-      // Otherwise I end up with flat ends (ugly at angled intersections).
-      // Apparently OpenGL has no line end style parameter?
-      glPointSize( lineWidth -0.5);
-#if 0
-      // This does NOT seem to work as well as I thought it would.
-      // Instead, just draw the points (unantialiased) BEFORE the lines.
-      if (qualityLines)
-      {
-	glEnable( GL_POINT_SMOOTH ); 
-	glHint( GL_POINT_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
-      }
-#endif
-    }
+    linequalitysetup(zSolid);
 
 #if 0
     // Make command lists for the eight stipple patterns.
@@ -2093,8 +2107,10 @@ render(void)
   if (qualityLines && (zWire == 0))
   {
     zSolid = 1;
+    linequalitysetup(zSolid);
     DrawModel();
     zSolid = 0;
+    linequalitysetup(zSolid);
     zWire = 1;
     stepcount = 0; // NOTE: Not sure what effect this will have...
     DrawModel();
@@ -2112,7 +2128,10 @@ render(void)
   }
 #endif
   else 
+  {
+    linequalitysetup(zSolid);
     DrawModel();
+  }
 #endif
   }
   else
@@ -2136,6 +2155,7 @@ render(void)
   {
     zSolid = 1;
   }
+  linequalitysetup(zSolid);
   mpd_subfile_name = NULL; // potential memory leak
   znamelist_push();
   ldlite_parse(datfilename, buf);
@@ -2174,6 +2194,7 @@ render(void)
   if (qualityLines && (zWire == 0))
   {
     zSolid = 0;
+    linequalitysetup(zSolid);
     zWire = 1;
 
     zcolor_init();
@@ -4967,23 +4988,6 @@ void keyboard(unsigned char key, int x, int y)
     case 'Q':
     case 'q':
       qualityLines ^= 1;
-      if (qualityLines)
-      {
-	glEnable( GL_LINE_SMOOTH ); 
-	glHint( GL_LINE_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
-	if (lineWidth > 1.0)
-	  glLineWidth( lineWidth );
-	else
-	  glLineWidth( 1.0 );
-	glEnable( GL_BLEND );
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      }
-      else
-      {
-	glDisable( GL_LINE_SMOOTH ); 
-	glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
-	glDisable( GL_BLEND );
-      }
       break;
     case 27:
 	exit(0);
