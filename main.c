@@ -66,6 +66,9 @@ extern char partspath[256];
 extern char modelspath[256];
 extern char datfilepath[256];
 
+char userpath[256];
+char bitmappath[256];
+
 #ifdef USE_L3_PARSER
 #define UNKNOWN_PARSER -1
 #define LDLITE_PARSER 0
@@ -1717,7 +1720,11 @@ void platform_step_filename(int step, char *filename)
     return;
   }
     
+#if 0
   concat_path(pathname, use_uppercase ? "BITMAP" : "bitmap", filepath);
+#else
+  strcpy(filepath, bitmappath);
+#endif
   if (ldraw_commandline_opts.rotate == 1) 
   {
     sprintf(filenum,"rot_%0dd",(int)twirl_angle);
@@ -2019,7 +2026,21 @@ void platform_setpath()
 
   concat_path(pathname, use_uppercase ? "P" : "p", primitivepath);
   concat_path(pathname, use_uppercase ? "PARTS" : "parts", partspath);
-  concat_path(pathname, use_uppercase ? "MODELS" : "models", modelspath);
+
+  // Give the user a chance to override some paths for personal data.
+  env_str = platform_getenv("LDRAWUSER");
+  if (env_str != NULL)
+  {
+    strcpy(userpath, env_str);
+  }
+  else if (GetPrivateProfileString("LDraw","UserDirectory","",
+			  userpath,256,"ldraw.ini") == 0)
+  {
+    strcpy(userpath, pathname);
+  }
+
+  concat_path(userpath, use_uppercase ? "MODELS" : "models", modelspath);
+  concat_path(userpath, use_uppercase ? "BITMAP" : "bitmap", bitmappath);
 }
 
 /***************************************************************/
