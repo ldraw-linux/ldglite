@@ -69,28 +69,14 @@ extern int Init1LineCounter(void);
 #define BBOX_MODE 	0x0008
 #define INVISIBLE_MODE 	0x0010
 #define STUDONLY_MODE 	0x0020
+#define STUDLINE_MODE 	0x0040
 
 //************************************************************************
-void DrawPartBox(struct L3PartS *PartPtr,int CurColor,float m[4][4],int wire)
+void MakePartBox(struct L3PartS *PartPtr,float m[4][4], vector3d bb3d[8])
 {
   float          r[4];
-  int            i, Color;
   float          r2[4];
-  vector3d       bb3d[8];
 
-  if (0 <= CurColor  &&  CurColor <= 15)
-    Color = edge_color(CurColor);
-  else
-    Color = 0;
-  
-  Color = CurColor;
-#if 0	    
-  printf("IsModel = %d  FromPARTS = %d  color = %d\n",
-	 IsModel, PartPtr->FromPARTS, Color);
-  printf("BBox = (%0.2f,%0.2f,%0.2f) (%0.2f,%0.2f,%0.2f)\n",
-	 PartPtr->BBox[0][0],PartPtr->BBox[0][1],PartPtr->BBox[0][2],
-	 PartPtr->BBox[1][0],PartPtr->BBox[1][1],PartPtr->BBox[1][2]);
-#endif
   r2[0]=PartPtr->BBox[0][0]; //bb[0]
   r2[1]=PartPtr->BBox[0][1];
   r2[2]=PartPtr->BBox[0][2];
@@ -147,6 +133,30 @@ void DrawPartBox(struct L3PartS *PartPtr,int CurColor,float m[4][4],int wire)
   bb3d[7].x=r[0];
   bb3d[7].y=r[1];
   bb3d[7].z=r[2];
+}
+
+//************************************************************************
+void DrawPartBox(struct L3PartS *PartPtr,int CurColor,float m[4][4],int wire)
+{
+  float          r[4];
+  int            i, Color;
+  float          r2[4];
+  vector3d       bb3d[8];
+
+  if (0 <= CurColor  &&  CurColor <= 15)
+    Color = edge_color(CurColor);
+  else
+    Color = 0;
+  
+  Color = CurColor;
+#if 0	    
+  printf("IsModel = %d  FromPARTS = %d  color = %d\n",
+	 IsModel, PartPtr->FromPARTS, Color);
+  printf("BBox = (%0.2f,%0.2f,%0.2f) (%0.2f,%0.2f,%0.2f)\n",
+	 PartPtr->BBox[0][0],PartPtr->BBox[0][1],PartPtr->BBox[0][2],
+	 PartPtr->BBox[1][0],PartPtr->BBox[1][1],PartPtr->BBox[1][2]);
+#endif
+  MakePartBox(PartPtr, m, bb3d);
   if (wire) // Draw wireframe box.
   {
     render_line(&bb3d[0],&bb3d[1],Color);
@@ -172,6 +182,38 @@ void DrawPartBox(struct L3PartS *PartPtr,int CurColor,float m[4][4],int wire)
     render_quad(&bb3d[2],&bb3d[6],&bb3d[7],&bb3d[3],Color);
     render_quad(&bb3d[3],&bb3d[7],&bb3d[4],&bb3d[0],Color);
   }
+}
+
+//************************************************************************
+void DrawPartLine(struct L3PartS *PartPtr,int CurColor,float m[4][4])
+{
+  float          r[4];
+  int            i, Color;
+  float          r2[4];
+  vector3d       bb3d[8];
+
+  if (0 <= CurColor  &&  CurColor <= 15)
+    Color = edge_color(CurColor);
+  else
+    Color = 0;
+  
+  //Color = CurColor;
+
+  r2[0]=(PartPtr->BBox[0][0] + PartPtr->BBox[1][0]) / 2.0;
+  r2[1]=(PartPtr->BBox[0][1]);
+  r2[2]=(PartPtr->BBox[0][2] + PartPtr->BBox[1][2]) / 2.0;
+  M4V3Mul(r,m,r2);
+  bb3d[0].x=r[0];
+  bb3d[0].y=r[1];
+  bb3d[0].z=r[2];
+
+  r2[1]=PartPtr->BBox[1][1];
+  M4V3Mul(r,m,r2);
+  bb3d[1].x=r[0];
+  bb3d[1].y=r[1];
+  bb3d[1].z=r[2];
+
+  render_line(&bb3d[0],&bb3d[1],Color);
 }
 #endif
 
@@ -211,6 +253,14 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 	vector3d       v3d[4];
 
 #ifdef USE_OPENGL
+	if ((ldraw_commandline_opts.F & STUDLINE_MODE) != 0)
+	  if (PartPtr->IsStud)
+	  {
+	    DrawPartLine(PartPtr, CurColor, m);
+	    //DrawPartBox(PartPtr, CurColor, m, 1);
+	    return;
+	  }
+
 	// Draw only bounding boxes of top level parts if in fast spin mode.
 	if (ldraw_commandline_opts.F & BBOX_MODE) 
 	  if (PartPtr->FromPARTS) // (!IsModel)
