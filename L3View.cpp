@@ -325,7 +325,8 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			// Do NOT resave a color if its already saved.
 			if (strncmp(s,"COLOR",5) == 0)
 			{
-			  printf("%s\n", s);
+			  if (ldraw_commandline_opts.debug_level == 1)
+			    printf("%s\n", s);
 			  //0 COLOR 4 red 0 196 0 38 255 196 0 38 255
 			  char name[256];
 			  int n, inverse_index;
