@@ -126,6 +126,13 @@ GLfloat lightcolorHalf[] =  { 0.5, 0.5, 0.5, 1.0 }; // Half light
 GLfloat lightcolorDim[] =  { 0.25, 0.25, 0.25, 1.0 }; // dim light
 #endif
 
+int fogging = 0; // 0 = disabled, 1 = LINEAR, 2 = EXP, 3 = EXP2
+GLint fogMode = GL_LINEAR;
+GLfloat fogColor[4] = {1.0, 1.0, 1.0, 1.0}; // Fade to white
+GLfloat fogDensity = 1.0;
+GLfloat fogStart = 0.0;
+GLfloat fogEnd = 1.0;
+
 // [Views] swiped from ldraw.ini
 // Modified some views to be orthogonal.
 char Back[] = "-1,0,0,0,1,0,0,0,-1";
@@ -1915,6 +1922,32 @@ void rendersetup(void)
   //glPolygonMode(GL_BACK,GL_FILL);
   //glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
   //glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+
+  if (fogging)
+  {
+    switch (fogging)
+    {
+      case 2:
+	fogMode = GL_EXP;
+	break;
+      case 3:
+	fogMode = GL_EXP;
+	break;
+      default:
+	fogMode = GL_LINEAR;
+	break;
+    }
+    glEnable(GL_FOG);
+    glFogi(GL_FOG_MODE, fogMode);
+    glFogfv(GL_FOG_COLOR, fogColor);
+    glFogf(GL_FOG_DENSITY, fogDensity);
+    //glHint(GL_FOG_HINT, GL_NICEST);
+    glHint(GL_FOG_HINT, GL_DONT_CARE);
+    glFogf(GL_FOG_START, fogStart);
+    glFogf(GL_FOG_END, fogEnd);
+  }
+  else
+    glDisable(GL_FOG);
 }
 
 /***************************************************************/
@@ -5817,7 +5850,10 @@ void ParseParams(int *argc, char **argv)
 	    ldraw_commandline_opts.F |= SHADED_MODE;
 	    break;
 	  case 'S':
-	    ldraw_commandline_opts.F |= STUDLESS_MODE;
+	    if (toupper(pszParam[2]) == 'L')
+	      ldraw_commandline_opts.F |= STUDLINE_MODE;
+	    else
+	      ldraw_commandline_opts.F |= STUDLESS_MODE;
 	    break;
 	  case 'W':
 	  case 'L':
@@ -5831,8 +5867,35 @@ void ParseParams(int *argc, char **argv)
 	    ldraw_commandline_opts.F &= ~(WIREFRAME_MODE);
 	    break;
 	  case 'R':
-	    zSolid = 1;
+	  case 'E':
+	    zSolid = 1; // no Edgelines
 	    break;
+	  case 'F': // Fog.
+	    {
+	      float v[4][4];
+	      v[0][0] = 1,0;   // LINEAR
+	      v[0][1] = fogEnd; // or fogDensity
+	      v[0][2] = fogStart;
+	      v[1][0] = fogColor[0];
+	      v[1][1] = fogColor[1];
+	      v[1][2] = fogColor[2];
+	      ScanPoints(v, 2, &(pszParam[2]));
+	      printf("fogging = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
+	      fogging = (int) v[0][0];
+	      if (fogging < 1) fogging = 1;
+	      if (fogging > 3) fogging = 3;
+	      if (fogging == 1)
+	      {
+		fogStart = v[0][1];
+		fogEnd = v[0][2];
+	      }
+	      else
+		fogDensity = v[0][1];
+	      printf("fogColor = (%g, %g, %g)\n", v[1][0], v[1][1], v[1][2]);
+	      fogColor[0] = v[1][0];
+	      fogColor[1] = v[1][1];
+	      fogColor[2] = v[1][2];
+	    }
 	  }
 	}
 	break;
