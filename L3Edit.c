@@ -1139,7 +1139,7 @@ typedef struct vector3d_struct {
 extern void MakePartBox(struct L3PartS *PartPtr,float m[4][4],vector3d bb3[8]);
 
 /*****************************************************************************/
-void GetPartBox(struct L3LineS *LinePtr, int sc[4])
+void GetPartBox(struct L3LineS *LinePtr, int sc[4], int clip)
 {
   float          r[4];
   int            i;
@@ -1224,16 +1224,20 @@ void GetPartBox(struct L3LineS *LinePtr, int sc[4])
     if (s1y > s2y)
       s2y = s1y;
   }
-  // FUDGE FACTOR.
-  s0x -= 8;
-  s0y -= 8;
-  s2x += 8;
-  s2y += 8;
 
-  if (s0x < 0.0) s0x = 0.0;
-  if (s0y < 0.0) s0y = 0.0;
-  if (s2x > Width) s2x = Width;
-  if (s2y > Height) s2y = Height;
+  if (clip)
+  {
+    // FUDGE FACTOR.
+    s0x -= 8;
+    s0y -= 8;
+    s2x += 8;
+    s2y += 8;
+    
+    if (s0x < 0.0) s0x = 0.0;
+    if (s0y < 0.0) s0y = 0.0;
+    if (s2x > Width) s2x = Width;
+    if (s2y > Height) s2y = Height;
+  }
 
   sc[0] = (int)s0x;
   sc[1] = (int)s0y;
@@ -1266,7 +1270,7 @@ int Get1PartBox(int partnum, int sc[4])
     if (!LinePtr)
 	return 0; //partnum not found
 
-    GetPartBox(LinePtr, sc);
+    GetPartBox(LinePtr, sc, 1);
 
     return 1;
 }
