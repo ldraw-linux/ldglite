@@ -38,6 +38,7 @@ all	: ldglite
 ldglite:   $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o ldglite.exe -I. $(PNG_LIBS) $(GUI_LIBS) -lglut32 -lglu32 -lopengl32
 	cp ldglite.exe l3glite.exe
+	cp ldglite.exe l3gledit.exe
 
 l3glite:   ldglite
 

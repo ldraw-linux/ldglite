@@ -30,6 +30,8 @@ ldglite:   $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o ldglite -L/usr/X11R6/lib $(PNG_LIBS) $(GUI_LIBS) -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
 	rm -rf l3glite
 	ln -s ldglite l3glite
+	rm -rf l3gledit
+	ln -s ldglite l3gledit
 
 l3glite:   ldglite
 
