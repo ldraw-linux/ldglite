@@ -119,11 +119,13 @@ static int list_made = 0;
 
 #define USE_DOUBLE_BUFFER
 
+// Stuff for editing mode
 // contents of back buffer after glutSwapBuffers():
 #define SWAP_TYPE_UNDEFINED 0 	// unknown
 #define SWAP_TYPE_SWAP 1	// former front buffer
 #define SWAP_TYPE_COPY 2	// unchanged
 #define SWAP_TYPE_NODAMAGE 3	// unchanged even by X expose() events
+#define SWAP_TYPE_KTX 4		// use the GL_KTX_buffer_region extension
 
 #ifdef MESA
 int buffer_swap_mode = SWAP_TYPE_NODAMAGE
@@ -131,14 +133,13 @@ int buffer_swap_mode = SWAP_TYPE_NODAMAGE
 int buffer_swap_mode = SWAP_TYPE_UNDEFINED;
 #endif
 
-// Stuff for editing mode
 int editing = 0;
 int curpiece = 0;
 int movingpiece = -1;
 char editingprevmode = 'C';
 int editingkey = -1;
 int SOLID_EDIT_MODE = 0;
-static char eprompt[3][100];
+static char eprompt[4][100];
 static char ecommand[100] = "";
 static char eresponse[100] = "";
 float moveXamount = 10.0;
@@ -149,6 +150,7 @@ float moveZamount = 10.0;
 int staticbuffer = GL_BACK;
 int screenbuffer = GL_FRONT; 
 // Buffer pointers and IDs for speedier opengl extension functions.
+
 GLuint cbuffer_region = 0;
 GLuint zbuffer_region = 0;
 static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
@@ -271,27 +273,64 @@ void clear_edit_mode_gui()
   eprompt[0][0] = 0;
   eprompt[1][0] = 0;
   eprompt[2][0] = 0;
+  eprompt[4][0] = 0;
 }
 
 /***************************************************************/
 int edit_mode_gui()
 {
-  static char eline[3][100];
+  static char eline[4][100];
   int savedirty;
   int lineheight = 14.0;
   int charwidth = 14.0;
+  char *viewstr;
+  char *movestr;
+
+  Print3Parts(curpiece, eline[1], eline[2], eline[3]);
 
   if (strlen(ecommand))
   {
     strcpy(eline[0], eprompt[0]);
     strcat(eline[0], &(ecommand[1]));
-    strcpy(eline[1], eprompt[1]);
-    strcpy(eline[2], "");
+    if (strlen(eprompt[1]))
+      strcpy(eline[1], eprompt[1]);
   }
   else
-    Print3Parts(curpiece, eline[0], eline[1], eline[2]);
+  {
+    if (m_viewMatrix == Back)
+      viewstr = "Back";
+    else if (m_viewMatrix == Left)
+      viewstr = "Left";
+    else if (m_viewMatrix == Right)
+      viewstr = "Right";
+    else if (m_viewMatrix == Above)
+      viewstr = "Above";
+    else if (m_viewMatrix == Beneath)
+      viewstr = "Beneath";
+    else if (m_viewMatrix == Oblique)
+      viewstr = "Oblique";
+    else if (m_viewMatrix == Front)
+      viewstr = "Front";
+    else if (m_viewMatrix == UpsideDown)
+      viewstr = "UpsideDown";
+    else if (m_viewMatrix == Natural)
+      viewstr = "Natural";
+    else
+      viewstr = "Three-D";
+
+    if (moveXamount == 100.0)
+      movestr = "Coarse";
+    else if (moveXamount == 1.0)
+      movestr = "Fine";
+    else
+      movestr = "Normal";
+
+    sprintf(eline[0],"Line: %d  View: %s  Zoom: x%.3f  Move: %s",
+	    curpiece, viewstr, ldraw_commandline_opts.S, movestr);
+  }
 
   glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
+  glDisable(GL_LIGHTING);
 
   glMatrixMode( GL_PROJECTION );
   glPushMatrix();
@@ -304,13 +343,14 @@ int edit_mode_gui()
   glBegin(GL_QUADS);
   glVertex2f(0.0, Height);
   glVertex2f(Width, Height);
-  glVertex2f(Width, Height-(lineheight*4.0));
-  glVertex2f(0.0, Height-(lineheight*4.0));
+  glVertex2f(Width, Height-(lineheight*4.5));
+  glVertex2f(0.0, Height-(lineheight*4.5));
   glEnd();
   glColor4f( 0.0, 0.0, 0.0, 1.0 );		/* black  	*/
   DoRasterString( charwidth, Height - lineheight, eline[0] );
   DoRasterString( charwidth, Height - lineheight*2.0, eline[1] );
   DoRasterString( charwidth, Height - lineheight*3.0, eline[2] );
+  DoRasterString( charwidth, Height - lineheight*4.0, eline[3] );
   glPopMatrix();
   glMatrixMode( GL_PROJECTION );
   glPopMatrix();
@@ -1516,6 +1556,11 @@ void reshape(int width, int height)
     else
       glDisable(GL_SCISSOR_TEST);
 #endif
+    if (editing)
+    {
+      if ((width != Width) && (height != Height))
+	NukeSavedDepthBuffer();
+    }
 
     Width = width;
     Height = height;
@@ -2184,11 +2229,15 @@ void TiledDisplay(void)
 #define GL_KTX_Z_REGION 0x0002
 #define GL_KTX_STENCIL_REGION 0x0003
 
-typedef GLuint (* PFNGLNEWBUFFERREGIONPROC)(GLenum);
-typedef void (* PFNGLDELETEBUFFERREGIONPROC)(GLuint);
-typedef void (* PFNGLREADBUFFERREGIONPROC)(GLuint, GLint, GLint, GLsizei, GLsizei);
-typedef void (* PFNGLDRAWBUFFERREGIONPROC)(GLuint, GLint, GLint, GLsizei, GLsizei, GLint, GLint);
-typedef GLuint (* PFNGLBUFFERREGIONENABLEDPROC)(void);
+#ifndef WINAPI
+#define WINAPI 
+#endif
+
+typedef GLuint (WINAPI * PFNGLNEWBUFFERREGIONPROC)(GLenum);
+typedef void (WINAPI * PFNGLDELETEBUFFERREGIONPROC)(GLuint);
+typedef void (WINAPI * PFNGLREADBUFFERREGIONPROC)(GLuint, GLint, GLint, GLsizei, GLsizei);
+typedef void (WINAPI * PFNGLDRAWBUFFERREGIONPROC)(GLuint, GLint, GLint, GLsizei, GLsizei, GLint, GLint);
+typedef GLuint (WINAPI * PFNGLBUFFERREGIONENABLEDPROC)(void);
 
 PFNGLNEWBUFFERREGIONPROC glNewBufferRegion = NULL;
 PFNGLDELETEBUFFERREGIONPROC glDeleteBufferRegion = NULL;
@@ -2203,7 +2252,7 @@ void test_ktx_buffer_region(char *str)
   {	
     printf("The GL_KTX_buffer_region extension is available\n");
 
-#if 1
+#if 0
     glNewBufferRegion = (GLuint (*)(GLenum))
       wglGetProcAddress("glNewBufferRegion");
     glDeleteBufferRegion = (void (*)(GLuint))
@@ -2220,20 +2269,23 @@ void test_ktx_buffer_region(char *str)
     printf("The GL_KTX_f1 = %p\n",glNewBufferRegion);
     glDeleteBufferRegion = (PFNGLDELETEBUFFERREGIONPROC)
       wglGetProcAddress("glDeleteBufferRegion");
-    printf("The GL_KTX_f1 = %p\n",glDeleteBufferRegion);
+    printf("The GL_KTX_f2 = %p\n",glDeleteBufferRegion);
     glReadBufferRegion = (PFNGLREADBUFFERREGIONPROC)
       wglGetProcAddress("glReadBufferRegion");
-    printf("The GL_KTX_f1 = %p\n",glReadBufferRegion);
+    printf("The GL_KTX_f3 = %p\n",glReadBufferRegion);
     glDrawBufferRegion = (PFNGLDRAWBUFFERREGIONPROC)
       wglGetProcAddress("glDrawBufferRegion");
-    printf("The GL_KTX_f1 = %p\n",glDrawBufferRegion);
+    printf("The GL_KTX_f4 = %p\n",glDrawBufferRegion);
     glBufferRegionEnabled = (PFNGLBUFFERREGIONENABLEDPROC)
       wglGetProcAddress("glBufferRegionEnabled");
-    printf("The GL_KTX_f1 = %p\n",glBufferRegionEnabled);
+    printf("The GL_KTX_f5 = %p\n",glBufferRegionEnabled);
 #endif
 
-    cbuffer_region = glNewBufferRegion(GL_KTX_BACK_REGION);
-    zbuffer_region = glNewBufferRegion(GL_KTX_Z_REGION);
+    printf("glBufferRegionEnabled() = %d\n", glBufferRegionEnabled());
+    if (glBufferRegionEnabled())
+    {
+      buffer_swap_mode = SWAP_TYPE_KTX;
+    }
   }
 }
 
@@ -2274,12 +2326,37 @@ void test_wgl_arb_buffer_region(char *str)
 #endif
 
 /***************************************************************/
+int NukeSavedDepthBuffer(void)
+{
+  if (buffer_swap_mode == SWAP_TYPE_KTX)
+  {
+    if (cbuffer_region != 0)
+      glDeleteBufferRegion(cbuffer_region);
+    if (zbuffer_region != 0)
+      glDeleteBufferRegion(zbuffer_region);
+
+    cbuffer_region = 0;
+    zbuffer_region = 0;
+  }
+  else if (zbufdata)
+  {
+    free (zbufdata);  // NOTE: gotta free this when finished editing.
+    zbufdata = NULL;
+  }
+}
+
+/***************************************************************/
 void SaveDepthBuffer(void)
 {
-  if (zbuffer_region)
+  if (buffer_swap_mode == SWAP_TYPE_KTX)
   {
-    glReadBufferRegion(cbuffer_region,0,0,Width,Height);
+    if (cbuffer_region == 0)
+      cbuffer_region = glNewBufferRegion(GL_KTX_BACK_REGION);
+    if (zbuffer_region == 0)
+      zbuffer_region = glNewBufferRegion(GL_KTX_Z_REGION);
+
     glReadBufferRegion(zbuffer_region,0,0,Width,Height);
+    glReadBufferRegion(cbuffer_region,0,0,Width,Height);
   }
   else
   {
@@ -2291,6 +2368,219 @@ void SaveDepthBuffer(void)
     glReadPixels(0,0, Width,Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
   }
   //NOTE:  I have to reallocate zbufdata whenever we resize the window.
+}
+
+/***************************************************************/
+int XORcurPiece()
+{
+  int retval = 0;
+  int drawmode = ldraw_commandline_opts.F;
+  int savewire = zWire;
+  int saveshade = zShading;
+
+  //ldraw_commandline_opts.F |= STUDLESS_MODE;
+  //ldraw_commandline_opts.F = (WIREFRAME_MODE | STUDLESS_MODE);
+  ldraw_commandline_opts.F = WIREFRAME_MODE;
+  zWire = 1;
+  zShading = 0;
+
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+
+  rendersetup();
+
+  glDisable(GL_LIGHTING); // No need for lighting
+  glDisable( GL_DEPTH_TEST ); // don't test for depth -- just put in front
+  glEnable( GL_COLOR_LOGIC_OP ); 
+  glLogicOp(GL_XOR);
+  glColor3f(1.0, 1.0, 1.0); // white
+  glCurColorIndex = -1;
+  retval = Draw1Part(curpiece, 15);
+  glLogicOp(GL_COPY);
+  glEnable( GL_DEPTH_TEST ); 
+  glDisable( GL_COLOR_LOGIC_OP ); 
+
+  glCurColorIndex = -1;
+
+  glFlush();
+
+  glPopMatrix();
+
+  zShading = saveshade;
+  zWire = savewire;
+  ldraw_commandline_opts.F = drawmode;
+
+  return retval;
+}
+
+/***************************************************************/
+// Here is a snippet from the web. 
+#if 0
+glGet(GL_CURRENT_RASTER_POSITION); //0.5000 165.0000 0.5000 1.0000
+glGet(GL_DEPTH_BIAS); //0.0000
+glGet(GL_DEPTH_BITS); //32.0000
+glGet(GL_DEPTH_CLEAR_VALUE); //1.0000
+glGet(GL_DEPTH_FUNC); //513.0000
+glGet(GL_DEPTH_RANGE); //0.0000 1.0000
+glGet(GL_DEPTH_SCALE); //1.0000
+glGet(GL_DEPTH_TEST); //0.0000
+glGet(GL_DEPTH_WRITEMASK); //1.0000
+
+glPushAttrib(GL_COLOR_BUFFER_BIT|GL_CURRENT_BIT|GL_DEPTH_BUFFER_BIT|GL_FOG_BIT|GL_LIGHTING_BIT|GL_MISC_BIT_EXT|GL_VIEWPORT_BIT);
+glViewport(0, 0, 470, 330);
+glScissor(0, 0, 470, 330);
+glDisable(GL_DEPTH_TEST);
+glDisable(GL_FOG);
+glMatrixMode(GL_PROJECTION);
+glPushMatrix();
+glLoadIdentity();
+glOrtho(-0.5000f, 470.5000f, -0.5000f, 330.5000f, -1.0000f, 1.0000f);
+glMatrixMode(GL_MODELVIEW);
+glPushMatrix();
+glLoadIdentity();
+glDrawBuffer(GL_FRONT_AND_BACK);
+glRasterPos2f(0.0000f, 165.0000f);
+glCopyPixels(0, 0, 470, 165, GL_COLOR);
+glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+// Added these two lines
+glEnable(GL_DEPTH_TEST);
+glDepthFunc(GL_ALWAYS);     // New value always wins.
+// *********************
+glCopyPixels(0, 0, 470, 165, GL_DEPTH);
+glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+glPopMatrix();
+glMatrixMode(GL_PROJECTION);
+glPopMatrix();
+glMatrixMode(GL_MODELVIEW);
+glDrawBuffer(GL_BACK);
+glPopAttrib();
+#endif
+
+/***************************************************************/
+/***************************************************************/
+// CopyStaticBuffer is fairly slow but should always work.
+// I could speed this up with opengl extensions when I get more time
+// Look for:
+// WGL_ARB_pbuffer and/or WGL_EXT_pbuffer
+// GLX_MESA_copy_sub_buffer / glXCopySubBufferMESA()
+// GL_WIN_swap_hint (I have this one in software OpenGL)
+//   This may require a pixel format with PFD_SWAP_COPY.  Must read more...
+// GLX_SGIX_pbuffer
+// Also I wonder if I could copy the depth buffer to the accumulation buffer.
+//
+// NOTE:  these two extensions are the same thing with different names.
+// I should try these first after testing MESA COPY_NODAMAGE stuff.
+// WGL_ARB_buffer_region
+// GL_KTX_buffer_region
+
+
+/***************************************************************/
+void CopyStaticBuffer(void)
+{
+  if (SOLID_EDIT_MODE)
+  {
+    if (movingpiece != curpiece)
+    {
+      Select1Part(curpiece);
+      // Draw stuff into the staticbuffer
+      glDrawBuffer(staticbuffer); 
+      
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      render();
+
+      SaveDepthBuffer();
+    }
+    movingpiece = curpiece;
+    
+    // get fresh copy of static data
+    if (buffer_swap_mode == SWAP_TYPE_KTX)
+    {
+      glDrawBuffer(staticbuffer); 
+      glDrawBufferRegion(zbuffer_region,0,0,Width,Height,0,0);
+      glDrawBufferRegion(cbuffer_region,0,0,Width,Height,0,0);
+      glutSwapBuffers(); 
+      glDrawBuffer(screenbuffer); 
+      rendersetup();
+      return;
+    }
+
+    // get fresh copy of static data
+    glReadBuffer(staticbuffer); // set pixel source
+    glDrawBuffer(screenbuffer); // set pixel destination
+    glDisable( GL_DEPTH_TEST ); // Speed up copying
+    glDisable(GL_LIGHTING);     // Speed up copying
+    glMatrixMode( GL_PROJECTION );
+    glLoadIdentity();
+    gluOrtho2D(0, Width, 0, Height);
+    glMatrixMode( GL_MODELVIEW );
+    glPushMatrix();
+    glLoadIdentity();
+    glRasterPos2i(0, 0);
+    glDepthMask(GL_FALSE); // disable updates to depth buffer
+    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
+    if ((buffer_swap_mode == SWAP_TYPE_COPY) ||
+	(buffer_swap_mode == SWAP_TYPE_NODAMAGE))
+      glutSwapBuffers(); // Found GL_WIN_swap_hint extension
+    else
+      glCopyPixels(0, 0, Width, Height, GL_COLOR);
+#ifdef DEPTH_BUFFER_MASK
+    // Enable depth test, but disable depth writes while moving the piece
+    // This would work well if the moving piece were depth sorted.
+    // As is, the moving piece is drawn in random depth order and looks bad.
+    // This could work with the half depth buffer trick using a split
+    // depth range.  
+    // The moving piece gets half the depth range with GL_GREATER...
+    glDepthMask(GL_FALSE); // disable updates to depth buffer
+#else
+    glRasterPos2i(0, 0);
+    glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
+    glDepthMask(GL_TRUE); // enable updates to depth buffer
+    glEnable( GL_DEPTH_TEST ); 
+    glDepthFunc(GL_ALWAYS);
+    glRasterPos2i(0, 0);
+    glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
+#endif
+    glPopMatrix();
+    reshape(Width, Height);
+    glEnable( GL_DEPTH_TEST ); 
+    glDepthFunc(GL_LESS);
+    rendersetup();
+    // screenbuffer is ready for dynamic data
+  }
+  else
+  {
+    XORcurPiece(); // Erase the previous piece
+    if (movingpiece != curpiece)
+    {
+      // Render the buffer without the new moving piece.
+      Select1Part(curpiece);
+      glDrawBuffer(staticbuffer); 
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      render();
+      glutSwapBuffers();
+      glDrawBuffer(screenbuffer); 
+      UnSelect1Part(curpiece);
+    }
+  }
+}
+      
+/***************************************************************/
+void DrawMovingPiece(void)
+{
+  if (SOLID_EDIT_MODE)
+  {
+    if (zShading)
+      glEnable(GL_LIGHTING);
+    else
+      glDisable(GL_LIGHTING);
+    DrawCurPart(-1);
+  }
+  else
+  {
+    XORcurPiece();
+  }
+  glFlush();
 }
 
 /***************************************************************/
@@ -2308,23 +2598,38 @@ void display(void)
 
   if (editing) 
   {
-    if (dirtyWindow)
+    if (panning || dirtyWindow)
     {
       if (SOLID_EDIT_MODE)
       {
-	if ((panning) || (movingpiece == curpiece))
-	  glDrawBuffer(staticbuffer); 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	render();
-	if (movingpiece == curpiece)
-	  SaveDepthBuffer();
-	if ((panning) || (movingpiece == curpiece))
+	if (panning)
 	{
+	  glDrawBuffer(staticbuffer); 
+	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	  render();
 	  glutSwapBuffers();
 	  glDrawBuffer(screenbuffer); 
 	}
+	else 
+	{
+	  if (movingpiece == curpiece)
+	  {
+	    glDrawBuffer(staticbuffer); 
+	    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	    render();
+	    SaveDepthBuffer();
+	    CopyStaticBuffer();
+	  }	  
+	  else 
+	  {
+	    glDrawBuffer(screenbuffer); 
+	    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	    render();
+	  }	  
+	}
+	rendersetup();
 	if (movingpiece == curpiece)
-	  DrawCurPart(-1);
+	  DrawMovingPiece();
 	else
 	  XORcurPiece();
       }
@@ -2355,9 +2660,7 @@ void display(void)
 	edit_mode_gui();
     }
 
-#if 0 // This doesn't work for some reason
     dirtyWindow = 0;  // The window is nice and squeaky clean now.
-#endif
     return;
   }
 
@@ -2546,206 +2849,6 @@ void parse_view(char *viewMatrix)
 }
 
 /***************************************************************/
-int XORcurPiece()
-{
-  int retval = 0;
-
-  glMatrixMode(GL_MODELVIEW);
-  glPushMatrix();
-
-  rendersetup();
-
-  glDisable(GL_LIGHTING); // No need for lighting
-  glDisable( GL_DEPTH_TEST ); // don't test for depth -- just put in front
-  glEnable( GL_COLOR_LOGIC_OP ); 
-  glLogicOp(GL_XOR);
-  glColor3f(1.0, 1.0, 1.0); // white
-  glCurColorIndex = -1;
-  retval = Draw1Part(curpiece, 15);
-  glLogicOp(GL_COPY);
-  glEnable( GL_DEPTH_TEST ); 
-  glDisable( GL_COLOR_LOGIC_OP ); 
-
-  glCurColorIndex = -1;
-
-  glFlush();
-
-  glPopMatrix();
-
-  return retval;
-}
-
-/***************************************************************/
-// Here is a snippet from the web. 
-#if 0
-glGet(GL_CURRENT_RASTER_POSITION); //0.5000 165.0000 0.5000 1.0000
-glGet(GL_DEPTH_BIAS); //0.0000
-glGet(GL_DEPTH_BITS); //32.0000
-glGet(GL_DEPTH_CLEAR_VALUE); //1.0000
-glGet(GL_DEPTH_FUNC); //513.0000
-glGet(GL_DEPTH_RANGE); //0.0000 1.0000
-glGet(GL_DEPTH_SCALE); //1.0000
-glGet(GL_DEPTH_TEST); //0.0000
-glGet(GL_DEPTH_WRITEMASK); //1.0000
-
-glPushAttrib(GL_COLOR_BUFFER_BIT|GL_CURRENT_BIT|GL_DEPTH_BUFFER_BIT|GL_FOG_BIT|GL_LIGHTING_BIT|GL_MISC_BIT_EXT|GL_VIEWPORT_BIT);
-glViewport(0, 0, 470, 330);
-glScissor(0, 0, 470, 330);
-glDisable(GL_DEPTH_TEST);
-glDisable(GL_FOG);
-glMatrixMode(GL_PROJECTION);
-glPushMatrix();
-glLoadIdentity();
-glOrtho(-0.5000f, 470.5000f, -0.5000f, 330.5000f, -1.0000f, 1.0000f);
-glMatrixMode(GL_MODELVIEW);
-glPushMatrix();
-glLoadIdentity();
-glDrawBuffer(GL_FRONT_AND_BACK);
-glRasterPos2f(0.0000f, 165.0000f);
-glCopyPixels(0, 0, 470, 165, GL_COLOR);
-glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-// Added these two lines
-glEnable(GL_DEPTH_TEST);
-glDepthFunc(GL_ALWAYS);     // New value always wins.
-// *********************
-glCopyPixels(0, 0, 470, 165, GL_DEPTH);
-glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-glPopMatrix();
-glMatrixMode(GL_PROJECTION);
-glPopMatrix();
-glMatrixMode(GL_MODELVIEW);
-glDrawBuffer(GL_BACK);
-glPopAttrib();
-#endif
-
-/***************************************************************/
-/***************************************************************/
-// CopyStaticBuffer is fairly slow but should always work.
-// I could speed this up with opengl extensions when I get more time
-// Look for:
-// WGL_ARB_pbuffer and/or WGL_EXT_pbuffer
-// GLX_MESA_copy_sub_buffer / glXCopySubBufferMESA()
-// GL_WIN_swap_hint (I have this one in software OpenGL)
-//   This may require a pixel format with PFD_SWAP_COPY.  Must read more...
-// GLX_SGIX_pbuffer
-// Also I wonder if I could copy the depth buffer to the accumulation buffer.
-//
-// NOTE:  these two extensions are the same thing with different names.
-// I should try these first after testing MESA COPY_NODAMAGE stuff.
-// WGL_ARB_buffer_region
-// GL_KTX_buffer_region
-
-
-/***************************************************************/
-void CopyStaticBuffer(void)
-{
-  if (SOLID_EDIT_MODE)
-  {
-    if (movingpiece != curpiece)
-    {
-      Select1Part(curpiece);
-      // Draw stuff into the staticbuffer
-      glDrawBuffer(staticbuffer); 
-      
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      render();
-
-      SaveDepthBuffer();
-    }
-    movingpiece = curpiece;
-    
-    // get fresh copy of static data
-    if (zbuffer_region)
-    {
-      glDrawBuffer(staticbuffer); 
-      // On my card this call nukes the call stack so we crash on return below.
-      glDrawBufferRegion(cbuffer_region,0,0,Width,Height,0,0);
-      glDrawBufferRegion(zbuffer_region,0,0,Width,Height,0,0);
-      glutSwapBuffers(); 
-      glDrawBuffer(screenbuffer); 
-      return;
-    }
-
-    // get fresh copy of static data
-    glReadBuffer(staticbuffer); // set pixel source
-    glDrawBuffer(screenbuffer); // set pixel destination
-    glDisable( GL_DEPTH_TEST ); // Speed up copying
-    glDisable(GL_LIGHTING);     // Speed up copying
-    glMatrixMode( GL_PROJECTION );
-    glLoadIdentity();
-    gluOrtho2D(0, Width, 0, Height);
-    glMatrixMode( GL_MODELVIEW );
-    glPushMatrix();
-    glLoadIdentity();
-    glRasterPos2i(0, 0);
-    glDepthMask(GL_FALSE); // disable updates to depth buffer
-    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
-    if ((buffer_swap_mode == SWAP_TYPE_COPY) ||
-	(buffer_swap_mode == SWAP_TYPE_NODAMAGE))
-      glutSwapBuffers(); // Found GL_WIN_swap_hint extension
-    else
-      glCopyPixels(0, 0, Width, Height, GL_COLOR);
-#ifdef DEPTH_BUFFER_MASK
-    // Enable depth test, but disable depth writes while moving the piece
-    // This would work well if the moving piece were depth sorted.
-    // As is, the moving piece is drawn in random depth order and looks bad.
-    // This could work with the half depth buffer trick using a split
-    // depth range.  
-    // The moving piece gets half the depth range with GL_GREATER...
-    glDepthMask(GL_FALSE); // disable updates to depth buffer
-#else
-    glRasterPos2i(0, 0);
-    glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
-    glDepthMask(GL_TRUE); // enable updates to depth buffer
-    glEnable( GL_DEPTH_TEST ); 
-    glDepthFunc(GL_ALWAYS);
-    glRasterPos2i(0, 0);
-    glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
-    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
-#endif
-    glPopMatrix();
-    reshape(Width, Height);
-    glEnable( GL_DEPTH_TEST ); 
-    glDepthFunc(GL_LESS);
-    rendersetup();
-    // screenbuffer is ready for dynamic data
-  }
-  else
-  {
-    XORcurPiece(); // Erase the previous piece
-    if (movingpiece != curpiece)
-    {
-      // Render the buffer without the new moving piece.
-      Select1Part(curpiece);
-      glDrawBuffer(staticbuffer); 
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      render();
-      glutSwapBuffers();
-      glDrawBuffer(screenbuffer); 
-      UnSelect1Part(curpiece);
-    }
-  }
-}
-      
-/***************************************************************/
-void DrawMovingPiece(void)
-{
-  if (SOLID_EDIT_MODE)
-  {
-    if (zShading)
-      glEnable(GL_LIGHTING);
-    else
-      glDisable(GL_LIGHTING);
-    DrawCurPart(-1);
-  }
-  else
-  {
-    XORcurPiece();
-  }
-  glFlush();
-}
-
-/***************************************************************/
 void EraseCurPiece(void)
 {
   if ((SOLID_EDIT_MODE) && (movingpiece == curpiece))
@@ -2899,11 +3002,13 @@ int edit_mode_fnkeys(int key, int x, int y)
     editingprevmode = ldraw_commandline_opts.M;
     ldraw_commandline_opts.M = 'C';
     ldraw_commandline_opts.poll = 0; // Disable polling 
-    curstep = 0; // Reset to first step
-    dirtyWindow = 1;
     
     if (editingprevmode != 'C')
-      glutPostRedisplay();  // gotta redisplay to draw the whole thing.
+      if (stepcount != curstep)
+	glutPostRedisplay();  // gotta redisplay to draw the whole thing.
+
+    curstep = 0; // Reset to first step
+    dirtyWindow = 1;
 
     curpiece = 0;
     movingpiece = -1;
@@ -3104,11 +3209,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	ecommand[1] = 0;
 	edit_mode_gui();
 	break;
-      case 'g':
-	sprintf(eprompt[0], "Goto Line: ");
-	ecommand[0] = toupper(key);
-	ecommand[1] = 0;
-	edit_mode_gui();
+      case 'q':
+	exit(0);
 	break;
       default:
 	break;
@@ -3268,6 +3370,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	HiLightCurPiece(curpiece); // unselect any moving parts
 	parse_view(m_viewMatrix);
 	initCamera(); // Reset the camera position for any stock views.
+	dirtyWindow = 1;
 	glutPostRedisplay();
       }
       return 1;
@@ -3440,17 +3543,17 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	break;
       case '1':
 	sscanf(&(ecommand[1]),"%f", &f);
-	ldraw_commandline_opts.O.x = f;
+	ldraw_commandline_opts.O.x = -f;
 	edit_mode_gui();
 	break;
       case '2':
 	sscanf(&(ecommand[1]),"%f", &f);
-	ldraw_commandline_opts.O.y = f;
+	ldraw_commandline_opts.O.y = -f;
 	edit_mode_gui();
 	break;
       case '3':
 	sscanf(&(ecommand[1]),"%f", &f);
-	ldraw_commandline_opts.O.z = f;
+	ldraw_commandline_opts.O.z = -f;
 	edit_mode_gui();
 	break;
       case 'C':
@@ -3487,7 +3590,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
   switch(key) {
   case 27:
   case '/':
-    sprintf(eprompt[0], "File Edit View Turn Piece Options Goto");
+    sprintf(eprompt[0], "File Edit View Turn Piece Options Quit");
     ecommand[0] = '/';
     ecommand[1] = 0;
     edit_mode_gui();
@@ -3509,7 +3612,9 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     InsertNewPiece();
     return 1;
   case 'e':
-    printf("Erase and redraw screen (Shouldn't be needed)\n");
+    // printf("Erase and redraw screen (Shouldn't be needed)\n");
+    dirtyWindow = 1;
+    glutPostRedisplay();
     return 1;
   case 'w':
     printf("Swap current piece with next piece\n");
@@ -3546,6 +3651,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       moveZamount = 10.0;
       moveYamount = 8.0;
     }
+    edit_mode_gui();
     return 1;
   case 'c':
 #if 1
@@ -3779,30 +3885,43 @@ void keyboard(unsigned char key, int x, int y)
       return;
   }
 
-    switch(key) {
-#if 0
-    case 'e':
-      dirtyWindow = 1;
-      glutSetCursor(GLUT_CURSOR_WAIT);
-      outputEPS(512000, 1, "render.eps");
-      glutSetCursor(GLUT_CURSOR_INHERIT);
-      return;
-    case 'E':
-      dirtyWindow = 1;
-      glutSetCursor(GLUT_CURSOR_WAIT);
-      outputEPS(512000, 0, "render.eps");
-      glutSetCursor(GLUT_CURSOR_INHERIT);
-      return;
-    case 'b':
-      dirtyWindow = 1;
-      glutSetCursor(GLUT_CURSOR_WAIT);
-      outputEPS(512000, 0, NULL);
-      glutSetCursor(GLUT_CURSOR_INHERIT);
-      return;
+#ifdef EPS_OUTPUT_FIGURED_OUT
+  // Allow eps output with ALT-e key combo someday...
+  if (((glutModifiers & GLUT_ACTIVE_ALT) != 0) && (tolower(key) == 'e'))
+  {
+    if ((glutModifiers & GLUT_ACTIVE_CTRL) != 0)
+      key = 6;
+    else if (key == 'e')
+      key = 4;
+    else 
+      key = 5;
+  }
+  switch(key) {
+  case 4:
+    dirtyWindow = 1;
+    glutSetCursor(GLUT_CURSOR_WAIT);
+    outputEPS(512000, 1, "render.eps"); // Sorted EPS
+    glutSetCursor(GLUT_CURSOR_INHERIT);
+    return;
+  case 5:
+    dirtyWindow = 1;
+    glutSetCursor(GLUT_CURSOR_WAIT);
+    outputEPS(512000, 0, "render.eps"); // UnSorted EPS
+    glutSetCursor(GLUT_CURSOR_INHERIT);
+    return;
+  case 6:
+    dirtyWindow = 1;
+    glutSetCursor(GLUT_CURSOR_WAIT);
+    outputEPS(512000, 0, NULL); // Debug the selection buffer.
+    glutSetCursor(GLUT_CURSOR_INHERIT);
+    return;
+  }
 #endif
+
+    switch(key) {
 #define AUTOSCALE_OPTION 1
 #ifdef AUTOSCALE_OPTION
-    case 'y':
+    case 'S':
       // NOTE: this assumes cropping == 1 (which may not be true)
       // I should really just get a bounding sphere
       // and scale it to fit in the view frustrum.
@@ -3836,16 +3955,15 @@ void keyboard(unsigned char key, int x, int y)
 	reshape(Width, Height);
 	break;
 #endif
-    case 'z':
+    case 2: // Zoom out
         ldraw_commandline_opts.S *= 0.9;
 	dirtyWindow = 1; //reshape(Width, Height);
 	break;
-    case 'Z':
+    case 3: // Zoom in
         ldraw_commandline_opts.S *= (1.0 / 0.9);
 	dirtyWindow = 1; //reshape(Width, Height);
 	break;
-    case 's':
-    case '-':
+    case '-': // Half Size (scale dn)
         printf("key = %d = '%c' (%08x)\n",key,key, glutModifiers);
 	if ((glutModifiers & GLUT_ACTIVE_ALT) != 0)
 	  ldraw_commandline_opts.S *= 0.9;
@@ -3853,8 +3971,7 @@ void keyboard(unsigned char key, int x, int y)
 	  ldraw_commandline_opts.S *= 0.5;
 	dirtyWindow = 1; //reshape(Width, Height);
 	break;
-    case 'S':
-    case '+':
+    case '+': // Double Size (scale up)
         printf("key = %d = '%c' (%08x)\n",key,key, glutModifiers);
 	if ((glutModifiers & GLUT_ACTIVE_ALT) != 0)
 	  ldraw_commandline_opts.S *= (1.0 / 0.9);
@@ -3928,16 +4045,16 @@ void keyboard(unsigned char key, int x, int y)
       ldraw_commandline_opts.F |= SHADED_MODE;
       reshape(Width, Height);
       break;
-    case 'w':
+    case 'l':
       zWire = 1;
       zShading = 0;
       ldraw_commandline_opts.F |= WIREFRAME_MODE;
       ldraw_commandline_opts.F &= !(SHADED_MODE);
       reshape(Width, Height);
       break;
-    case 'P':
-    case 'p':
-      if (key == 'P') 
+    case 'B': // Bitmap
+    case 'b':
+      if (key == 'B') 
       {
 	ldraw_image_type = IMAGE_TYPE_PNG_RGB;
 	if (glutModifiers & GLUT_ACTIVE_CTRL)
@@ -3968,10 +4085,10 @@ void keyboard(unsigned char key, int x, int y)
       else 
 	pan_visible = (BBOX_MODE | WIREFRAME_MODE);
       return;
-    case 'c':
+    case 's':
       // NOTE: I could toggle the menu strings but that would require
       // setting them right initially, and making sure its not fullscreen.
-      // Right now than means checking  if (ldraw_commandline_opts.V_x >= -1)
+      // Right now that means checking  if (ldraw_commandline_opts.V_x >= -1)
       //glutSetMenu(opts); // Reset the current menu to the main menu.
       if (ldraw_commandline_opts.M == 'C')
       {	
@@ -3985,12 +4102,12 @@ void keyboard(unsigned char key, int x, int y)
       }
       curstep = 0; // Reset to first step
       dirtyWindow = 1;
-      return;
+      break; //return;
     case 'g':
       ldraw_commandline_opts.poll ^= 1;
       return;
 #ifdef USE_L3_PARSER
-    case 'l':
+    case 'r': // Reader (parser)
       if (parsername == LDLITE_PARSER)
       {
 	parsername = L3_PARSER;
@@ -4031,6 +4148,7 @@ void keyboard(unsigned char key, int x, int y)
 	exit(0);
 	break;
     case '\r':
+    case ' ':
 	break;
     default:
 	return;
@@ -4533,6 +4651,8 @@ void colormenu(int c)
   glClearColor(((float)zc.r)/255.0,((float)zc.g)/255.0,((float)zc.b)/255.0,0.0);
   if (ldraw_commandline_opts.debug_level == 1)
     printf("clearcolor %d = (%d, %d, %d)\n", c, zc.r, zc.g, zc.b);
+
+  dirtyWindow = 1;  // Do not increment step counter
   glutPostRedisplay();
 }
 
@@ -4951,6 +5071,7 @@ void ParseParams(int *argc, char **argv)
 	    ldraw_commandline_opts.F |= STUDLESS_MODE;
 	    break;
 	  case 'W':
+	  case 'L':
 	    ldraw_commandline_opts.F |= WIREFRAME_MODE;
 	    zWire = 1;
 	    break;
@@ -5333,21 +5454,21 @@ main(int argc, char **argv)
   glutAddMenuEntry("Perspective     ", 'J');
   glutAddMenuEntry("                ", '\0');
   glutAddMenuEntry("Shading         ", 'h');
-  glutAddMenuEntry("Wireframe       ", 'w');
+  glutAddMenuEntry("Linemode        ", 'l');
   glutAddMenuEntry("Normal          ", 'n');
   glutAddMenuEntry("Studs           ", 'f');
   glutAddMenuEntry("Quality Lines   ", 'q');
   glutAddMenuEntry("Visible spin    ", 'v');
-  glutAddMenuEntry("Continuous      ", 'c');
+  glutAddMenuEntry("Step-Continuous ", 's');
   glutAddMenuEntry("Polling         ", 'g');
 #ifdef USE_L3_PARSER
-  glutAddMenuEntry("Parser          ", 'l');
+  glutAddMenuEntry("Parser          ", 'r');
 #endif
   glutAddMenuEntry("                ", '\0');
-  glutAddMenuEntry("Zoom out        ", 'z');
-  glutAddMenuEntry("Zoom in         ", 'Z');
-  glutAddMenuEntry("Scale dn        ", 's');
-  glutAddMenuEntry("Scale up        ", 'S');
+  glutAddMenuEntry("Zoom out        ", 2);
+  glutAddMenuEntry("Zoom in         ", 3);
+  glutAddMenuEntry("Scale dn        ", '-');
+  glutAddMenuEntry("Scale up        ", '+');
 
   colors = glutCreateMenu(colormenu);
   glutAddMenuEntry("Black              ", 0);
@@ -5399,7 +5520,7 @@ main(int argc, char **argv)
 
   helpmenunum = glutCreateMenu(menu);
   glutAddMenuEntry(progname             , '\0');
-  glutAddMenuEntry("Version 0.8.0      ", '\0');
+  glutAddMenuEntry("Version 0.9.A      ", '\0');
 
   mainmenunum = glutCreateMenu(menu);
   glutAddSubMenu(  "File               ", filemenunum);
@@ -5410,10 +5531,12 @@ main(int argc, char **argv)
   glutAddSubMenu(  "Options            ", opts);
   glutAddSubMenu(  "BackGround Color   ", colors);
   glutAddMenuEntry("                   ", '\0');
-  glutAddMenuEntry("Picture            ", 'P');
-  glutAddMenuEntry("EPS file (sorted)  ", 'e');
-  glutAddMenuEntry("EPS file (UNsorted)", 'E');
-  glutAddMenuEntry("Feedback Buffer    ", 'b');
+  glutAddMenuEntry("Bitmap             ", 'B');
+#ifdef EPS_OUTPUT_FIGURED_OUT
+  glutAddMenuEntry("EPS file (sorted)  ", 4);
+  glutAddMenuEntry("EPS file (UNsorted)", 5);
+  glutAddMenuEntry("EPS debug          ", 6);
+#endif
   glutAddMenuEntry("                   ", '\0');
   glutAddSubMenu(  "Help               ", helpmenunum);
   glutAddMenuEntry("Quit               ", '\033');
