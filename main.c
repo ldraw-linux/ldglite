@@ -402,21 +402,24 @@ GLUTAPI void GLUTAPIENTRY glutSetCursor(int cursor)
       switch (cursor)
       {
       case GLUT_CURSOR_NONE:
-	scare_mouse();
+	//scare_mouse();
+	show_mouse(NULL);
 	return;
       case GLUT_CURSOR_INHERIT:
-	set_mouse_sprite(NULL);
+	//set_mouse_sprite(NULL);
 	break;
       case GLUT_CURSOR_WAIT:
       default:
       }
-      unscare_mouse();
+      show_mouse(screen);
+      //unscare_mouse();
     }
 }
 
 GLUTAPI void GLUTAPIENTRY glutWarpPointer(int x, int y)
 {
   position_mouse(x, y);
+  //show_mouse(screen);
 }
 
 GLUTAPI void GLUTAPIENTRY glutFullScreen(void)
@@ -4839,7 +4842,11 @@ motion(int x, int y)
       pan_start_F = ldraw_commandline_opts.F;
       ldraw_commandline_opts.F = pan_visible; 
     }
+#ifdef VISIBLE_WARP_CHECK
+    glutSetCursor(GLUT_CURSOR_INHERIT);
+#else
     glutSetCursor(GLUT_CURSOR_NONE);
+#endif
     panning = 1;
 
     // Check for shift or ctrl mouse drag changes on the fly.
@@ -4917,9 +4924,21 @@ motion(int x, int y)
       if (ldraw_commandline_opts.debug_level == 1)
 	printf("ROTATING about(%0.2f, %0.2f) by angle %0.2f\n", pan_y, -pan_x, angle);
       rotate_about(pan_y, -pan_x, 0.0, angle );
-      
+
       pan_start_x = p_x; //Set next pan_start coords.
       pan_start_y = p_y;
+
+#ifndef NOT_WARPING
+      // Set next pan_start coords to center of screen if far enough away.
+      // This should prevent the problem where we stop spinning when the 
+      // mouse gets to the edge of the screen.
+      if ((p_x > 10) || (p_x < -10) || (p_y > 10) || (p_y < -10))
+      {
+	glutWarpPointer(Width/2, Height/2);
+	pan_start_x = 0;
+	pan_start_y = 0;
+      }
+#endif
 
       glutPostRedisplay();
     }
@@ -5920,22 +5939,26 @@ main(int argc, char **argv)
 
   if ((Width <= 0) || (Height <= 0))
   {
-    if ((Width < 0) && (Height < 0))
+    // OSMesa does not seem to like glutGet(GLUT_SCREEN_WIDTH)
+    if (OffScreenRendering == 0) 
     {
-      //glutFullScreen();  // This shows no window decorations.
-      Width = glutGet(GLUT_SCREEN_WIDTH);
-      Height = ldraw_commandline_opts.V_y = glutGet(GLUT_SCREEN_HEIGHT);
-    }   
-    else
-    {
-      // get the screen size and subtract a fudge factor for window borders
-      Width = ldraw_commandline_opts.V_x = glutGet(GLUT_SCREEN_WIDTH) - 8;
-      Height = ldraw_commandline_opts.V_y = glutGet(GLUT_SCREEN_HEIGHT) - 32;
+      if ((Width < 0) && (Height < 0))
+      {
+	//glutFullScreen();  // This shows no window decorations.
+	Width = ldraw_commandline_opts.V_x = glutGet(GLUT_SCREEN_WIDTH);
+	Height = ldraw_commandline_opts.V_y = glutGet(GLUT_SCREEN_HEIGHT);
+      }   
+      else
+      {
+	// get the screen size and subtract a fudge factor for window borders
+	Width = ldraw_commandline_opts.V_x = glutGet(GLUT_SCREEN_WIDTH) - 8;
+	Height = ldraw_commandline_opts.V_y = glutGet(GLUT_SCREEN_HEIGHT) - 32;
 #if defined(MAC)
-      // Set default window small for MACs to get cmdline args.
-      Width = 640;
-      Height = 480;
+	// Set default window small for MACs to get cmdline args.
+	Width = 640;
+	Height = 480;
 #endif
+      }
     }
 
     if ((Width <= 0) || (Height <= 0))
