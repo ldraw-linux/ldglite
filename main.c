@@ -90,7 +90,7 @@ int ldraw_projection_type = 0;  // 1 = perspective, 0 = orthographic.
 // znear 1.0 gives zfighting with 16bit Mesa Zbuf, 10.0 still does on datsville
 double projection_znear = 10.0; 
 double projection_zfar = 4000.0;
-double projection_fov = 45.0;
+double projection_fov = 67.38; //L3P default is 67.38 degrees = 2*atan(2/3)
 double projection_fromx = 0.0;
 double projection_fromy = 0.0;
 double projection_fromz = 1000.0;
@@ -1359,6 +1359,10 @@ void linequalitysetup()
     glHint( GL_LINE_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
     glEnable( GL_BLEND );
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // Also smooth edges of printed polygons.
+    glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+    //glEnable( GL_POLYGON_SMOOTH ); 
+    //glHint( GL_POLYGON_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
 #if 0
     if (lineWidth > 1.0)
     {
@@ -1374,6 +1378,10 @@ void linequalitysetup()
     glDisable( GL_LINE_SMOOTH ); 
     glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
     glDisable( GL_BLEND );
+    // Return from smoothing edges of printed polygons.
+    //glDisable( GL_POLYGON_SMOOTH ); 
+    //glHint( GL_POLYGON_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+    glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
   }
 
   //NOTE:  I should draw round points at the ends of all lines (in stub.c).
