@@ -1,4 +1,9 @@
 ----------------------------------------------------------------------
+Consider rewriting all the the code that writes to GL_FRONT to write
+to GL_BACK instead.  It's much, much faster on many systems, and less
+buggy on OSX (with it's weird BACK buffer trickery).
+
+----------------------------------------------------------------------
 The MUI menu is a real CPU hog on slow systems like the 486.  Does it
 have an Idle function.  If not, where can I put it to sleep?
 
