@@ -1,4 +1,31 @@
 ----------------------------------------------------------------------
+Test ~/foo.dat in the MUI open file dialog in linux (and OSX).
+
+----------------------------------------------------------------------
+Remember to strip and UPX any Windows Executables for distribution.
+
+----------------------------------------------------------------------
+Make some way to register ldglite since win2k and winXP do not allow
+creation of new MIME types via explorer.  Either do something like
+ldglite -reg or distribute a ldglite.reg file with instructions on how 
+to set the directory path of the executable. 
+
+Hey, I wonder if that OSX bundle junk can be used to register the .LDR
+extension on a Mac to make it launch ldglite on a .LDR file by clicking
+on the file.
+
+----------------------------------------------------------------------
+Make an OSX bundle directory structure for ldglite with contents,
+info.plist, icon etc so It can be launched by clicking on it.
+
+Note that GLUT is a separate framework, and will chdir to the
+Resources folder of your application bundle on glutInit! If you don't
+want this to happen, the easiest way is to
+getcwd(...);glutInit(...);chdir(...);. There is a command line
+argument flag that you may pass to it, but I think getcwd/chdir is
+easier than stuffing an extra flag into the argv.
+
+----------------------------------------------------------------------
 Consider rewriting all the the code that writes to GL_FRONT to write
 to GL_BACK instead.  It's much, much faster on many systems, and less
 buggy on OSX (with it's weird BACK buffer trickery).
