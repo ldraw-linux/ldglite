@@ -6968,16 +6968,23 @@ MsgSubClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
   // Intercept WM_COPYDATA and convert string to WM_KEYDOWN, WM_KEYUPs.
   if (uMsg == WM_COPYDATA)
   {
+    struct {
+      int X, Y;
+      char s[256];
+    } *CopyRecord;
+
     char *foo;
 
     cds = (COPYDATASTRUCT *) lParam;
-    printf("WM_COPYDATA %s\n", cds->lpData);
+    printf("WM_COPYDATA %d, %d, %p\n",cds->cbData, cds->dwData, cds->lpData);
 
-    foo = (char *)wParam;
-    printf("WM_COPYDATA wParam %s\n", foo);
-
-    foo = (char *)lParam;
-    printf("WM_COPYDATA lParam %s\n", foo);
+    if ((cds) && (cds->dwData == 1) && 
+	(cds->cbData == sizeof(*CopyRecord)) && (cds->lpData))
+    {
+      CopyRecord = cds->lpData;
+      printf("Copyrecord = %d, %d, %s\n",
+	     CopyRecord->X, CopyRecord->Y, CopyRecord->s);
+    }
   }
     // convert string to WM_KEYDOWN, WM_KEYUPs.
   else if (uMsg == WM_DROPFILES)
