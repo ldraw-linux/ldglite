@@ -148,6 +148,7 @@ int NVIDIA_XOR_HACK = 0;
 
 int editing = 0;
 int curpiece = 0;
+int curpoint = -1;
 int movingpiece = -1;
 int StartLineNo = -1;
 int DrawToCurPiece = 0;
@@ -190,6 +191,8 @@ extern int Comment1Part(int partnum, char *Comment);
 extern int Switch1Part(int partnum);
 extern int Get1PartBox(int partnum, int sc[4]);
 extern int Make1Primitive(int partnum, char *str);
+extern int GetCurLineType(int partnum);
+extern int Inline1Part(int partnum);
 
 int use_quads = 0;
 int curstep = 0;
@@ -3386,7 +3389,7 @@ int edit_mode_fnkeys(int key, int x, int y)
     // Switch to continuous mode.
     editingprevmode = ldraw_commandline_opts.M;
     ldraw_commandline_opts.M = 'C';
-    ldraw_commandline_opts.poll = 0; // Disable polling 
+    //ldraw_commandline_opts.poll = 0; // Disable polling 
     
     if (editingprevmode != 'C')
       if (stepcount != curstep)
@@ -3618,7 +3621,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	break;
       case 'p':
 	sprintf(eprompt[0], "Piece: ");
-	sprintf(eprompt[1], "File Color Goto    Location Scale Matrix");
+	sprintf(eprompt[1], "File Color Goto  Location Scale Matrix  Inline");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
@@ -3867,6 +3870,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	return 1;
       case 'g':
 	sprintf(eprompt[0], "Goto Line: ");
+	eprompt[1][0] = 0;
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
@@ -3892,6 +3896,13 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	ecommand[0] = 'm';
 	ecommand[1] = 0;
 	edit_mode_gui();
+	return 1;
+      case 'i':
+	// Inline the current piece
+	clear_edit_mode_gui();
+	UnLightCurPiece();
+	Inline1Part(curpiece);
+	HiLightNewPiece(curpiece);
 	return 1;
       }
       return 1;
@@ -4047,7 +4058,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	m[1][3] += f;
 	TranslateCurPiece(m);
 	break;
-      case 'v':
+      case 'v': // Translate x, y, z, or v = vector.
 	v[0][0] = v[0][1] = v[0][2] = 0.0;
 	ScanPoints(v, 1, &(ecommand[1]));
 	m[0][3] += v[0][0];
@@ -4253,7 +4264,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     ecommand[1] = 0;
     edit_mode_gui();
     return 1;
-  case 'v':
+  case 'v': // Translate x, y, z, or v = vector.
     sprintf(eprompt[0], "vector (x y z): ");
     ecommand[0] = key;
     ecommand[1] = 0;
@@ -4674,7 +4685,7 @@ void keyboard(unsigned char key, int x, int y)
       platform_step(INT_MAX, 0, -1, NULL);
       ldraw_commandline_opts.M = c;
       return;
-    case 'v':
+    case 'V':
       if (pan_visible == (BBOX_MODE | WIREFRAME_MODE) )
 	pan_visible = (WIREFRAME_MODE | STUDLESS_MODE);
       else if (pan_visible == (WIREFRAME_MODE | STUDLESS_MODE) )
@@ -5518,6 +5529,12 @@ void myGlutIdle( void )
     else if (datstat.st_mtime != last_file_time)
     {
       printf("Reloading %s = %d\n", filename, last_file_time);
+      if (editing)
+      {
+	// Unselect piece before reloading from poll.
+	EraseCurPiece();
+	movingpiece = -1;
+      }
 #ifdef USE_L3_PARSER
       if (parsername == L3_PARSER)
 	list_made = 0; // Gotta reparse the file.
@@ -6223,7 +6240,7 @@ main(int argc, char **argv)
     // Switch to continuous mode.
     editingprevmode = ldraw_commandline_opts.M;
     ldraw_commandline_opts.M = 'C';
-    ldraw_commandline_opts.poll = 0; // Disable polling 
+    //ldraw_commandline_opts.poll = 0; // Disable polling 
     
     curstep = 0; // Reset to first step
     dirtyWindow = 1;
