@@ -5,6 +5,7 @@ Contents of readme.txt:
   Introduction
   LdGLite for Windows README
   LdGLite for linux README
+  LdGLite for DOS README
   Extra Stuff
     Command line options
     Hot Keys
@@ -168,6 +169,35 @@ ldglite.  If you want a 640x480 window with shading turned on try something
 like this.  See ldlite docs for help with command line options. 
 
     /usr/local/bin/ldglite -v3 -fh %s
+
+
+
+                        LdGLite for DOS README
+
+You must install the basic ldraw files from www.ldraw.org
+
+    c:
+    cd \
+    mkdir c:\ldraw
+    cd c:\ldraw
+    ldraw.exe -y
+    complete.exe -y
+
+For ldglite to find the parts you must set the environment variable
+LDRAWDIR.  Add this line to your C:\AUTOEXEC.BAT file and reboot your
+PC.  
+
+    SET LDRAWDIR=C:\LDRAW
+
+You need to run the csdpmi5b DOS extender for this to work unless you
+are using Windows 95 or 98 DOS mode.  You also seem to need at least
+8MB of RAM (16MB recommended) and a 16bpp Video card.  You may also
+need the Scitech Display Doctor (univbe.exe) if video bios does not
+support any of the video modes available with the -v command line
+option.  Finally you may need to redirect stdout to a file to avoid
+some garbage at the top of the screen.
+
+    ldglite -l3 -v3 myfile.dat >messages.txt
 
 
 
