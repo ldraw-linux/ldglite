@@ -6351,6 +6351,11 @@ void getDisplayProperties()
   // Change the default znear for skimpy depth buffers like the Mesa Default.
   if (DepthBits < 24) 
     projection_znear = 100.0; 
+  else if (strstr(vendstr, "ATI") || strstr(verstr, "ATI"))
+  {
+    // The Mac ATI Rage 128 has bleeding edgelines even at 24bit depth.
+    projection_znear = 100.0; 
+  }
 
   glGetIntegerv(GL_STENCIL_BITS, &StencilBits);
   printf("GL_STENCIL_BITS = %d\n", StencilBits);
