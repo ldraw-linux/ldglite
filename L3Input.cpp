@@ -411,7 +411,11 @@ static struct L3PartS *FindPart(int Internal, char *DatName)
    }
    for (i = sizeof(StudPrimitives) / sizeof(StudPrimitives[0]); --i >= 0;)
    {
+#ifdef USE_OPENGL
+      if (stricmp(DatName, StudPrimitives[i]) == 0)
+#else
       if (strcmp(DatName, StudPrimitives[i]) == 0)
+#endif
       {
          PartPtr->IsStud = 1;
          break;
@@ -746,7 +750,11 @@ static int           CheckLine(struct L3LineS * LinePtr,
                matrix if the part is one of the XZ-plane primitives. Many part
                authors are lazy or ignorant and specify zero y values.       */
             for (i = sizeof(xzParts) / sizeof(xzParts[0]); --i >= 0;)
+#ifdef USE_OPENGL
+               if (stricmp(DatName, xzParts[i]) == 0)
+#else
                if (strcmp(DatName, xzParts[i]) == 0)
+#endif
                   break;
             if (i < 0)
             {
@@ -1526,7 +1534,11 @@ static int           ReadDatFile(FILE *fp, struct L3PartS * PartPtr,
                Data.v[3][i] = 0.0;
             }
             Data.v[3][3] = 1.0;
+#ifdef USE_OPENGL
+            if (LightDotDat && stricmp(SubPartDatName, "light.dat") == 0)
+#else
             if (LightDotDat && strcmp(SubPartDatName, "light.dat") == 0)
+#endif
             {
                struct L3LightS     *LightPtr;
 
