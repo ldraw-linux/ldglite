@@ -132,6 +132,10 @@ char *dirname( const char *filepath )
 
   if ( (ptr = strrchr(filepath, '\\')) || (ptr = strrchr(filepath, '/')) )
 
+#elif defined(MACOS_X)
+
+  if ( (ptr = strrchr(filepath, '/'))  || (ptr = strrchr(filepath, ':')) )
+
 #elif defined(UNIX)
 
   if ( (ptr = strrchr(filepath, '/')) )
@@ -191,6 +195,10 @@ char *basename( const char *filepath )
 
   if ( (ptr = strrchr(filepath, '\\')) || (ptr = strrchr(filepath, '/')) )
 
+#elif defined(MACOS_X)
+
+  if ( (ptr = strrchr(filepath, '/'))  || (ptr = strrchr(filepath, ':')) )
+
 #elif defined(UNIX)
 
   if ( (ptr = strrchr(filepath, '/')) )
@@ -248,7 +256,12 @@ localize_path(char *inoutPath)
   for(i=0; i<strlen(inoutPath); i++) 
   {
     /* Localize Directory Separators */
-    if ((inoutPath[i] == '/') || (inoutPath[i] == '\\'))
+    if ((inoutPath[i] == '/') 
+	|| (inoutPath[i] == '\\')
+#if defined(MACOS_X)
+	|| (inoutPath[i] == ':')
+#endif
+	)
     {
       inoutPath[i] = separator; 
     }
@@ -283,6 +296,12 @@ char *concat_path(const char *path1, const char *path2, char *result)
     strcat(ptr, ":"); ptr += strlen(ptr);
   }
 
+#elif defined(MACOS_X)
+  if ((strlastchar(path1) != '/') && (strlastchar(path1) != ':'))
+  {
+    strcat(ptr, "/"); ptr += strlen(ptr);
+  }
+  
 #elif defined(UNIX)
   if (strlastchar(path1) != '/')
   {
