@@ -219,8 +219,20 @@ int Move1Part(int partnum, float m[4][4], int premult)
     case 3:
     case 4:
     case 5:
+        if (premult == 2) // First point of primitive = origin.
+	{
+		x = LinePtr->v[0][0]; // Save the original origin
+		y = LinePtr->v[0][1];
+		z = LinePtr->v[0][2];
+	}
 	for (i=0; i<LinePtr->LineType; i++)
 	{
+	    if (premult == 2)
+	    {
+		LinePtr->v[i][0]-=x; // Move Origin to (0,0,0)
+		LinePtr->v[i][1]-=y;
+		LinePtr->v[i][2]-=z;
+	    }
 	    if (premult)
 	    {
 		M4V3Mul(r,m,LinePtr->v[i]);
@@ -234,6 +246,12 @@ int Move1Part(int partnum, float m[4][4], int premult)
 		LinePtr->v[i][0]=r[0];
 		LinePtr->v[i][1]=r[1];
 		LinePtr->v[i][2]=r[2];
+	    }
+	    if (premult == 2)
+	    {
+		LinePtr->v[i][0]+=x; // Restore Origin
+		LinePtr->v[i][1]+=y;
+		LinePtr->v[i][2]+=z;
 	    }
 	    if (i >= 3) // type five line only has 4 points.
 		break;
@@ -687,6 +705,21 @@ int Add1Part(int partnum)
 
 	SubPartDatName = Strdup("3001.dat");
 	Color = 0;
+    }
+    // Check if this is a primitive.
+    else if ((PrevPtr->LineType >= 2) && (PrevPtr->LineType <= 5))
+    {
+        LinePtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+	if (!LinePtr)
+	  return 0;
+        memcpy(LinePtr, PrevPtr, sizeof(struct L3LineS));
+#ifndef __TURBOC__
+	LinePtr->LineNo = i;
+#endif
+        //memcpy(LinePtr->v, PrevPtr->v, sizeof(LinePtr->v));
+	LinePtr->NextLine = PrevPtr->NextLine;
+	PrevPtr->NextLine = LinePtr;
+	return LinePtr->LineNo;
     }
     else if (!(PrevPtr->PartPtr) || 
 	     !(PrevPtr->PartPtr->DatName) ||
