@@ -1768,8 +1768,16 @@ void zWrite(char *message)
 void zClear()
 {
   int oldrows, oldcols;
+
+#ifdef USE_OPENGL
+  // What a mess!  ldlite uses zGet*size() to center the view.
+  // ldglite uses glulookat() so these fns are rigged to return 0.
+  oldrows = z.rows;  
+  oldcols = z.cols;  // Probably should use Width and Height (to be sure). 
+#else
   oldrows = zGetRowsize();
   oldcols = zGetColsize();
+#endif
   zReset(&oldrows, &oldcols);
 
 #ifdef USE_OPENGL
@@ -1802,6 +1810,8 @@ void zSave(int step)
 int zGetRowsize(void)
 {
 #ifdef USE_OPENGL 
+  // What a mess!  ldlite uses zGet*size() to center the view.
+  // ldglite uses glulookat() so these fns are rigged to return 0.
   return 0; // Fix this.  Do I have rows and cols backwards from ldlite?
 #else
 	return z.rows;
@@ -1811,6 +1821,8 @@ int zGetRowsize(void)
 int zGetColsize(void)
 {
 #ifdef USE_OPENGL
+  // What a mess!  ldlite uses zGet*size() to center the view.
+  // ldglite uses glulookat() so these fns are rigged to return 0.
   return 0; // Fix this.  Do I have rows and cols backwards from ldlite?
 #else
 	return z.cols;
