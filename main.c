@@ -6283,8 +6283,8 @@ void ParseParams(int *argc, char **argv)
 	  v[0][0] = v[0][1] = v[0][2] = 0.0;
 	  ScanPoints(v, 1, &(pszParam[2]));
 	  printf("FROM = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
-	  camera_longitude = v[0][0];
-	  camera_latitude = v[0][1];
+	  camera_latitude = v[0][0];
+	  camera_longitude = v[0][1];
 	  camera_distance  = v[0][2];
 	}
 	else
@@ -6673,6 +6673,10 @@ void ParseParams(int *argc, char **argv)
     printf("CAM = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
 
     // Yuck!  Gotta get rid of LdrawOblique!
+    // L3p defaults to Oblique view, but bases -cg on the front view.
+    // I think L3p puts origin at the center of model, not ldraw (0,0,0).
+    // Maybe I should offset by the center of the model bbox to match it.
+    // Unfortunately I don't have that until I parse the model...
     if (m_viewMatrix == LdrawOblique)
     {
       parse_view(Front);
