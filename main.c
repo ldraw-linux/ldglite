@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 0.9.9b     ";
+char ldgliteVersion[] = "Version 0.9.9c     ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -7758,6 +7758,10 @@ void getDisplayProperties()
     printf("Stencil buffer disabled for XOR with Apple driver.\n");
     // Generic Apple driver has problem with XOR similar to NVIDIA.
     use_stencil_for_XOR = 0;
+
+    // The Mac ATI Rage has bleeding edgelines even at 24bit depth.
+    // But it may use the Apple software driver when has <= 8MB VRAM.
+    projection_znear = 100.0; 
   }
 
 #ifdef GENERIC_MS_TEST
