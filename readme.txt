@@ -73,6 +73,62 @@ For Netscape:
     3) Edit, and set the mime type to application/x-ldraw.
     4) Browse for the ldglite.exe executable.
 
+For Internet Explorer in Win2k (and perhaps Millenium):
+
+    Thank you Micro$oft.  In Win2k you can no longer create new MIME types
+    from an Explorer window.  You must use regedit instead.
+
+    1) Start/Run
+       Type "regedit" in the box and click "OK"
+
+    2) Right click on HKEY_CLASSES_ROOT.
+       Add a new key and rename it to ".dat"
+       Right click on (Default) for this new key and modify the value.
+       Enter "ldlite.Document" for the Value data.
+
+    3) Right click on the key HKEY_CLASSES_ROOT/.dat
+       Add a new string value and rename it to "Content Type"
+       Right click on "Content Type" and select modify.
+       Change the Value data to "application/x-ldraw".
+
+    4) Find the key:
+       HKEY_CLASSES_ROOT/MIME/Database/Content Type.  
+       Under this key, create a key for application/x-ldraw.
+
+    5) Under the application/x-ldraw key, create a string value:
+       "Extension", with data ".dat".
+
+    6) Quit regedit.
+
+    7) Open an Explorer window (or any folder window).
+
+    8) Select the "Tools->Folder Options" menu selection.
+
+    9) Go to the "File Types" tab.
+
+   10) Scroll down and double click on the "ldlite Document" line.  
+       (On Win2K search for the "DAT" extension)
+           If there is no "DAT" extension line, click the "New" button
+           and then click on the "Advanced >>" button.
+           Enter "DAT" in the "File Extension" field.
+           and scroll to select "ldlite Document" for "Associated File Type".
+           (If you can't find it go back to step 1)
+           Press OK.
+
+   11) Press the "Advanced" button.
+
+   12) If "open" is not listed under "Actions" click the "New" button.
+       Otherwise click on "open" and then click "Edit".
+       
+   13) In the "Actions" field, enter "open" if it's not already there.
+       For "Application...", browse to the location of ldglite.exe (or l3glite.exe)
+
+   14) Add any extra command line arguments in the "Application..." field
+       Mine says this (I use the l3 parser and a small window):  
+       C:\projects\ldglite\ldglite -l3 -v3 "%1"
+
+   15) Press enough OK buttons to finish this up.
+
 
 
                         LdGLite for linux README
