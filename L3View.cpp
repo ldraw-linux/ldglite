@@ -61,6 +61,10 @@ static	float	v[4];
 extern int Skip1Line(int IsModel, struct L3LineS *LinePtr);
 extern int Init1LineCounter(void);
 
+extern int BufA1Store(int IsModel, struct L3LineS *LinePtr);
+extern int BufA1Retrieve(int IsModel, struct L3LineS *LinePtr);
+int Draw1Part(int partnum, int Color);
+
 extern int include_stack_ptr;
 extern int hardcolor;
 
@@ -323,6 +327,56 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			  // if (include_stack_ptr <= ldraw_commandline_opts.output_depth )
 			  {
 			    zClear();
+			  }
+			}
+			// Experiment with MLCAD extensions
+			// Based on info provided on lugnet.
+			else if (strncmp(s,"BUFEXCHG A STORE",16) == 0)
+			{
+			  int k;
+
+			  if (IsModel)
+			  {
+			    k = BufA1Store(IsModel,LinePtr);
+			    printf("BUFEXCHG A STORE %d\n", k);
+			  }
+			}
+			else if (strncmp(s,"BUFEXCHG A RETRIEVE",19) == 0)
+			{
+			  int j,n, opts, dcp, cp;
+			  extern int curpiece;
+			  extern int DrawToCurPiece;
+			  void DrawModel(void);
+			   
+			  if (IsModel)
+			  {
+			    n = BufA1Retrieve(IsModel,LinePtr);
+			    printf("BUFEXCHG A RETRIEVE %d\n", n);
+			    // clear and redraw model up to saved point.
+#if 0		    
+			    opts = ldraw_commandline_opts.M;
+			    ldraw_commandline_opts.M = 'C';
+			    dcp = DrawToCurPiece;
+			    DrawToCurPiece = 1;
+			    cp = curpiece;
+			    zClear();
+			    curpiece = n;
+			    Init1LineCounter();
+			    BufA1Store(IsModel,LinePtr);
+			    DrawModel();
+			    //for(j = 0; j < n; j++)
+			    //  Draw1Part(j, -1);
+			    DrawToCurPiece = dcp;
+			    curpiece = cp;
+			    ldraw_commandline_opts.M = opts;
+#endif
+			  }
+			}
+			else if (strncmp(s,"GHOST",5) == 0)
+			{
+			  if (IsModel)
+			  {
+			    // Parse the rest of the line as a .DAT line.
 			  }
 			}
 			if (ldraw_commandline_opts.M != 'C')

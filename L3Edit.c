@@ -983,22 +983,45 @@ extern int StartLineNo;
 extern int DrawToCurPiece;
 
 static int LineNoCounter = -1;
+static int BufALineNo = -1;
 /*****************************************************************************/
 int Init1LineCounter()
 {
   LineNoCounter = 0;
+  BufALineNo = -1;
+}
+
+/*****************************************************************************/
+int BufA1Store(int IsModel, struct L3LineS *LinePtr)
+{
+  if (!IsModel)
+    return 0;
+  
+  BufALineNo = LineNoCounter;
+
+  return BufALineNo;
+}
+
+/*****************************************************************************/
+int BufA1Retrieve(int IsModel, struct L3LineS *LinePtr)
+{
+
+  if (!IsModel)
+    return 0;
+  
+  return BufALineNo;
 }
 
 /*****************************************************************************/
 int Skip1Line(int IsModel, struct L3LineS *LinePtr)
 {
-  if (!editing)
-    return 0;
-
   if (!IsModel)
     return 0;
   
   LineNoCounter++;
+
+  if (!editing)
+    return 0;
 
   // This needs work.  I should count the lines myself.
   // Make Init1LineCounter() fn and make a static counter in this module.
@@ -1077,7 +1100,7 @@ void FreeSomeParts(firstpart, lastpart)
 }
 
 /*****************************************************************************/
-#include <GL/glut.h>
+#include "glwinkit.h"
 
 extern GLdouble model_mat[4*4];
 extern GLdouble proj_mat[4*4];
@@ -1525,6 +1548,13 @@ int Hose1Part(int partnum, int steps)
     char *parttext = NULL;
     char *firstparttext = NULL;
     double         angle;
+    int            drawlines = 0;
+
+    if (steps < 0)
+    {
+      drawlines = 1;
+      steps = -steps;
+    }
 
     if (SelectedLinePtr)
 	LinePtr = SelectedLinePtr;
@@ -1622,7 +1652,7 @@ int Hose1Part(int partnum, int steps)
     else if (stricmp(SubPartDatName, "stud3a.dat") == 0)
     {
       // Found a flex axle.  Get the names of the hose parts.
-      firstparttext = strdup("faxle1.dat"); // Gotta do faxle2 ... faxle5.dat
+      firstparttext = strdup("s/faxle1.dat"); // Gotta do faxle2 ... faxle5.dat
       FixDatName(firstparttext);
       parttext = strdup("axlehol8.dat");
       FixDatName(parttext);
@@ -1670,7 +1700,7 @@ int Hose1Part(int partnum, int steps)
     SelectedLinePtr = FirstPtr;
 
     // Insert the hosed part between the last two comment lines.
-    hoser(m, CurColor, steps, 0, parttext,firstparttext);
+    hoser(m, CurColor, steps, drawlines, parttext,firstparttext);
 
     // Restore SelectedLinePtr
     SelectedLinePtr = PrevPtr;
@@ -1688,12 +1718,32 @@ int hoseseg(char *segname, int color, float m[4][4])
     struct L3LineS *LastPtr;
     struct L3PartS *PartPtr;
 
+    float m1[4][4] = {
+      {1.0,0.0,0.0,0.0},
+      {0.0,1.0,0.0,0.0},
+      {0.0,0.0,1.0,0.0},
+      {0.0,0.0,0.0,1.0}
+    };
+
     LinePtr = SelectedLinePtr;
 
     // Add a 755.dat plug part at near end of the hose.
     NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
     memcpy(NextPtr, LinePtr, sizeof(struct L3LineS));
+#if 0
+    if (stricmp(segname, "77.dat") == 0)
+    {
+      // Gotta scale a flex tube from 1 LDU to 4 LDU per seg
+      // That way we need less segments.
+      m1[1][1] = 4;
+      m1[1][3] = -2; // move center up half of 4 LDU
+      M4M4Mul(NextPtr->v,m,m1);
+    }
+    else
+      memcpy(NextPtr->v, m, sizeof(LinePtr->v));
+#else
     memcpy(NextPtr->v, m, sizeof(LinePtr->v));
+#endif
     PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
     memcpy(PartPtr, LinePtr->PartPtr, sizeof(struct L3PartS));
     NextPtr->PartPtr = PartPtr;
