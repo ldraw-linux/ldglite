@@ -920,7 +920,13 @@ int winOffScreenStart()
   pfd.nVersion = 1 ;
   pfd.dwFlags = PFD_DRAW_TO_BITMAP | PFD_SUPPORT_OPENGL | PFD_SUPPORT_GDI;
   pfd.iPixelType = PFD_TYPE_RGBA ; 
+#ifdef NOALPHA
   pfd.cColorBits = 24;
+#else
+  //pfd.cColorBits = 32;
+  pfd.cColorBits = 24;
+  pfd.cAlphaBits = 8;
+#endif
   pfd.cDepthBits = 32;                // 32-bit z-buffer
   pfd.iLayerType = PFD_MAIN_PLANE;
 
