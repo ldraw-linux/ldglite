@@ -67,8 +67,17 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 	vector3d       v3d[4];
 
 #ifdef USE_OPENGL
+
+// Drawing modes
+#define NORMAL_MODE 	0x0000
+#define STUDLESS_MODE 	0x0001
+#define WIREFRAME_MODE 	0x0002
+#define SHADED_MODE 	0x0004
+#define BBOX_MODE 	0x0008
+#define INVISIBLE_MODE 	0x0010
+
 	// Draw only bounding boxes of top level parts if in fast spin mode.
-	if (ldraw_commandline_opts.F == 2) 
+	if (ldraw_commandline_opts.F & BBOX_MODE) 
 	  if (PartPtr->FromPARTS) // (!IsModel)
 	  {
 	    float      r2[4];
@@ -143,20 +152,31 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 	    bb3d[7].x=r[0];
 	    bb3d[7].y=r[1];
 	    bb3d[7].z=r[2];
+	    if (ldraw_commandline_opts.F & WIREFRAME_MODE) 
+	    {
+	      render_line(&bb3d[0],&bb3d[1],Color);
+	      render_line(&bb3d[1],&bb3d[2],Color);
+	      render_line(&bb3d[2],&bb3d[3],Color);
+	      render_line(&bb3d[3],&bb3d[0],Color);
+	      render_line(&bb3d[4],&bb3d[5],Color);
+	      render_line(&bb3d[5],&bb3d[6],Color);
+	      render_line(&bb3d[6],&bb3d[7],Color);
+	      render_line(&bb3d[7],&bb3d[4],Color);
+	      render_line(&bb3d[0],&bb3d[4],Color);
+	      render_line(&bb3d[1],&bb3d[5],Color);
+	      render_line(&bb3d[2],&bb3d[6],Color);
+	      render_line(&bb3d[3],&bb3d[7],Color);
+	    }
+	    else // Lets try solid boxes.
+	    {
+	      render_quad(&bb3d[0],&bb3d[1],&bb3d[2],&bb3d[3],Color);
+	      render_quad(&bb3d[4],&bb3d[5],&bb3d[6],&bb3d[7],Color);
 
-	    render_line(&bb3d[0],&bb3d[1],Color);
-	    render_line(&bb3d[1],&bb3d[2],Color);
-	    render_line(&bb3d[2],&bb3d[3],Color);
-	    render_line(&bb3d[3],&bb3d[0],Color);
-	    render_line(&bb3d[4],&bb3d[5],Color);
-	    render_line(&bb3d[5],&bb3d[6],Color);
-	    render_line(&bb3d[6],&bb3d[7],Color);
-	    render_line(&bb3d[7],&bb3d[4],Color);
-	    render_line(&bb3d[0],&bb3d[4],Color);
-	    render_line(&bb3d[1],&bb3d[5],Color);
-	    render_line(&bb3d[2],&bb3d[6],Color);
-	    render_line(&bb3d[3],&bb3d[7],Color);
-
+	      render_quad(&bb3d[0],&bb3d[4],&bb3d[5],&bb3d[1],Color);
+	      render_quad(&bb3d[1],&bb3d[5],&bb3d[6],&bb3d[2],Color);
+	      render_quad(&bb3d[2],&bb3d[6],&bb3d[7],&bb3d[3],Color);
+	      render_quad(&bb3d[3],&bb3d[7],&bb3d[4],&bb3d[0],Color);
+	    }
 	    return;
 	  }
 #endif
@@ -207,7 +227,7 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
     // 
     // Other ideas include substituting GLU cylinder primitives for studs.  
 		        if (LinePtr->PartPtr->IsStud)
-                          if (ldraw_commandline_opts.F == 1) 
+                          if (ldraw_commandline_opts.F & STUDLESS_MODE) 
                             break;
 #endif
 			M4M4Mul(m1,m,LinePtr->v);
