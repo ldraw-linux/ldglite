@@ -395,20 +395,21 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			// Should SAVE old colors, restore after the for loop.
 			// To save space, build a linked list of saved colors.
 			// Do NOT resave a color if its already saved.
-			if (strncmp(s,"COLOR",5) == 0)
+			if ((strncmp(s,"COLOR",5) == 0) ||
+			    (strncmp(s,"COLOUR",6) == 0))
 			{
 			  if (ldraw_commandline_opts.debug_level == 1)
 			    printf("%s\n", s);
 			  //0 COLOR 4 red 0 196 0 38 255 196 0 38 255
+			  char colorstr[256];
 			  char name[256];
 			  int n, inverse_index;
 
-			  s += 5; // skip "COLOR"
-			  n = sscanf(s, "%d %s %d %f %f %f %f %f %f %f %f",
-				     &i, name, &inverse_index,
+			  n = sscanf(s, "%s %d %s %d %f %f %f %f %f %f %f %f",
+				     colorstr, &i, name, &inverse_index,
 				     &m1[0][0], &m1[0][1], &m1[0][2], &m1[0][3],
 				     &m1[1][0], &m1[1][1], &m1[1][2], &m1[1][3]);
-			  if (n != 11)
+			  if (n != 12)
 			  {
 			    if (ldraw_commandline_opts.debug_level == 1)
 			      printf("Illegal COLOR syntax %d\n",n);
