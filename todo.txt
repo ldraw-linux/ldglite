@@ -1,5 +1,18 @@
 ----------------------------------------------------------------------
 
+Make a portable lddp style plugin.  For example, make a minifig
+modeller in GLUI (or something else that's easy to learn and portable
+to everything including OSX).  Attempt to build a plugin out of it.
+Use the INI file from the LDDP plugin, and borrow the layout except
+put the Fig preview between the left/right options (sorta like
+leocad).  Since it's a plugin, I guess C++ and Non-opengl toolkits
+like FLTK or wxwindows are OK as long as they work on all platforms.
+
+OpenGL GUI toolkit choices include GLUI, MUI, PLIB/p-guide, GLOW, 
+NGL/NUI, LibUFO/UGT, glgooey, ...
+
+----------------------------------------------------------------------
+
 In the part lookup, how about if the last part you looked up is
 automatically selected each time you open the lookup menu, so that you
 can quickly get to nearby pieces in the list? Since a lot of pieces
