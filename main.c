@@ -2416,6 +2416,7 @@ static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
 // GLX_SGIX_pbuffer
 // GL_KTX_buffer_region
 // Also I wonder if I could copy the depth buffer to the accumulation buffer.
+//
 /***************************************************************/
 void CopyStaticBuffer(void)
 {
