@@ -383,7 +383,11 @@ void pasteCommand(int x, int y)
   char *token;
   char *s;
   char *p;
-  int i;
+  int i, n, count;
+  int inventory = 0;
+  char partstr[255];
+  char colorstr[255];
+  int color;
 	  
   if (pastelist)
   {
@@ -419,29 +423,66 @@ void pasteCommand(int x, int y)
       // if ((n == 15) && (d == 1))
       //     it's a type 1 LDRAW line.  Keep all info.
       
+      if (strstr(token, "Part # Color Description"))
+      {
+	printf("// Hey, it's an inventory from peeron.com.\n");
+	inventory = 1;
+	token = strtok( NULL, seps); // Move on to the actual inventory.
+      }
+ 
       // Look for '.' and remove trailing, leading whitespace.
       // If no '.' found, focus on the first word.
-      p = strchr(token, '.');
-      if (p == NULL)
-	p = token;
-      
-      // Eliminate trailing whitespace
-      s = strpbrk(p, whitespace);
-      if (s)
-	*s = 0;
-      printf("got trailing <%s> from clipboard\n", token);
-      
-      
-      // Eliminate leading whitespace
-      *p = 0;
-      s = strrpbrk(token, whitespace);
-      if (s)
-	token = s+1;
-      *p = '.';
-      
-      printf("got leading <%s> from clipboard\n", token);
-    }
+      if ((!inventory) && (p = strchr(token, '.')))
+      {
+	// Eliminate trailing whitespace
+	s = strpbrk(p, whitespace);
+	if (s)
+	  *s = 0;
+	printf("got trailing <%s> from clipboard\n", token);
+
+	// Eliminate leading whitespace
+	*p = 0;
+	s = strrpbrk(token, whitespace);
+	if (s)
+	  token = s+1;
+	*p = '.';
+	printf("got leading <%s> from clipboard\n", token);
+      }
+      else
+      {
+	// Eliminate leading whitespace
+	for (p = token; (*p == ' ') || (*p == '\t'); *p++);
+	token = p;
+	printf("got leading <%s> from clipboard\n", token);
+      }
     
+      if (inventory)
+      {
+	n = sscanf(token, "%d", &count);
+	printf("count = %d\n", count);
+	p = strpbrk(token, whitespace);
+	printf("got trailing <%s> from clipboard\n", p);
+	if (!p)
+	  continue;
+	if (strncmp(p, "     ", 4))
+	{
+	  printf("scanning part, color\n");
+	  n = sscanf(p, "   %s    %s", partstr, colorstr);
+	}
+	else
+	{
+	  printf("setting part\n");
+	  strcpy(partstr, "unknown.dat");
+	  printf("scanning color\n");
+	  n = sscanf(p, "    %s", colorstr);
+	}
+	printf("setting setting token to part <%s>\n", partstr);
+        token = partstr;
+	color = zcolor_lookup(colorstr);
+	printf("Part = <%s>, color = <%s> = %d\n", token, colorstr);
+      }
+    }
+
     if (token && strlen(token))
     {
       // If subsequent part, insert last part and start this one.
@@ -454,8 +495,18 @@ void pasteCommand(int x, int y)
       strcat(dst, token);
 
       // Only do more than one if it's a part.
+      // NOTE:  Should also do multiple lines for comments.
       if (ecommand[0] != 'p') 
 	break;
+
+      if (inventory)
+	for (n = 1; n < count; n++)
+	{
+	  edit_mode_keyboard('\n', x, y);
+	  edit_mode_keyboard('i', x, y);
+	  edit_mode_keyboard('p', x, y);
+	  strcat(dst, token);
+	}
     }
   }
   
