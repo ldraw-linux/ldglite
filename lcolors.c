@@ -125,6 +125,84 @@ ZMATRIX_NAMELIST_ENTRY *zmatrix_namelist_stack[MAX_ZCOLOR_DEPTH];
 
 int znamelist_stack_index=0;
 
+#ifdef USE_OPENGL
+/***************************************************************/
+int alias_peeron_colors(void)
+{
+  #define UNKNOWN_COLOR 16
+
+  zcolor_alias(0, "Black");
+  zcolor_alias(1, "Blue");
+  zcolor_alias(UNKNOWN_COLOR, "Brass");
+  zcolor_alias(6, "Brown");
+  zcolor_alias(10, "BtGreen");
+  zcolor_alias(UNKNOWN_COLOR, "BurntOrange");
+  zcolor_alias(UNKNOWN_COLOR, "Butterscotch");
+  zcolor_alias(UNKNOWN_COLOR, "ChromeBlue");
+  zcolor_alias(UNKNOWN_COLOR, "ChromeGreen");
+  zcolor_alias(47, "Clear");
+  zcolor_alias(UNKNOWN_COLOR, "DkFlatSilver");
+  zcolor_alias(8, "DkGray");
+  zcolor_alias(UNKNOWN_COLOR, "DkOrange");
+  zcolor_alias(5, "DkPink");
+  zcolor_alias(UNKNOWN_COLOR, "DkPurple");
+  zcolor_alias(323, "DkRed");
+  zcolor_alias(UNKNOWN_COLOR, "FlatGold");
+  zcolor_alias(UNKNOWN_COLOR, "FlatSilver");
+  zcolor_alias(21, "GlowInTheDark");
+  zcolor_alias(334, "Gold");
+  zcolor_alias(7, "Gray");
+  zcolor_alias(2, "Green");
+  zcolor_alias(UNKNOWN_COLOR, "Lime");
+  zcolor_alias(11, "LtBlue");
+  zcolor_alias(UNKNOWN_COLOR, "LtGray");
+  zcolor_alias(UNKNOWN_COLOR, "LtGreen");
+  zcolor_alias(UNKNOWN_COLOR, "LtOrange");
+  zcolor_alias(UNKNOWN_COLOR, "LtPink");
+  zcolor_alias(UNKNOWN_COLOR, "LtSwampGreen");
+  zcolor_alias(UNKNOWN_COLOR, "LtTeal");
+  zcolor_alias(UNKNOWN_COLOR, "LtViolet");
+  zcolor_alias(18, "LtYellow");
+  zcolor_alias(UNKNOWN_COLOR, "MdBlue");
+  zcolor_alias(UNKNOWN_COLOR, "MetallicBlue");
+  zcolor_alias(UNKNOWN_COLOR, "MetallicGreen");
+  zcolor_alias(UNKNOWN_COLOR, "NavyBlue");
+  zcolor_alias(UNKNOWN_COLOR, "NeonBlue");
+  zcolor_alias(UNKNOWN_COLOR, "Olive");
+  zcolor_alias(25, "Orange");
+  zcolor_alias(UNKNOWN_COLOR, "PaleGreen");
+  zcolor_alias(17, "PasGreen");
+  zcolor_alias(UNKNOWN_COLOR, "Pearlescent");
+  zcolor_alias(13, "Pink");
+  zcolor_alias(22, "Purple");
+  zcolor_alias(4, "Red");
+  zcolor_alias(379, "SandBlue");
+  zcolor_alias(378, "SandGreen");
+  zcolor_alias(373, "SandPurple");
+  zcolor_alias(335, "SandRed");
+  zcolor_alias(383, "Silver");
+  zcolor_alias(39, "Smoke");
+  zcolor_alias(UNKNOWN_COLOR, "SwampGreen");
+  zcolor_alias(19, "Tan");
+  zcolor_alias(3, "Teal");
+  zcolor_alias(33, "TrBlue");
+  zcolor_alias(42, "TrFlYellow");
+  zcolor_alias(34, "TrGreen");
+  zcolor_alias(41, "TrLtBlue");
+  zcolor_alias(UNKNOWN_COLOR, "TrLuWhite");
+  zcolor_alias(57, "TrOrange");
+  zcolor_alias(UNKNOWN_COLOR, "TrPink");
+  zcolor_alias(UNKNOWN_COLOR, "TrPinkGlitter");
+  zcolor_alias(UNKNOWN_COLOR, "TrPurple");
+  zcolor_alias(36, "TrRed");
+  zcolor_alias(UNKNOWN_COLOR, "TrViolet");
+  zcolor_alias(46, "TrYellow");
+  zcolor_alias(UNKNOWN_COLOR, "Violet");
+  zcolor_alias(15, "White");
+  zcolor_alias(14, "Yellow");
+}
+#endif
+
 void zcolor_init()
 {
 	ZCOLOR_TABLE_ENTRY defcolor;
@@ -182,6 +260,7 @@ void zcolor_init()
 
 #ifdef USE_OPENGL
 	zcolor_alias(256,"Matte-Black"); // rubber for tires.
+	alias_peeron_colors();
 #endif  
 }
 
