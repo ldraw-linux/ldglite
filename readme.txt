@@ -209,7 +209,7 @@ some garbage at the top of the screen.
 
 
 Command line options (see also the original ldlite docs for more):
-
++X,Y sets the initial window position offset to (X,Y).
 -fh turns on shading mode.
 -fs turns off stud drawing. (l3glite only)
 -fsl draws studs as lines. (l3glite only)
@@ -240,6 +240,8 @@ Command line options (see also the original ldlite docs for more):
 -v8 displays in 1600x1200
 -vX,Y displays in an X wide by Y high window.
 -x displays the x,y,z axis.
+-n2 renders each part in the backbuffer before transfering it to the screen.
+-n4 renders the whole model in the backbuffer and then copies it to the screen.
 -ms Saves an image for each STEP and quits.
 -mS Does the same, but without opening a window (on most systems).
     You can also include an optional output filename with either of these.
