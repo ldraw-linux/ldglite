@@ -441,26 +441,19 @@ void pasteCommand(int x, int y)
       if ((!inventory) && (p = strchr(token, '.')))
       {
 	// Eliminate trailing whitespace
-	s = strpbrk(p, whitespace);
-	if (s)
+	if (s = strpbrk(p, whitespace))
 	  *s = 0;
 	//printf("got trailing <%s> from clipboard\n", token);
 
 	// Eliminate leading whitespace
 	*p = 0;
-	s = strrpbrk(token, whitespace);
-	if (s)
+	if (s = strrpbrk(token, whitespace))
 	  token = s+1;
 	*p = '.';
-	//printf("got leading <%s> from clipboard\n", token);
       }
       else
-      {
-	// Eliminate leading whitespace
-	for (p = token; (*p == ' ') || (*p == '\t'); p++);
-	token = p;
-	//printf("got leading <%s> from clipboard\n", token);
-      }
+	token += strspn(token, whitespace); // Eliminate leading whitespace
+      //printf("got leading <%s> from clipboard\n", token);
     
       if (!inventory)
       {
@@ -501,37 +494,24 @@ void pasteCommand(int x, int y)
 	  inventory = 0; // All done with inventory.
 	  continue;
 	}
+
 	if (strncmp(p, "     ", 4))
+	  n = sscanf(p, "   %s    %s", partstr, colorstr); // Found a partname.
+	else if (!strncmp(p, "      ", 5))
 	{
-	  if (strncmp(p, "      ", 5))
-	    //printf("scanning part, color\n");
-	    n = sscanf(p, "   %s    %s", partstr, colorstr);
-	  else
-	  {
-	    // no color on this line.  Sticker sheet or cloth or whatever?
-	    sprintf(colorstr, "unknown");
-	    strcpy(partstr, p);
-	  }
+	  // no part or color on this line.  Sticker sheet or cloth or whatever?
+	  sprintf(colorstr, "unknown");
+	  strcpy(partstr, p);
 	}
 	else
 	{
-	  //printf("setting part\n");
-	  strcpy(partstr, "unknown.dat");
-	  //printf("scanning color\n");
-	  n = sscanf(p, "    %s", colorstr);
+	  // No part on this line.  Convert comment into bogus partname.
+	  p += strspn(p, whitespace); // Eliminate leading whitespace
+	  n = sscanf(p, "%s", colorstr);  // Get the color
+	  if (token = strpbrk(p, whitespace))  // Find next whitespace
+	    p = token + strspn(token, whitespace); // Eliminate leading whitespace
 
-	  // Eliminate leading whitespace
-	  //printf("skipping whitespace <%s>\n",p);
-	  for (; (*p == ' ') || (*p == '\t'); p++);
-	  //printf("skipping color <%s>\n", p);
-	  token = strpbrk(p, whitespace);
-	  if (token)
-	  {
-	    //printf("skipping blanks <%s>\n",token);
-	    for (p = token; (*p == ' ') || (*p == '\t'); p++);
-	  }
 	  // Eliminate trailing whitespace
-	  //printf("skipping trailer <%s>\n",p);
 	  token = p;
 	  for (p += (strlen(token)-1); p >= token; p--)
 	  {
