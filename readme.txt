@@ -11,6 +11,11 @@ currently runs in Windows, Linux, and MacOS.  It does not yet provide
 all of the functionality of LdLite.  However it does have a few small
 goodies not yet available in LdLite.
 
+L3Glite is ldglite except it uses the L3 parser.  Actually the executables
+are identical, the program decides which parser to use based on the name
+of the program.  On linux you can softlink l3glite to ldglite.  You can
+also force the program to use a specific parser with a -ld or -l3 command
+line option.
 
 
                         LdGLite for Windows README
@@ -99,6 +104,7 @@ You must build ldglite
 
     make -f makefile.linux
     cp ldglite /usr/local/bin
+    ln -s /usr/local/bin/ldglite /usr/local/bin/l3glite
 
 Of course this assumes you have Mesa or some other OpenGL installed.
 I had to make some softlinks for the Mesa libs on my Mandrake 6.1
@@ -108,6 +114,9 @@ linux distribution before the ldglite would link.
     ln -s libMesaGLU.so libGLU.so
     ln -s libMesaGL.so libGL.so
 
+I think the makefile also assumes you have libpng and libz installed.
+Check makefile.linux for instructions on how to skip them if you have 
+trouble linking.
 
 For Netscape, go to the Netscape menu item
 Edit/Preferences/Navigator/Applications, select "ldlite Document",
@@ -130,7 +139,7 @@ like this.  See ldlite docs for help with command line options.
                              Extra Stuff
 
 
-Command line options:
+Command line options (see also the original ldlite docs for more):
 
 -fh turns on shading mode.
 -fs turns off stud drawing. (l3glite only)
@@ -141,6 +150,8 @@ Command line options:
 -i-N turns off cropping and picks image type.
 -eN.NN fixes polyline offset driver errors.  Try -e0.95 if lines look bad.
 -p turns on polling mode.
+-ld forces the program to use the ldlite parser.
+-l3 forces the program to use the l3 parser.
 
 NOTE: if no DAT filename is given on the command line ldglite will read
 from stdin.  (l3glite does not do this)  Try this:
@@ -148,24 +159,31 @@ from stdin.  (l3glite does not do this)  Try this:
 Kinda neat, but I don't know if this is good for much.
 
 
-Hot Keys (especially useful in gamemode):
+Hot Keys (especially useful in fullscreen gamemode):
 
 F10 enters fullscreen gamemode.
 F9 exits fullscreen gamemode.
+Right Mouse button displays the popup menu.
 Left Mouse Drag will rotate the model.
-Arrow keys orbit the viewpoint 5 degrees about the model.
-PGUP and PGDN move the viewpoint in and out (only visible in perspective mode)
+Shift Mouse Drag rotates the model in solid bounding box mode.
+Ctrl Mouse Drag rotates the model in solid studless mode.
+Arrow keys turn the viewpoint camera 5 degrees left, right, up, down.
+Alt Arrow keys roll the camera left, right, up, down.
+Ctrl Arrow keys move the camera left, right, up, down.
+PGUP and PGDN move the camera in and out (only visible in perspective mode)
 0-9 keys pick one of the preset viewpoints.
-s shrinks the model by half
+s shrinks the model by half.
 S Scales the model up to double size.
 z zooms out 10%.
 Z sooms in 10%.
+g toggles polling mode.
 j picks the orthographic projection.
 J picks the perspective projection.
 n turns on normal (no) shading.
 h turns on shading.
-f toggles stud drawing.
 w turns on wireframe mode.
+f toggles stud drawing.
+v toggles visible spin mode.
 p prints a BMP file.
 P prints a PNG file.
 Esc quits.
