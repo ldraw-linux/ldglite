@@ -1,4 +1,16 @@
 ----------------------------------------------------------------------
+Convert from Glut to SDL.  SDL seems to be available on ALL platforms
+except perhaps MSDOS (and who cares about that anyhow).  It has better
+keyboard support so I can get keystrokes while the mouse button is 
+down (unlike in glut).  This should make the quake/freespace camera
+code easier to create.  Maybe I should start with the SDUT code which
+emulates parts of glut on SDL.  The only sticky point is the license
+on the MUI gui code.  It should run on SDL since I don't use the
+glut pulldown menus, but it does need the few small patches from the
+base MUI source to prevent the crash problem and allow the scissor
+function.  Maybe if I make a MUI patch and run the patch as part of
+the makefile it'll solve the any license issues.
+----------------------------------------------------------------------
 
 Convert offscreen rendering functions into shared library/DLL 
 functions.  Add entries to the makefile for DLL targets using
