@@ -462,18 +462,56 @@ void pasteCommand(int x, int y)
 	//printf("got leading <%s> from clipboard\n", token);
       }
     
-      if (inventory)
+      if (!inventory)
+      {
+	// If not inventory and we still have whitespace, then its a comment.
+	if (s = strrpbrk(token, whitespace))
+	{
+	  if ((i > 0) && (ecommand[0] == 'c'))
+	  {
+	    edit_mode_keyboard('\n', x, y);
+	    edit_mode_keyboard('i', x, y);
+	    ecommand[0] == 'p';
+	  }
+	  if (ecommand[0] == 'p') 
+	  {
+	    ecommand[0] = 'C';  // Switch to a comment
+  	    strcpy(dst, "  ");
+  	    strcat(dst, token);
+	    continue;
+	  }
+	}
+      }
+      else
       {
 	n = sscanf(token, "%d", &count);
 	//printf("count = %d\n", count);
 	p = strpbrk(token, whitespace);
 	//printf("got trailing <%s> from clipboard\n", p);
-	if (!p)
+	if ((n == 0) || !p)
+	{
+	  if ((i > 0) && (ecommand[0] == 'c'))
+	  {
+	    edit_mode_keyboard('\n', x, y);
+	    edit_mode_keyboard('i', x, y);
+	  }
+	  ecommand[0] = 'C';  // Switch to a comment
+	  strcpy(dst, "  ");
+	  strcat(dst, token);
+	  inventory = 0; // All done with inventory.
 	  continue;
+	}
 	if (strncmp(p, "     ", 4))
 	{
-	  //printf("scanning part, color\n");
-	  n = sscanf(p, "   %s    %s", partstr, colorstr);
+	  if (strncmp(p, "      ", 5))
+	    //printf("scanning part, color\n");
+	    n = sscanf(p, "   %s    %s", partstr, colorstr);
+	  else
+	  {
+	    // no color on this line.  Sticker sheet or cloth or whatever?
+	    sprintf(colorstr, "unknown");
+	    strcpy(partstr, p);
+	  }
 	}
 	else
 	{
