@@ -4839,7 +4839,7 @@ void keyboard(unsigned char key, int x, int y)
 
   glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
 
-  if (ldraw_commandline_opts.debug_level == 1)
+  //if (ldraw_commandline_opts.debug_level == 1)
     printf("key(%c) = (%d, %d)\n", key, key, glutModifiers);
 
   if (editing)
@@ -5506,6 +5506,11 @@ motion(int x, int y)
 
     // Check for shift or ctrl mouse drag changes on the fly.
     //glutModifiers = glutGetModifiers(); // Glut doesn't like this here!
+#ifdef USE_F00_CAMERA
+    if (glutModifiers & GLUT_ACTIVE_ALT)
+      ldraw_commandline_opts.F = pan_visible; 
+    else 
+#endif
     if (glutModifiers & GLUT_ACTIVE_CTRL)
 	ldraw_commandline_opts.F = (TYPE_F_STUDLESS_MODE | TYPE_F_SHADED_MODE);
     else if (glutModifiers & GLUT_ACTIVE_SHIFT)
@@ -5598,12 +5603,19 @@ motion(int x, int y)
 	    turnCamera( (GLfloat)(y_angle), (GLfloat)x_angle, 0.0 );
 	    //printf("TURNING about(%0.2f, %0.2f) by angle %0.2f\n", x_angle, y_angle, angle);
 	  }
+	  else if (glutModifiers & GLUT_ACTIVE_CTRL)
+	  {
+	    if (x_angle != 0)
+	      truckCamera( x_angle, true, false, false );
+	    if (y_angle != 0)
+	      truckCamera( y_angle, false, false, true );
+	  }
 	  else
 	  {
 	    if (x_angle != 0)
 	      truckCamera( x_angle, true, false, false );
 	    if (y_angle != 0)
-	      truckCamera( y_angle, false, true, false );
+	      truckCamera( -y_angle, false, true, false );
 	  }
 	    
 	}
