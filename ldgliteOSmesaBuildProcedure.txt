@@ -19,6 +19,10 @@ include static versions of the libraries.
   cd Mesa-5.0.1
   ./configure --without-x --enable-static
 
+To get large images with the offscreen MESA driver
+you'll need to edit the MESA config file src/config.h and change
+MAX_WIDTH and MAX_HEIGHT from 2048 to something bigger.
+
 Build the GL OSMesa and GLU libraries.
 
   cd src
@@ -35,9 +39,15 @@ the executable to reduce the size down to about 2.5 MB.
 
 I tried this method on a linux box and it seemed to work for offscreen
 rendering.  BSD should be just about the same, although you may need
-to manually add -L/usr/local/lib -L/usr/local/lib/pth to the CFLAGS
-line to pull in the PNG and ZLIB libraries?  Since it's all software
-rendering, an OSX build should not be much different from a BSD build.
+to manually add -L/usr/local/lib -L/usr/local/lib/pth to the PNG_LIBS
+line to pull in the PNG and ZLIB libraries.
+
+  PNG_FLAGS=-I/usr/local/include -DUSE_PNG 
+  PNG_LIBS= -L/usr/local/lib -L/usr/local/lib/pth -lpng -lz 
+
+You also may need to use gmake on BSD instead of make.  Since it's all
+software rendering, an OSX build should not be much different from a
+BSD build.
 
 If you want to use dynamic libs you'll have to edit the makefile and
 remove the -static linker directive.  You'll probably have to install
