@@ -356,6 +356,9 @@ void printPOVMatrix()
     {0.0,0.0,1.0,0.0},
     {0.0,0.0,0.0,1.0}
   };
+  float lp[4];
+  float lpp[4];
+  float bc[4];
   float cc[4];
   float cla[4];
   float sky[4];
@@ -370,6 +373,14 @@ void printPOVMatrix()
   char orthographicstr[] = "\torthographic\n";
   char perspectivestr[] = "\t//orthographic\n";
   char *projectionstr = orthographicstr;
+
+  extern ZCOLOR_DEF_TABLE_ENTRY zcolor_table_default[];
+
+  i = ldraw_commandline_opts.B;
+  bc[0] = zcolor_table_default[i].primary.r / 255.0;
+  bc[1] = zcolor_table_default[i].primary.b / 255.0;
+  bc[2] = zcolor_table_default[i].primary.g / 255.0;
+  printf("\nbackground { color rgb <%g,%g,%g>}\n", bc[0], bc[1], bc[1]);
 
   if (1) //(ldraw_projection_type)
   {
@@ -469,6 +480,22 @@ void printPOVMatrix()
   printf("\trotate   <0,1e-5,0> // Prevent gap between adjecent quads\n");
   printf(projectionstr);
   printf("}\n\n");
+
+#if 0
+  // Give the ldglite lighting model a shot.
+  for (i = 0; i < 3; i++)
+    lp[i] = lightposition0[i];
+  lightposition0[1] = -lightposition0[1];  // Switch to ldraw coords
+  lightposition0[2] = -lightposition0[2];  // Switch to ldraw coords
+  M4V3Mul(lpp,m,lp);
+  for (i = 0; i < 3; i++)
+  {
+    lpp[i] *= 100.0; // Move far away
+    lp[i] = lightcolor0[i];
+  }
+  printf("light_source {\n\t<%g,%g,%g>\n\tcolor rgb <%g,%g,%g>\n}\n\n",
+	 lpp[0],lpp[1],lpp[2], lp[0],lp[1],lp[2]);
+#endif
 
   {
     char filename[256];
