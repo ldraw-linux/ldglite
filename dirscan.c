@@ -36,8 +36,19 @@
 
 #include "platform.h"
 
-#ifdef _WIN32
+#define USE_DIRENT 1
+
+#ifdef _WIN32_NATIVE_FILE_OPS
  #include "windows.h"
+#endif
+#ifdef USE_DIRENT
+#if defined(MAC)
+#include "macos_dirent.h"
+#elif defined(WINDOWS)
+#include "win32_dirent.h"
+#else
+#include <dirent.h>  // directory operations
+#endif
 #else
  #include <sys/types.h>
  #include <dirent.h>  // directory operations
@@ -237,10 +248,14 @@ int ScanDirectory(char *dir, char *pattern, int firstfile,
   int   lenDir;
   int   filecount = 0;
   int   i;
-#ifdef _WIN32
+#ifdef _WIN32_NATIVE_FILE_OPS
   HANDLE            searchPath = NULL;
   // LPCTSTR == const char *
   WIN32_FIND_DATA   dataStruct;
+#endif
+#ifdef USE_DIRENT
+  DIR           *searchPath = NULL;
+  struct dirent *dataStruct;
 #else // Unix
   DIR           *searchPath = NULL;
   struct dirent *dataStruct;
@@ -258,7 +273,7 @@ int ScanDirectory(char *dir, char *pattern, int firstfile,
 
   concat_path(dir, pattern, wildcard);
 
-#ifdef _WIN32
+#ifdef _WIN32_NATIVE_FILE_OPS
   searchPath = FindFirstFile( (LPCTSTR)wildcard, &dataStruct);
   if( searchPath == INVALID_HANDLE_VALUE ) 
   {
@@ -293,6 +308,34 @@ int ScanDirectory(char *dir, char *pattern, int firstfile,
   }
   FindClose(searchPath);
 
+#endif
+#ifdef USE_DIRENT
+  if( (searchPath = opendir(wildcard)) ) { 
+    // Skip files before our current window.
+    for ( filecount = 0; filecount < firstfile; )
+    { 
+      if (!(dataStruct = readdir(searchPath)))
+      {
+	closedir(searchPath);
+	return(0);
+      }
+      concat_path(dir, dataStruct->d_name, filelist[0]);
+      if (isDir(filelist[0]))
+	strcpy(filelist[0], "");
+      else
+	filecount++;
+    }
+    filecount = 0;
+    while( filecount < MAX_DIR_ENTRIES
+	   && (dataStruct = readdir(searchPath)) ) {
+      concat_path(dir, dataStruct->d_name, filelist[filecount]);
+      if (isDir(filelist[0]))
+	strcpy(filelist[0], "");
+      else
+	filecount++;
+    }
+    closedir(searchPath);
+  }
 #else // Unix
   glob(wildcard, 0, 0, &glob_results);
 
@@ -320,45 +363,6 @@ int ScanDirectory(char *dir, char *pattern, int firstfile,
   }
   globfree(&glob_results);
 
-#if 0
-  if( (searchPath = opendir(dir)) ) { 
-    // Skip files before our current window.
-    for ( filecount = 0; filecount < firstfile; )
-    { 
-      if (!dataStruct = readdir(searchPath);)
-      {
-	closedir(searchPath);
-	return(0);
-      }
-      concat_path(dir, dataStruct->d_name, filelist[0]);
-      if (isDir(filelist[0]))
-	strcpy(filelist[0], "");
-      else
-	filecount++;
-    }
-    filecount = 0;
-    while(    filecount < MAX_DIR_ENTRIES // Grenzen beachten
-	   && (dataStruct = readdir(searchPath)) ) {
-      file = dataStruct->d_name;
-      lenf = strlen(file);      
-      lenp = strlen(pattern);
-      test = 0;
-      // NOTE: This is LAME!  No wildcard testing!
-      for(i = 1; i < 4; i++) {
-	      if( file[lenf-i] == pattern[lenp-i] )
-	        test++;
-      }
-      if( test == 3 ) { // Dateiendung stimmt ueberein
-	concat_path(dir, dataStruct->d_name, filelist[filecount]);
-	if (isDir(filelist[0]))
-	  strcpy(filelist[0], "");
-	else
-	  filecount++;
-      }
-    }
-    closedir(searchPath);
-  }
-#endif 
 #endif 
 
   return filecount;
@@ -373,10 +377,14 @@ int ScanFolder(char *dir, char *pattern, int firstfile,
   int   lenDir;
   int   filecount = 0;
   int   i;
-#ifdef _WIN32
+#ifdef _WIN32_NATIVE_FILE_OPS
   HANDLE            searchPath = NULL;
   // LPCTSTR == const char *
   WIN32_FIND_DATA   dataStruct;
+#endif
+#ifdef USE_DIRENT
+  DIR           *searchPath = NULL;
+  struct dirent *dataStruct;
 #else // Unix
   DIR           *searchPath = NULL;
   struct dirent *dataStruct;
@@ -394,7 +402,7 @@ int ScanFolder(char *dir, char *pattern, int firstfile,
 
   concat_path(dir, pattern, wildcard);
 
-#ifdef _WIN32
+#ifdef _WIN32_NATIVE_FILE_OPS
   searchPath = FindFirstFile( (LPCTSTR)wildcard, &dataStruct);
   if( searchPath == INVALID_HANDLE_VALUE ) 
   {
@@ -430,6 +438,34 @@ int ScanFolder(char *dir, char *pattern, int firstfile,
   }
   FindClose(searchPath);
 
+#endif
+#ifdef USE_DIRENT
+  if( (searchPath = opendir(wildcard)) ) { 
+    // Skip files before our current window.
+    for ( filecount = 0; filecount < firstfile; )
+    { 
+      if (!(dataStruct = readdir(searchPath)))
+      {
+	closedir(searchPath);
+	return(0);
+      }
+      concat_path(dir, dataStruct->d_name, filelist[filecount]);
+      if (isDir(filelist[filecount]))
+	filecount++;
+      else
+	strcpy(filelist[filecount], "");
+    }
+    filecount = 0;
+    while( filecount < MAX_DIR_ENTRIES 
+	   && (dataStruct = readdir(searchPath)) ) {
+      concat_path(dir, dataStruct->d_name, filelist[filecount]);
+      if (isDir(filelist[filecount]))
+	filecount++;
+      else
+	strcpy(filelist[filecount], "");
+    }
+    closedir(searchPath);
+  }
 #else // Unix
   glob(wildcard, GLOB_PERIOD, 0, &glob_results);
 
@@ -457,30 +493,6 @@ int ScanFolder(char *dir, char *pattern, int firstfile,
   }
   globfree(&glob_results);
 
-#if 0
-  if( (searchPath = opendir(dir)) ) { 
-    // Skip files before our current window.
-    for ( filecount = 0; filecount < firstfile; filecount++ )
-    { 
-      if (!dataStruct = readdir(searchPath);)
-      {
-	closedir(searchPath);
-	return(0);
-      }
-    }
-    filecount = 0;
-    while(    filecount < MAX_DIR_ENTRIES // Grenzen beachten
-	   && (dataStruct = readdir(searchPath)) ) {
-      concat_path(dir, dataStruct->d_name, filelist[filecount]);
-      // NOTE: This is LAME!  No wildcard testing!
-      if (isDir(filelist[filecount]))
-	filecount++;
-      else
-	strcpy(filelist[filecount], "");
-    }
-    closedir(searchPath);
-  }
-#endif 
 #endif 
 
   return filecount;
