@@ -1,12 +1,19 @@
 ----------------------------------------------------------------------
 
+Add cmdline arg that prints cmdline usage message.  (-h -? --help)
+Use the same help message in scrolling window in MUI GUI.
+
+----------------------------------------------------------------------
+
 Add some sort of wildcard option to -MSfilename.out to allow adding
-step numbers to the suggested filename.  Fix it to work with twirl.
+step numbers to the suggested filename.  (FIXED: 05/??/03 use '#')
+
+Fix it to work with twirl.  (Actually offscreen doesn't do twirl yet)
 
 ----------------------------------------------------------------------
 
 Fix crash when you press an arrow key in LEDIT mode with no .DAT file
-loaded yet.
+loaded yet.  (FIXED: 06/09/03)
 
 ----------------------------------------------------------------------
 
@@ -85,11 +92,12 @@ Finish up the MUI menus or replace them with something better.
 
 Come up with a texture mapped font (built into the executable) for
 speed with hardware opengl and for the DOS version.  Investigate
-glfont and the font code in freeglut.
+glfont and the font code in freeglut.  Ldview now uses an internal
+texture mapped font.  Consider borrowing this code.
 
 ----------------------------------------------------------------------
 
-Add bezier/hoser code to LEDIT mode.
+Add bezier/hoser code to LEDIT mode. 
 
 ----------------------------------------------------------------------
 
