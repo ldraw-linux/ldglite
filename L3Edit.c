@@ -1,3 +1,24 @@
+#include "math.h"
+
+#ifdef USE_OPENGL
+// Gotta prepare for case sensitive file systems.
+#include "StdAfx.h"
+#else
+#include "stdafx.h"
+#endif
+
+#include "stdio.h"
+#include "stdlib.h"
+#include "L3Def.h"
+//#include "math.h"
+#include "string.h"
+
+#include "platform.h"
+
+#ifndef false
+#define false 0
+#endif
+
 extern int Draw1PartPtr(struct L3LineS *LinePtr, int Color);
 
 extern char datfilename[256];
@@ -133,7 +154,8 @@ int Move1Part(int partnum, float m[4][4])
 	break;
     case 1:
 	M4M4Mul(m1,LinePtr->v,m);
-	LinePtr->v = m1;
+	//LinePtr->v = m1;
+        memcpy(LinePtr->v, m1, sizeof(LinePtr->v));
 	break;
     case 2:
     case 3:
@@ -171,7 +193,8 @@ int Rotate1Part(int partnum, float m[4][4])
 	break;
     case 1:
 	M4M4Mul(m1,LinePtr->v,m);
-	LinePtr->v = m1;
+        memcpy(LinePtr->v, m1, sizeof(LinePtr->v));
+	//LinePtr->v = m1;
 	break;
     case 2:
     case 3:
@@ -576,7 +599,8 @@ int Add1Part(int partnum)
 #ifdef REUSE_ORIENTATION
         LinePtr->v = PrevPtr->v;
 #else
-	LinePtr->v = m;
+        memcpy(LinePtr->v, m, sizeof(LinePtr->v));
+	//LinePtr->v = m;
         // Just copy the position, but not the orientation.
 	LinePtr->v[0][3] += PrevPtr->v[0][3];
 	LinePtr->v[1][3] += PrevPtr->v[1][3];
@@ -584,7 +608,8 @@ int Add1Part(int partnum)
 #endif
     }
     else
-	LinePtr->v = m;
+        memcpy(LinePtr->v, m, sizeof(LinePtr->v));
+        //LinePtr->v = m;
     LinePtr->PartPtr = PartPtr;
     if (PrevPtr)
     {

@@ -36,7 +36,11 @@
 
 #include "platform.h"
 
+
+#ifndef UNIX
+// For some reason this does not work in linux.  Investigate...
 #define USE_DIRENT 1
+#endif
 
 #ifdef _WIN32_NATIVE_FILE_OPS
  #include "windows.h"

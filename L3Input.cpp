@@ -318,7 +318,10 @@ static char         *StudPrimitives[] = {
 };
 
 /* Modifies the string: lower case and OS-correct slashes */
-static void          FixDatName(register char *DatName)
+#ifndef USE_OPENGL
+static 
+#endif
+void          FixDatName(register char *DatName)
 {
    register int         i;
 
@@ -363,7 +366,10 @@ static char         *FirstNonBlank(char *s)
    return (s);
 }
 
-static struct L3PartS *FindPart(int Internal, char *DatName)
+#ifndef USE_OPENGL
+static 
+#endif
+struct L3PartS *FindPart(int Internal, char *DatName)
 {
    register int         i;
    struct L3PartS      *PartPtr;
@@ -1776,7 +1782,10 @@ static char         *LineType2Primitives[] = {
 /* Read part (if necessary - it may already be read if MPD) and
 resolve any linetype 1 parts                                                 */
 /* Return: 0=OK, 1=NotFound, 2=Recursion */
-static int          LoadPart(struct L3PartS * PartPtr, int IsModel, char *ReferencingDatfile)
+#ifndef USE_OPENGL
+static 
+#endif
+int          LoadPart(struct L3PartS * PartPtr, int IsModel, char *ReferencingDatfile)
 {
    FILE                *fp;
    struct L3LineS      *LinePtr;
@@ -2074,10 +2083,6 @@ void                 LoadModelPost(void)
       LogDia.DoModal();
 #endif
 }
-#endif
-
-#ifdef USE_OPENGL
-#include "L3Edit.c"
 #endif
 
 #ifdef USE_OPENGL
