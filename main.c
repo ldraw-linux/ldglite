@@ -98,6 +98,8 @@ int cropping = 1;
 int panning = 0;
 GLdouble pan_start_x = 0.0;
 GLdouble pan_start_y = 0.0;
+int pan_start_zWire;
+int pan_start_F;
 
 //#define USE_QUATERNION 1
 #ifdef USE_QUATERNION
@@ -1675,6 +1677,15 @@ void keyboard(unsigned char key, int x, int y)
       ldraw_projection_type = 1;
       reshape(Width, Height);
       break;
+    case 'f':
+      if (ldraw_commandline_opts.F != 1)
+	ldraw_commandline_opts.F = 1;
+      else if (zWire == 1)
+	ldraw_commandline_opts.F = 2;
+      else
+	ldraw_commandline_opts.F = 0;
+      reshape(Width, Height);
+      break;
     case 'n':
       zWire = 0;
       zShading = 0;
@@ -1781,6 +1792,12 @@ void rotate_about(float x, float y, float z, float degrees)
   vector3d t = {0.0, 0.0, 0.0};
   double a,b,c,s, veclen_inv, sin2a;
 
+  // Don't bother with bad axis or 0 rotations.
+  if (degrees == 0.0) 
+    return;
+  if ((x == 0.0) && (y == 0.0) && (z == 0.0))
+    return;
+
   // convert axis and degrees into a quaternion
   veclen_inv = 1.0/sqrt(x*x + y*y + z*z);
   sin2a = sin((3.1415927*degrees)/360.0);
@@ -1855,6 +1872,12 @@ void old_rotate_about(float x, float y, float z, float angle)
   float c, s;
   float v[3];
   
+  // Don't bother with bad axis or 0 rotations.
+  if (angle == 0.0) 
+    return;
+  if ((x == 0.0) && (y == 0.0) && (z == 0.0))
+    return;
+
   v[0] = x;
   v[1] = y;
   v[2] = z;
@@ -1936,6 +1959,10 @@ mouse(int button, int state, int x, int y)
   }
   else if (panning)
   {
+    // Restore wireframe and stud draw modes.
+    zWire = pan_start_zWire;
+    ldraw_commandline_opts.F = pan_start_F;
+
     // The LdrawOblique matrix is a projection matrix.
     // Substitute Oblique view matrix so we can rotate it.
     if (m_viewMatrix == LdrawOblique)
@@ -2008,7 +2035,8 @@ motion(int x, int y)
   GLdouble model[4*4];
   GLdouble proj[4*4];
   GLint view[4];
-  GLdouble pan_x, pan_y, pan_z;
+  GLdouble pan_x, pan_y, pan_z, x_angle, y_angle, angle, depth;
+  GLdouble p_x, p_y;
 
   if (mouse_state == GLUT_DOWN && mouse_button == GLUT_LEFT_BUTTON) {
     glGetDoublev(GL_MODELVIEW_MATRIX, model);
@@ -2024,10 +2052,56 @@ motion(int x, int y)
     // NOTE:  This would be a nice place to rotate or pan the model.
     //        (If only the redisplay were more realtime)
     
+    if (panning == 0)
+    {
+      // Save draw modes, then switch to wireframe and turn off studs.
+      pan_start_zWire = zWire;
+      pan_start_F = ldraw_commandline_opts.F;
+      zWire = 1;
+      ldraw_commandline_opts.F = 1; 
+    }
     panning = 1;
+
+    // Lets rotate the wireframe.
+    if (1)
+    {
+      p_x = pan_x; //Save next pan_start coords.
+      p_y = pan_y;
+
+      // The LdrawOblique matrix is a projection matrix.
+      // Substitute Oblique view matrix so we can rotate it.
+      if (m_viewMatrix == LdrawOblique)
+      {
+	m_viewMatrix = Oblique;
+	parse_view(m_viewMatrix);
+      }
+
+      // Convert from world coords across screen plane to angle thru origin.
+#if WIDE_ANGLE_VIEW
+      depth = 1000.0;
+#else
+      depth = 500.0;
+#endif
+
+      pan_x -= pan_start_x;
+      pan_y -= pan_start_y;
+      pan_y = -pan_y; //Beats me why.
+      pan_z = max(fabs(pan_x), fabs(pan_y));
+      angle = atan2(pan_z, depth);
+      //angle *= -1.0;
+      angle *= 5.0;
+      angle *= (180.0/3.1415927);
+      if (ldraw_commandline_opts.debug_level == 1)
+	printf("ROTATING about(%0.2f, %0.2f) by angle %0.2f\n", pan_y, -pan_x, angle);
+      rotate_about(pan_y, -pan_x, 0.0, angle );
+      
+      pan_start_x = p_x; //Set next pan_start coords.
+      pan_start_y = p_y;
+
+      glutPostRedisplay();
+    }
   }
 
-  //glutPostRedisplay();
 }
 
 void filemenu(int);
@@ -2733,10 +2807,11 @@ main(int argc, char **argv)
   glutAddMenuEntry("Shading         ", 'h');
   glutAddMenuEntry("Wireframe       ", 'w');
   glutAddMenuEntry("Normal          ", 'n');
+  glutAddMenuEntry("Studs           ", 'f');
   glutAddMenuEntry("                ", '\0');
-  glutAddMenuEntry("Zoom decrease   ", 'z');
-  glutAddMenuEntry("Zoom increase   ", 'Z');
-  glutAddMenuEntry("Scale           ", 's');
+  glutAddMenuEntry("Zoom out        ", 'z');
+  glutAddMenuEntry("Zoom in         ", 'Z');
+  glutAddMenuEntry("Scale dn        ", 's');
   glutAddMenuEntry("Scale up        ", 'S');
 
   colors = glutCreateMenu(colormenu);
