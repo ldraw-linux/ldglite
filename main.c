@@ -119,7 +119,17 @@ static int list_made = 0;
 
 #define USE_DOUBLE_BUFFER
 
-int buffer_swap_mode = 0;
+// contents of back buffer after glutSwapBuffers():
+#define SWAP_TYPE_UNDEFINED 0 	// unknown
+#define SWAP_TYPE_SWAP 1	// former front buffer
+#define SWAP_TYPE_COPY 2	// unchanged
+#define SWAP_TYPE_NODAMAGE 3	// unchanged even by X expose() events
+
+#ifdef MESA
+int buffer_swap_mode = SWAP_TYPE_NODAMAGE
+#else
+int buffer_swap_mode = SWAP_TYPE_UNDEFINED;
+#endif
 
 int editing = 0;
 int curpiece = 0;
@@ -151,6 +161,7 @@ extern int Swap1Part(int partnum, char *SubPartDatName);
 extern int Print1Part(int partnum, FILE *f);
 extern int Print1Model(char *filename);
 extern int Print3Parts(int partnum, char *s1, char *s2, char *s3);
+extern int Comment1Part(int partnum, char *Comment);
 
 int use_quads = 0;
 int curstep = 0;
@@ -2488,6 +2499,7 @@ static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
 // GLX_MESA_copy_sub_buffer / glXCopySubBufferMESA()
 // WGL_ARB_buffer_region
 // GL_WIN_swap_hint (I have this one in software OpenGL)
+//   This may require a pixel format with PFD_SWAP_COPY.  Must read more...
 // GLX_SGIX_pbuffer
 // GL_KTX_buffer_region
 // Also I wonder if I could copy the depth buffer to the accumulation buffer.
@@ -2531,7 +2543,8 @@ void CopyStaticBuffer(void)
     glRasterPos2i(0, 0);
     glDepthMask(GL_FALSE); // disable updates to depth buffer
     glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
-    if (buffer_swap_mode == 1)
+    if ((buffer_swap_mode == SWAP_TYPE_COPY) ||
+	(buffer_swap_mode == SWAP_TYPE_NODAMAGE))
       glutSwapBuffers(); // Found GL_WIN_swap_hint extension
     else
       glCopyPixels(0, 0, Width, Height, GL_COLOR);
@@ -2747,6 +2760,9 @@ int edit_mode_fnkeys(int key, int x, int y)
     curstep = 0; // Reset to first step
     dirtyWindow = 1;
     
+    if (editingprevmode != 'C')
+      glutPostRedisplay();  // gotta redisplay to draw the whole thing.
+
     curpiece = 0;
     movingpiece = -1;
     if (parsername == LDLITE_PARSER)
@@ -2850,9 +2866,9 @@ int edit_mode_fnkeys(int key, int x, int y)
 #define OFFSET_Y_ID	'2'
 #define OFFSET_Z_ID	'3'
 
-#define FILE_LOAD_ID 	'l'
-#define FILE_SAVE_ID 	's'
-#define FILE_EXIT_ID 	'e'
+#define FILE_LOAD_ID 	'L'
+#define FILE_SAVE_ID 	'S'
+#define FILE_EXIT_ID 	'E'
 
 #define TURN_X_ID	'X'
 #define TURN_Y_ID	'Y'
@@ -2865,6 +2881,9 @@ int edit_mode_fnkeys(int key, int x, int y)
 #define GOTO_MENU_ID	'G'
 #define COLOR_MENU_ID	'c'
 #define PART_SWAP_ID	'p'
+
+#define EDIT_LINE_ID    'l'
+#define EDIT_COMMENT_ID 'C'
 
 /***************************************************************/
 int edit_mode_keyboard(unsigned char key, int x, int y)
@@ -3026,11 +3045,34 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       case 'l':
 	clear_edit_mode_gui();
 	sprintf(eprompt[0], "Line Type: ");
-	ecommand[0] = toupper(key);
+	ecommand[0] = tolower(key); // FILE_LOAD_ID == toupper('l');
 	edit_mode_gui();
 	return 1;
       }
       return 1;
+    }
+    if (ecommand[0] == 'l') // Edit Linetype Menu
+    {
+      // Try to get submenu command
+      switch(key) {
+      case 'p':
+	sprintf(eprompt[0], "New Part: ");
+	ecommand[0] = 'p';
+	ecommand[1] = 0;
+	edit_mode_gui();
+	return 1;
+      case 'c':
+	sprintf(eprompt[0], "Comment: ");
+	ecommand[0] = 'C';
+	ecommand[1] = 0;
+	edit_mode_gui();
+	return 1;
+      case 's':
+	EraseCurPiece();
+	Comment1Part(curpiece, "STEP");
+	HiLightCurPiece(i);
+	return 1;
+      }
     }
 
     // Not looking for a submenu command.  Just process the keystroke.
@@ -3169,6 +3211,12 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	sscanf(&(ecommand[1]),"%f", &f);
 	ldraw_commandline_opts.O.z = f;
 	edit_mode_gui();
+	break;
+      case 'C':
+	sscanf(&(ecommand[1]),"%s", partname);
+	EraseCurPiece();
+	Comment1Part(curpiece, partname);
+	HiLightCurPiece(i);
 	break;
       default:
 	edit_mode_gui();
@@ -4877,7 +4925,7 @@ main(int argc, char **argv)
   char filename[256];
   int opts, view, colors, helpmenunum;
   int exitcode;
-  char *str;
+  char *str, *verstr, *extstr, *vendstr, *rendstr;
   
   platform_startup(&argc, &argv);
 	
@@ -4980,15 +5028,25 @@ main(int argc, char **argv)
     }   
   }
 
-  str = (char *) glGetString(GL_VERSION);
-  printf("GL_VERSION = %s\n", str);
+  verstr = (char *) glGetString(GL_VERSION);
+  printf("GL_VERSION = %s\n", verstr);
 
-  str = (char *) glGetString(GL_EXTENSIONS);
-  printf("GL_EXTENSIONS = %s\n", str);
+  extstr = (char *) glGetString(GL_EXTENSIONS);
+  printf("GL_EXTENSIONS = %s\n", extstr);
 
-  if (strstr(str, "GL_WIN_swap_hint"))
+  printf("GL_VENDOR ='%s'\n", (vendstr = glGetString(GL_VENDOR)));
+  printf("GL_RENDERER ='%s'\n", (rendstr = glGetString(GL_RENDERER)));
+  
+  if (strstr(extstr, "GL_WIN_swap_hint"))
   {
-    buffer_swap_mode = 1;
+    if ((!strcmp(verstr, "1.1.0")) &&
+	(!strcmp(vendstr, "Microsoft Corporation")) &&
+	(!strcmp(rendstr, "GDI Generic"))
+	)
+    {
+      // Assume Microsoft software opengl which blits rather than page flips.
+      buffer_swap_mode = SWAP_TYPE_COPY;
+    }
   }
 
 #ifdef USE_DOUBLE_BUFFER
