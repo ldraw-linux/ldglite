@@ -2598,6 +2598,8 @@ void keyboard(unsigned char key, int x, int y)
       else
 	parsername = LDLITE_PARSER;
       list_made = 0; // Gotta reparse the file.
+      curstep = 0; // Reset to first step
+      dirtyWindow = 1;
       break;
 #endif
     case 'Q':
@@ -3274,6 +3276,8 @@ void filemenu(int item)
       if (parsername == L3_PARSER)
         list_made = 0; // Gotta reparse the file.
 #endif
+      curstep = 0; // Reset to first step
+      dirtyWindow = 1;
       glutPostRedisplay();
     }
   }
