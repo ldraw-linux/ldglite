@@ -931,6 +931,46 @@ int winOffScreenStart()
 }
 #endif
 
+#ifdef AGL_OFFSCREEN_OPTION
+//************************************************************************
+static AGLContext setupAGL(void * baseaddr,GLsizei rowbytes,GLsizei pixelsize)
+{
+  AGLPixelFormat fmt;
+  AGLContext     ctx;
+  GLboolean      ok;
+  GLint          attrib[] = { AGL_RGBA, AGL_PIXEL_SIZE, 0,
+			      AGL_OFFSCREEN, AGL_NONE };
+  
+  /* Set the pixel size attribute */
+  attrib[2] = pixelsize;
+  
+  /* Choose an rgb pixel format */
+  fmt = aglChoosePixelFormat(NULL, 0, attrib);
+  if ( fmt == NULL )
+    return NULL;
+  
+  /* Create an AGL context */
+  ctx = aglCreateContext(fmt, NULL);
+  if( ctx == NULL )
+    return NULL;
+  
+  /* Attach the off screen area to the context */
+  ok = aglSetOffScreen(ctx, Width, Height, rowbytes, baseaddr);
+  if( !ok )
+    return NULL;
+  
+  /* Make the context the current context */
+  ok = aglSetCurrentContext( ctx );
+  if( !ok )
+    return NULL;
+  
+  /* The pixel format is no longer needed */
+  aglDestroyPixelFormat( fmt );
+  
+  return ctx;
+}
+#endif
+
 /***************************************************************/
 int OffScreenRender()
   {
