@@ -1460,6 +1460,34 @@ void linequalitysetup()
 }
 
 /***************************************************************/
+// Moved this out of colormenu, glutPostRedisplay crashes offscreen render.
+void setBackgroundColor(int c)
+{
+  ZCOLOR zc, zs;
+
+  extern ZCOLOR_DEF_TABLE_ENTRY zcolor_table_default[];
+  extern ZCOLOR_TABLE_ENTRY *zcolor_table;
+
+  ldraw_commandline_opts.B = c;
+
+#ifdef USE_L3_PARSER
+  if ((parsername == L3_PARSER) && (zcolor_table))
+    translate_color(c,&zc,&zs);
+  else
+#endif
+  {
+  // NOTE:  I dont understand the colortable stack used in translate_color()
+  // so use the default color_table to avoid bad colors (bad stack ptr?).
+  zc.r = zcolor_table_default[c].primary.r;
+  zc.b = zcolor_table_default[c].primary.b;
+  zc.g = zcolor_table_default[c].primary.g;
+  }
+  glClearColor(((float)zc.r)/255.0,((float)zc.g)/255.0,((float)zc.b)/255.0,0.0);
+  if (ldraw_commandline_opts.debug_level == 1)
+    printf("clearcolor %d = (%d, %d, %d)\n", c, zc.r, zc.g, zc.b);
+}
+
+/***************************************************************/
 /*  GLUT event handlers
 /***************************************************************/
 void init(void)
@@ -2666,8 +2694,10 @@ void RestoreDepthBuffer(void)
   else
   {
       glDisable(GL_LIGHTING);     // Speed up copying
-      glDepthFunc(GL_ALWAYS);
       glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
+      glDepthMask(GL_TRUE); // enable updates to depth buffer
+      glEnable( GL_DEPTH_TEST ); 
+      glDepthFunc(GL_ALWAYS);
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
     gluOrtho2D(0, Width, 0, Height);
@@ -2868,7 +2898,6 @@ glPopAttrib();
 // WGL_ARB_buffer_region
 // GL_KTX_buffer_region
 
-
 /***************************************************************/
 void CopyStaticBuffer(void)
 {
@@ -2904,8 +2933,67 @@ void CopyStaticBuffer(void)
       rendersetup();
       return;
     }
-    RestoreDepthBuffer();
+
+    // get fresh copy of static data
+#ifdef USE_COPY_COLOR_BUFFER
+    // I WISH this worked!  But I have no idea why it doesnt.
+    if (!goodZ) // Don't bother with z restore if we just rendered.
+      RestoreDepthBuffer();
     CopyColorBuffer(staticbuffer, screenbuffer);
+#else
+    glReadBuffer(staticbuffer); // set pixel source
+    glDrawBuffer(screenbuffer); // set pixel destination
+    glDisable( GL_DEPTH_TEST ); // Speed up copying
+    glDisable(GL_LIGHTING);     // Speed up copying
+    glMatrixMode( GL_PROJECTION );
+    glLoadIdentity();
+    gluOrtho2D(0, Width, 0, Height);
+    glMatrixMode( GL_MODELVIEW );
+    glPushMatrix();
+    glLoadIdentity();
+    glRasterPos2i(0, 0);
+    glDepthMask(GL_FALSE); // disable updates to depth buffer
+    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
+    if ((buffer_swap_mode == SWAP_TYPE_COPY) ||
+	(buffer_swap_mode == SWAP_TYPE_NODAMAGE))
+      glutSwapBuffers(); // Found GL_WIN_swap_hint extension
+    else
+      glCopyPixels(0, 0, Width, Height, GL_COLOR);
+#ifdef DEPTH_BUFFER_MASK
+    // Enable depth test, but disable depth writes while moving the piece
+    // This would work well if the moving piece were depth sorted.
+    // As is, the moving piece is drawn in random depth order and looks bad.
+    // This could work with the half depth buffer trick using a split
+    // depth range.  
+    // The moving piece gets half the depth range with GL_GREATER...
+    glDepthMask(GL_FALSE); // disable updates to depth buffer
+#else
+    glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
+    glDepthMask(GL_TRUE); // enable updates to depth buffer
+    glEnable( GL_DEPTH_TEST ); 
+    glDepthFunc(GL_ALWAYS);
+    glRasterPos2i(0, 0);
+    if (!goodZ) // Don't bother with z restore if we just rendered.
+    {
+#ifdef SAVE_DEPTH_BOX
+      // Gotta figure out the src,dst stuff.  glTranslate()?
+      glRasterPos2i(sc[0], sc[1]);
+      if (ldraw_commandline_opts.debug_level == 1)
+	printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
+      glDrawPixels(sc[2],sc[3],GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
+#else
+      //glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+      glDrawPixels(Width,Height,GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
+#endif
+    }
+    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
+#endif
+    glPopMatrix();
+    reshape(Width, Height);
+    glEnable( GL_DEPTH_TEST ); 
+    glDepthFunc(GL_LESS);
+    rendersetup();
+#endif /* USE_COPY_COLOR_BUFFER */
     // screenbuffer is ready for dynamic data
   }
   else
@@ -5761,34 +5849,6 @@ void menu(int item)
   }
   else
     keyboard((unsigned char)item, 0, 0);
-}
-
-/***************************************************************/
-// Moved this out of colormenu, glutPostRedisplay crashes offscreen render.
-void setBackgroundColor(int c)
-{
-  ZCOLOR zc, zs;
-
-  extern ZCOLOR_DEF_TABLE_ENTRY zcolor_table_default[];
-  extern ZCOLOR_TABLE_ENTRY *zcolor_table;
-
-  ldraw_commandline_opts.B = c;
-
-#ifdef USE_L3_PARSER
-  if ((parsername == L3_PARSER) && (zcolor_table))
-    translate_color(c,&zc,&zs);
-  else
-#endif
-  {
-  // NOTE:  I dont understand the colortable stack used in translate_color()
-  // so use the default color_table to avoid bad colors (bad stack ptr?).
-  zc.r = zcolor_table_default[c].primary.r;
-  zc.b = zcolor_table_default[c].primary.b;
-  zc.g = zcolor_table_default[c].primary.g;
-  }
-  glClearColor(((float)zc.r)/255.0,((float)zc.g)/255.0,((float)zc.b)/255.0,0.0);
-  if (ldraw_commandline_opts.debug_level == 1)
-    printf("clearcolor %d = (%d, %d, %d)\n", c, zc.r, zc.g, zc.b);
 }
 
 /***************************************************************/
