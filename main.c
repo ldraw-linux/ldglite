@@ -2634,6 +2634,56 @@ void HiLightCurPiece(int piecenum)
 }
 
 /***************************************************************/
+void InsertNewPiece(void)
+{
+  if (movingpiece >= 0)
+  {
+    if (SOLID_EDIT_MODE)
+    {
+      // Add the current moving piece into the staticbuffer
+      glDrawBuffer(staticbuffer); 
+      DrawCurPart(-1); 
+      glDrawBuffer(screenbuffer); 
+    }
+    else
+    {
+      glDrawBuffer(staticbuffer); 
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      render();
+      glutSwapBuffers();
+      glDrawBuffer(screenbuffer); 
+    }
+  }
+  else 
+    EraseCurPiece();
+  curpiece = Add1Part(curpiece);
+  // NOTE: This crashes SOLID_EDIT_MODE because the piece isn't moving.
+  movingpiece = curpiece;
+  DrawMovingPiece();
+  Print1Part(curpiece, stdout);
+  edit_mode_gui();
+}
+
+/***************************************************************/
+void DelCurPiece(void)
+{
+  CopyStaticBuffer(); 
+  if (SOLID_EDIT_MODE)
+  {
+    // CopyStaticBuffer() selects current piece in SOLID_EDIT_MODE
+  }
+  else
+    Select1Part(curpiece);
+  Delete1Part(curpiece);
+  movingpiece = -1;
+  curpiece--;
+  if (curpiece < 0) curpiece = 0;
+  XORcurPiece();
+  Print1Part(curpiece, stdout);
+  edit_mode_gui();
+}
+
+/***************************************************************/
 void SetTitle(int showit)
 {
   char filename[256];
@@ -2644,133 +2694,42 @@ void SetTitle(int showit)
     sprintf(title, "%s - %s", progname, datfilename);
   else
     sprintf(title, "%s - %s", progname, filename);
-  
+
   if (showit)
     glutSetWindowTitle(title);
 }
 
 /***************************************************************/
-void fnkeys(int key, int x, int y)
+int edit_mode_fnkeys(int key, int x, int y)
 {
-  glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
+  int i;
+  float m[4][4] = {
+    {1.0,0.0,0.0,0.0},
+    {0.0,1.0,0.0,0.0},
+    {0.0,0.0,1.0,0.0},
+    {0.0,0.0,0.0,1.0}
+  };
 
-#ifdef USE_L3_PARSER
-  if (editing) 
+  if (!editing) // See if we need to enter edit mode
   {
-    int i;
-    float m[4][4] = {
-      {1.0,0.0,0.0,0.0},
-      {0.0,1.0,0.0,0.0},
-      {0.0,0.0,1.0,0.0},
-      {0.0,0.0,0.0,1.0}
-    };
+    if (key != GLUT_KEY_INSERT)
+      return 0; // Not already editing and not entering editing mode.
 
-    // If we have a command going then work on that.
-    if (i = strlen(ecommand))
-    {
-      switch(key) {
-      default:
-	printf("fnkey = %d = '%c'\n",key,key);
-	edit_mode_gui(); // Redisplay the GUI
-	break;
-      }
-      return;
-    }
-
-    switch(key) {
-    case GLUT_KEY_INSERT:
-      if (SOLID_EDIT_MODE)
-      {
-	if (movingpiece == curpiece)
-	{
-	  UnSelect1Part(curpiece);
-	  movingpiece = -1;
-	}
-      }
-      // if (parsername == L3_PARSER)
-      editing ^= 1;
-      // if (ldraw_commandline_opts.debug_level == 1)
-      printf("Editing mode =  %d\n", editing);
-
-      XORcurPiece(); // Erase the previous piece
-
-      // Restore previous continuous mode.
-      ldraw_commandline_opts.M = editingprevmode;
-      dirtyWindow = 1;
-      glutPostRedisplay();
-      break;
-    case GLUT_KEY_PAGE_UP:
-      HiLightCurPiece(curpiece-1);
-      break;
-    case GLUT_KEY_PAGE_DOWN:
-      HiLightCurPiece(curpiece+1);
-      break;
-    case GLUT_KEY_RIGHT:
-      m[0][3] += moveXamount;
-      TranslateCurPiece(m);
-      break;
-    case GLUT_KEY_LEFT:
-      m[0][3] -= moveXamount;
-      TranslateCurPiece(m);
-      break;
-    case GLUT_KEY_UP:
-      m[2][3] += moveZamount;
-      TranslateCurPiece(m);
-      break;
-    case GLUT_KEY_DOWN:
-      m[2][3] -= moveZamount;
-      TranslateCurPiece(m);
-      break;
-    case GLUT_KEY_HOME:
-      m[1][3] -= moveYamount;
-      TranslateCurPiece(m);
-      break;
-    case GLUT_KEY_END:
-      m[1][3] += moveYamount;
-      TranslateCurPiece(m);
-      break;
-    default:
-      return;
-    }
-    return;
-  }
-  else
-#endif
-  /*
-    This will rotate you around x and y and translate you along x, y, and z. 
-    It shouldn't take much to add rotation around the z axis.
-  */
-
-  // Add modifier check so I can:
-  //   spin about the 3 axis with 
-  //   slide along 3 axis with shifted keys
-  //   orbit about the center of the viewpoint with ctrl modified keys?
-  //
-  // glutGetModifiers() return masks.
-  //   GLUT_ACTIVE_SHIFT
-  //   GLUT_ACTIVE_CTRL
-  //   GLUT_ACTIVE_ALT
-
-  // The PG_UP, PG_DN keys seem to zoom in and out (only in perspective mode)
-  // You can NOT zoom in or out in orthographic mode, only scale.
-  switch(key) {
-#ifdef USE_L3_PARSER
-  case GLUT_KEY_INSERT:
     if (glutModifiers & GLUT_ACTIVE_CTRL)
       SOLID_EDIT_MODE = 1;
     else 
       SOLID_EDIT_MODE = 0;
     editing ^= 1;
     // if (ldraw_commandline_opts.debug_level == 1)
-      printf("Editing mode =  %d\n", editing);
-
+    printf("Editing mode =  %d\n", editing);
+    
     // Switch to continuous mode.
     editingprevmode = ldraw_commandline_opts.M;
     ldraw_commandline_opts.M = 'C';
     ldraw_commandline_opts.poll = 0; // Disable polling 
     curstep = 0; // Reset to first step
     dirtyWindow = 1;
-
+    
     curpiece = 0;
     movingpiece = -1;
     if (parsername == LDLITE_PARSER)
@@ -2786,9 +2745,581 @@ void fnkeys(int key, int x, int y)
       Print1Part(curpiece, stdout);
       edit_mode_gui();
     }
-    return;
+    return 1;
+  }
+
+  // If we have a command going then work on that.
+  if (i = strlen(ecommand))
+  {
+    switch(key) {
+    default:
+      printf("fnkey = %d = '%c'\n",key,key);
+      edit_mode_gui(); // Redisplay the GUI
+      break;
+    }
+    return 1;
+  }
+  
+  switch(key) {
+  case GLUT_KEY_INSERT:
+    if (SOLID_EDIT_MODE)
+    {
+      if (movingpiece == curpiece)
+      {
+	UnSelect1Part(curpiece);
+	movingpiece = -1;
+      }
+    }
+    // if (parsername == L3_PARSER)
+    editing ^= 1;
+    // if (ldraw_commandline_opts.debug_level == 1)
+    printf("Editing mode =  %d\n", editing);
+    
+    XORcurPiece(); // Erase the previous piece
+    
+    // Restore previous continuous mode.
+    ldraw_commandline_opts.M = editingprevmode;
+    dirtyWindow = 1;
+    glutPostRedisplay();
     break;
+  case GLUT_KEY_PAGE_UP:
+    HiLightCurPiece(curpiece-1);
+    break;
+  case GLUT_KEY_PAGE_DOWN:
+    HiLightCurPiece(curpiece+1);
+    break;
+  case GLUT_KEY_RIGHT:
+    m[0][3] += moveXamount;
+    TranslateCurPiece(m);
+    break;
+  case GLUT_KEY_LEFT:
+    m[0][3] -= moveXamount;
+    TranslateCurPiece(m);
+    break;
+  case GLUT_KEY_UP:
+    m[2][3] += moveZamount;
+    TranslateCurPiece(m);
+    break;
+  case GLUT_KEY_DOWN:
+    m[2][3] -= moveZamount;
+    TranslateCurPiece(m);
+    break;
+  case GLUT_KEY_HOME:
+    m[1][3] -= moveYamount;
+    TranslateCurPiece(m);
+    break;
+  case GLUT_KEY_END:
+    m[1][3] += moveYamount;
+    TranslateCurPiece(m);
+    break;
+  default:
+    break;
+  }
+  return 1;
+}
+
+/***************************************************************/
+#define MAIN_MENU_ID 	'/'
+#define FILE_MENU_ID 	'F'
+#define EDIT_MENU_ID 	'E'
+#define VIEW_MENU_ID 	'V'
+#define TURN_MENU_ID 	'T'
+#define PIECE_MENU_ID 	'P'
+#define OPTS_MENU_ID 	'O'
+
+#define OFFSET_MENU_ID 	'o'
+#define OFFSET_X_ID	'1'
+#define OFFSET_Y_ID	'2'
+#define OFFSET_Z_ID	'3'
+
+#define FILE_LOAD_ID 	'l'
+#define FILE_SAVE_ID 	's'
+#define FILE_EXIT_ID 	'e'
+
+#define TURN_X_ID	'X'
+#define TURN_Y_ID	'Y'
+#define TURN_Z_ID	'Z'
+
+#define MOVE_X_ID	'x'
+#define MOVE_Y_ID	'y'
+#define MOVE_Z_ID	'z'
+
+#define GOTO_MENU_ID	'G'
+#define COLOR_MENU_ID	'c'
+#define PART_SWAP_ID	'p'
+
+/***************************************************************/
+int edit_mode_keyboard(unsigned char key, int x, int y)
+{
+  int newview = 0;
+  char c;
+  
+  float m[4][4] = {
+    {1.0,0.0,0.0,0.0},
+    {0.0,1.0,0.0,0.0},
+    {0.0,0.0,1.0,0.0},
+    {0.0,0.0,0.0,1.0}
+  };
+  double angle;
+  float f;
+  int i, color;
+  char partname[256];
+
+  if (!editing)
+    return 0;
+
+  // If we have a command going then work on that.
+  if (i = strlen(ecommand))
+  {
+    if (key == 27)
+    {
+      // Abort the command
+      ecommand[0] = 0;
+      clear_edit_mode_gui();
+      edit_mode_gui();
+      return 1;
+    }
+    if (ecommand[0] == '/')
+    {
+      // Try to get submenu command
+      switch(key) {
+      case 'f':
+	sprintf(eprompt[0], "File: ");
+	sprintf(eprompt[1], "Load Save Exit");
+	ecommand[0] = toupper(key);
+	ecommand[1] = 0;
+	edit_mode_gui();
+	break;
+      case 'e':
+	sprintf(eprompt[0], "Edit: ");
+	sprintf(eprompt[1], "Delete Swap Line-type");
+	ecommand[0] = toupper(key);
+	ecommand[1] = 0;
+	edit_mode_gui();
+      case 'v':
+	sprintf(eprompt[0], "View: ");
+	sprintf(eprompt[1], "Front Right Left Back Over Under Three-D In Center");
+	ecommand[0] = toupper(key);
+	ecommand[1] = 0;
+	edit_mode_gui();
+      case 'p':
+	sprintf(eprompt[0], "Piece: ");
+	sprintf(eprompt[1], "File Color Goto");
+	ecommand[0] = toupper(key);
+	ecommand[1] = 0;
+	edit_mode_gui();
+      case 'o':
+	sprintf(eprompt[0], "%c: ", key);
+	ecommand[0] = toupper(key);
+	ecommand[1] = 0;
+	edit_mode_gui();
+	break;
+      case 't':
+	sprintf(eprompt[0], "Turn: ");
+	sprintf(eprompt[1], "X-axis Y-axis Z-axis Center-set");
+	ecommand[0] = toupper(key);
+	ecommand[1] = 0;
+	edit_mode_gui();
+	break;
+      case 'g':
+	sprintf(eprompt[0], "Goto Line: ");
+	ecommand[0] = toupper(key);
+	ecommand[1] = 0;
+	edit_mode_gui();
+	break;
+      default:
+	break;
+      }
+      return 1;
+    }
+    if (ecommand[0] == 'o') // Offset Menu
+    {
+      // Try to get submenu command
+      clear_edit_mode_gui();
+      sprintf(eprompt[0], "Offset %c-axis: ", toupper(key));
+      if (key == 'x')
+	ecommand[0] = '1';
+      if (key == 'y')
+	ecommand[0] = '2';
+      if (key == 'z')
+	ecommand[0] = '3';
+      ecommand[1] = 0;
+      edit_mode_gui();
+      return 1;
+    }
+    if (ecommand[0] == 'T') // Turn Menu
+    {
+      // Try to get submenu command
+      switch(key) {
+      case 'x':
+      case 'y':
+      case 'z':
+	clear_edit_mode_gui();
+	sprintf(eprompt[0], "Turn %c-axis angle: ", toupper(key));
+	ecommand[0] = toupper(key);
+	ecommand[1] = 0;
+	edit_mode_gui();
+	return 1;
+      }
+      return 1;
+    }
+    if (ecommand[0] == 'F') // File Menu
+    {
+      // Try to get submenu command
+      switch(key) {
+      case 'l':
+	clear_edit_mode_gui();
+	sprintf(eprompt[0], "Load file: ");
+	ecommand[0] = toupper(key);
+	sprintf(&(ecommand[1]), datfilename);
+	edit_mode_gui();
+	return 1;
+      case 's':
+	clear_edit_mode_gui();
+	sprintf(eprompt[0], "Save as: ");
+	ecommand[0] = toupper(key);
+	sprintf(&(ecommand[1]), datfilename);
+	edit_mode_gui();
+	return 1;
+      case 'e':
+	exit(0);
+      }
+      return 1;
+    }
+    if (ecommand[0] == 'E') // Edit Menu
+    {
+      // Try to get submenu command
+      switch(key) {
+      case 'i':
+	ecommand[0] = 0; // wipe the command char
+	clear_edit_mode_gui();
+	InsertNewPiece();
+	return 1;
+      case 'd':
+	ecommand[0] = 0; // wipe the command char
+	clear_edit_mode_gui();
+	DelCurPiece();
+	return 1;
+      case 's':
+	ecommand[0] = 0; // wipe the command char
+	clear_edit_mode_gui();
+	//SwapCurPiece(curpiece);
+	return 1;
+      case 'l':
+	clear_edit_mode_gui();
+	sprintf(eprompt[0], "Line Type: ");
+	ecommand[0] = toupper(key);
+	edit_mode_gui();
+	return 1;
+      }
+      return 1;
+    }
+
+    // Not looking for a submenu command.  Just process the keystroke.
+    switch(key) {
+    case '\n':
+    case '\r':
+      // Process the command
+      c = ecommand[0]; // get the command char
+      ecommand[0] = 0; // wipe the command char
+      clear_edit_mode_gui();
+      switch (c){
+      case 'G':
+	// Goto piece command
+	sscanf(&(ecommand[1]),"%d", &i);
+	HiLightCurPiece(i);
+	break;
+      case 'c':
+	sscanf(&(ecommand[1]),"%d", &color);
+	CopyStaticBuffer();//It would be nice to recolor without "moving" it.
+	movingpiece = curpiece;
+	Color1Part(curpiece, color);
+	DrawMovingPiece();
+	Print1Part(curpiece, stdout);
+	edit_mode_gui();
+	break;
+      case 'p':
+	sscanf(&(ecommand[1]),"%s", partname);
+	CopyStaticBuffer();
+	movingpiece = curpiece;
+	if (strrchr(partname, '.') == NULL)
+	  strcat(partname, use_uppercase ? ".DAT" : ".dat");
+	Swap1Part(curpiece, partname);
+	DrawMovingPiece();
+	Print1Part(curpiece, stdout);
+	edit_mode_gui();
+	break;
+      case 'x':
+	sscanf(&(ecommand[1]),"%f", &f);
+	m[0][3] += f;
+	TranslateCurPiece(m);
+	break;
+      case 'z':
+	sscanf(&(ecommand[1]),"%f", &f);
+	m[2][3] += f;
+	TranslateCurPiece(m);
+	break;
+      case 'y':
+	sscanf(&(ecommand[1]),"%f", &f);
+	m[1][3] += f;
+	TranslateCurPiece(m);
+	break;
+      case 'L':
+	// Load filename if new
+	printf("loading file: %s\n", &(ecommand[1]));
+	if (strcmp(&(ecommand[1]),datfilename))
+	{
+	  sscanf(&(ecommand[1]),"%s", &datfilename);
+	  curstep = 0; // Reset to first step
+	  dirtyWindow = 1;
+	  curpiece = 0;
+	  movingpiece = -1;
+	  list_made = 0; // Gotta reparse the file.
+	  SetTitle(1); // Change the title of the window.
+	  glutPostRedisplay();
+	}
+	else
+	  edit_mode_gui();
+	break;
+      case 'S':
+	// Save as filename
+	printf("Save as: %s\n", &(ecommand[1]));
+	sscanf(&(ecommand[1]),"%s", &datfilename);
+	Print1Model(datfilename);
+	SetTitle(1); // Change the title of the window.
+	edit_mode_gui();
+	break;
+      case 'X':
+	sscanf(&(ecommand[1]),"%f", &f);
+	angle = f;
+	printf("Rotate about %c by %f\n",c,angle);
+	CopyStaticBuffer();
+	angle *= PI_180;
+	m[1][1] = (float)cos(angle);
+	m[1][2] = (float)sin(angle);
+	m[2][1] = (float)(-1.0*sin(angle));
+	m[2][2] = (float)cos(angle);
+	movingpiece = curpiece;
+	Move1Part(curpiece, m);
+	DrawMovingPiece();
+	Print1Part(curpiece, stdout);
+	edit_mode_gui();
+	break;
+      case 'Z':
+	sscanf(&(ecommand[1]),"%f", &f);
+	angle = f;
+	printf("Rotate about %c by %f\n",c,angle);
+	CopyStaticBuffer();
+	angle *= PI_180;
+	m[0][0] = (float)cos(angle);
+	m[1][0] = (float)sin(angle);
+	m[0][1] = (float)(-1.0*sin(angle));
+	m[1][1] = (float)cos(angle);
+	movingpiece = curpiece;
+	Move1Part(curpiece, m);
+	DrawMovingPiece();
+	Print1Part(curpiece, stdout);
+	edit_mode_gui();
+	break;
+      case 'Y':
+	sscanf(&(ecommand[1]),"%f", &f);
+	angle = f;
+	printf("Rotate about %c by %f\n",c,angle);
+	CopyStaticBuffer();
+	angle *= PI_180;
+	m[0][0] = (float)cos(angle);
+	m[0][2] = (float)sin(angle);
+	m[2][0] = (float)(-1.0*sin(angle));
+	m[2][2] = (float)cos(angle);
+	movingpiece = curpiece;
+	Move1Part(curpiece, m);
+	DrawMovingPiece();
+	Print1Part(curpiece, stdout);
+	edit_mode_gui();
+	break;
+      case '1':
+	sscanf(&(ecommand[1]),"%f", &f);
+	ldraw_commandline_opts.O.x = f;
+	edit_mode_gui();
+	break;
+      case '2':
+	sscanf(&(ecommand[1]),"%f", &f);
+	ldraw_commandline_opts.O.y = f;
+	edit_mode_gui();
+	break;
+      case '3':
+	sscanf(&(ecommand[1]),"%f", &f);
+	ldraw_commandline_opts.O.z = f;
+	edit_mode_gui();
+	break;
+      default:
+	edit_mode_gui();
+	break;
+      }
+      break; // End of command finished processing.
+
+    case 8: // Backspace
+    case 127: // Delete
+      if (i > 1) // Don't backspace past the command char.
+	ecommand[i-1] = 0;
+      edit_mode_gui(); // Redisplay the GUI
+      break;
+    default:
+      // printf("key = %d = '%c'\n",key,key);
+      // Just add to the command
+      ecommand[i] = key;
+      ecommand[i+1] = 0;
+      edit_mode_gui(); // Redisplay the GUI
+      break;
+    }
+    return 1;
+  }
+  // End of edit mode command menu section.
+
+  // Look for normal editmode keys
+  switch(key) {
+  case 27:
+  case '/':
+    sprintf(eprompt[0], "File Edit View Turn Piece Options Goto");
+    ecommand[0] = '/';
+    ecommand[1] = 0;
+    edit_mode_gui();
+    return 1;
+  case 'a':
+    CopyStaticBuffer();
+    angle = (3.1415927/2.0);
+    m[0][0] = 0.0;  //(float)cos(angle);
+    m[0][2] = 1.0;  //(float)sin(angle);
+    m[2][0] = -1.0; //(float)(-1.0*sin(angle));
+    m[2][2] = 0.0;  //(float)cos(angle);
+    movingpiece = curpiece;
+    Move1Part(curpiece, m);
+    DrawMovingPiece();
+    Print1Part(curpiece, stdout);
+    edit_mode_gui();
+    return 1;
+  case 'i':
+    InsertNewPiece();
+    return 1;
+  case 'e':
+    printf("Erase and redraw screen (Shouldn't be needed)\n");
+    return 1;
+  case 'w':
+    printf("Swap current piece with next piece\n");
+    return 1;
+  case '\n':
+  case '\r':
+    printf("Draw the current piece (not needed?)\n");
+    return 1;
+  case 'x':
+  case 'y':
+  case 'z':
+    sprintf(eprompt[0], "%c: ", key);
+    ecommand[0] = key;
+    ecommand[1] = 0;
+    edit_mode_gui();
+    return 1;
+  case 'm':
+    if (moveXamount == 10.0)
+    {
+      moveXamount = 100.0; // Coarse movement.
+      moveZamount = 100.0;
+      moveYamount = 80.0;
+    }
+    else if (moveXamount == 100.0)
+    {
+      moveXamount = 1.0; // Fine movement.
+      moveZamount = 1.0;
+      moveYamount = 1.0;
+    }
+    else
+    {
+      moveXamount = 10.0; // Normal movement.
+      moveZamount = 10.0;
+      moveYamount = 8.0;
+    }
+    return 1;
+  case 'c':
+#if 1
+    sprintf(eprompt[0], "New Color: ");
+    ecommand[0] = 'c';
+    ecommand[1] = 0;
+    edit_mode_gui();
+    return 1;
 #endif
+    printf("New Color: ");
+    scanf("%d", &color);
+    CopyStaticBuffer(); // It would be nice to recolor without "moving" it.
+    movingpiece = curpiece;
+    Color1Part(curpiece, color);
+    DrawMovingPiece();
+    Print1Part(curpiece, stdout);
+    edit_mode_gui();
+    return 1;
+  case 'p':
+#if 1
+    sprintf(eprompt[0], "New Part: ");
+    ecommand[0] = 'p';
+    ecommand[1] = 0;
+    edit_mode_gui();
+    return 1;
+#endif
+    printf("New Part: ");
+    scanf("%s", partname);
+    CopyStaticBuffer();
+    movingpiece = curpiece;
+    Swap1Part(curpiece, partname);
+    DrawMovingPiece();
+    Print1Part(curpiece, stdout);
+    edit_mode_gui();
+    return 1;
+  case 'o':
+    sprintf(eprompt[0], "Offset: ");
+    sprintf(eprompt[1], "X-axis Y-axis Z-axis");
+    ecommand[0] = key;
+    ecommand[1] = 0;
+    edit_mode_gui();
+    return 1;
+  case 'd':
+  case 127: // Delete
+    DelCurPiece();
+    return 1;
+  }
+
+  return 0;
+}
+
+/***************************************************************/
+void fnkeys(int key, int x, int y)
+{
+  glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
+  
+#ifdef USE_L3_PARSER
+  if (editing) 
+  {
+    if (edit_mode_fnkeys(key, x, y))
+      return;
+  }
+#endif
+
+    /*
+      This will rotate you around x and y and translate you along x, y, and z. 
+      It shouldn't take much to add rotation around the z axis.
+    */
+    
+    // Add modifier check so I can:
+    //   spin about the 3 axis with 
+    //   slide along 3 axis with shifted keys
+    //   orbit about the center of the viewpoint with ctrl modified keys?
+    //
+    // glutGetModifiers() return masks.
+    //   GLUT_ACTIVE_SHIFT
+    //   GLUT_ACTIVE_CTRL
+    //   GLUT_ACTIVE_ALT
+    
+    // The PG_UP, PG_DN keys seem to zoom in and out (only in perspective mode)
+    // You can NOT zoom in or out in orthographic mode, only scale.
+  switch(key) {
 #ifdef USE_F00_CAMERA
   case GLUT_KEY_PAGE_UP:
   case GLUT_KEY_PAGE_DOWN:
@@ -2937,376 +3468,10 @@ void keyboard(unsigned char key, int x, int y)
 
   if (editing)
   {
-    // If we have a command going then work on that.
-    if (i = strlen(ecommand))
-    {
-      if (key == 27)
-      {
-	// Abort the command
-	ecommand[0] = 0;
-	clear_edit_mode_gui();
-	edit_mode_gui();
-	return;
-      }
-      if (ecommand[0] == '/')
-      {
-	// Try to get submenu command
-	switch(key) {
-	case 'f':
-	  sprintf(eprompt[0], "File: ");
-	  sprintf(eprompt[1], "Load Save Exit");
-	  ecommand[0] = key;
-	  ecommand[1] = 0;
-	  edit_mode_gui();
-	  break;
-	case 'e':
-	case 'v':
-	case 'p':
-	case 'o':
-	  sprintf(eprompt[0], "%c: ", key);
-	  ecommand[0] = key;
-	  ecommand[1] = 0;
-	  edit_mode_gui();
-	  break;
-	case 't':
-	  sprintf(eprompt[0], "Turn: ");
-	  sprintf(eprompt[1], "X-axis Y-axis Z-axis Center-set");
-	  ecommand[0] = key;
-	  ecommand[1] = 0;
-	  edit_mode_gui();
-	  break;
-	case 'g':
-	  sprintf(eprompt[0], "Goto Line: ");
-	  ecommand[0] = key;
-	  ecommand[1] = 0;
-	  edit_mode_gui();
-	  break;
-	default:
-	  break;
-	}
+    if (edit_mode_keyboard(key, x, y))
       return;
-      }
-      if (ecommand[0] == 't') // Turn Menu
-      {
-	// Try to get submenu command
-	switch(key) {
-	case 'x':
-	case 'y':
-	case 'z':
-	  clear_edit_mode_gui();
-	  sprintf(eprompt[0], "Turn %c-axis angle: ", toupper(key));
-	  ecommand[0] = toupper(key);
-	  ecommand[1] = 0;
-	  edit_mode_gui();
-	  return;
-	}
-	return;
-      }
-      if (ecommand[0] == 'f') // File Menu
-      {
-	// Try to get submenu command
-	switch(key) {
-	case 'l':
-	  clear_edit_mode_gui();
-	  sprintf(eprompt[0], "Load file: ");
-	  ecommand[0] = toupper(key);
-	  sprintf(&(ecommand[1]), datfilename);
-	  edit_mode_gui();
-	  return;
-	case 's':
-	  clear_edit_mode_gui();
-	  sprintf(eprompt[0], "Save as: ");
-	  ecommand[0] = toupper(key);
-	  sprintf(&(ecommand[1]), datfilename);
-	  edit_mode_gui();
-	  return;
-	case 'e':
-	  exit(0);
-	}
-	return;
-      }
-      switch(key) {
-      case '\n':
-      case '\r':
-	// Process the command
-	c = ecommand[0]; // get the command char
-	ecommand[0] = 0; // wipe the command char
-	clear_edit_mode_gui();
-	switch (c){
-	case 'g':
-	  sscanf(&(ecommand[1]),"%d", &i);
-	  HiLightCurPiece(i);
-	  break;
-	case 'c':
-	  sscanf(&(ecommand[1]),"%d", &color);
-	  CopyStaticBuffer();//It would be nice to recolor without "moving" it.
-	  movingpiece = curpiece;
-	  Color1Part(curpiece, color);
-	  DrawMovingPiece();
-	  Print1Part(curpiece, stdout);
-	  edit_mode_gui();
-	  break;
-	case 'p':
-	  sscanf(&(ecommand[1]),"%s", partname);
-	  CopyStaticBuffer();
-	  movingpiece = curpiece;
-	  if (strrchr(partname, '.') == NULL)
-	    strcat(partname, use_uppercase ? ".DAT" : ".dat");
-	  Swap1Part(curpiece, partname);
-	  DrawMovingPiece();
-	  Print1Part(curpiece, stdout);
-	  edit_mode_gui();
-	  break;
-	case 'x':
-	  sscanf(&(ecommand[1]),"%f", &f);
-          m[0][3] += f;
-	  TranslateCurPiece(m);
-	  break;
-	case 'z':
-	  sscanf(&(ecommand[1]),"%f", &f);
-	  m[2][3] += f;
-	  TranslateCurPiece(m);
-	  break;
-	case 'y':
-	  sscanf(&(ecommand[1]),"%f", &f);
-	  m[1][3] += f;
-	  TranslateCurPiece(m);
-	  break;
-	case 'L':
-	  // Load filename if new
-	  printf("loading file: %s\n", &(ecommand[1]));
-	  if (strcmp(&(ecommand[1]),datfilename))
-	  {
-	    sscanf(&(ecommand[1]),"%s", &datfilename);
-	    curstep = 0; // Reset to first step
-	    dirtyWindow = 1;
-	    curpiece = 0;
-	    movingpiece = -1;
-	    list_made = 0; // Gotta reparse the file.
-	    SetTitle(1); // Change the title of the window.
-	    glutPostRedisplay();
-	  }
-	  break;
-	case 'S':
-	  // Save as filename
-	  printf("Save as: %s\n", &(ecommand[1]));
-	  sscanf(&(ecommand[1]),"%s", &datfilename);
-	  Print1Model(datfilename);
-	  SetTitle(1); // Change the title of the window.
-	  break;
-	case 'X':
-	  sscanf(&(ecommand[1]),"%f", &f);
-	  angle = f;
-	  printf("Rotate about %c by %f\n",c,angle);
-	  CopyStaticBuffer();
-	  angle *= PI_180;
-	  m[1][1] = (float)cos(angle);
-	  m[1][2] = (float)sin(angle);
-	  m[2][1] = (float)(-1.0*sin(angle));
-	  m[2][2] = (float)cos(angle);
-	  movingpiece = curpiece;
-	  Move1Part(curpiece, m);
-	  DrawMovingPiece();
-	  Print1Part(curpiece, stdout);
-	  edit_mode_gui();
-	  break;
-	case 'Z':
-	  sscanf(&(ecommand[1]),"%f", &f);
-	  angle = f;
-	  printf("Rotate about %c by %f\n",c,angle);
-	  CopyStaticBuffer();
-	  angle *= PI_180;
-	  m[0][0] = (float)cos(angle);
-	  m[1][0] = (float)sin(angle);
-	  m[0][1] = (float)(-1.0*sin(angle));
-	  m[1][1] = (float)cos(angle);
-	  movingpiece = curpiece;
-	  Move1Part(curpiece, m);
-	  DrawMovingPiece();
-	  Print1Part(curpiece, stdout);
-	  edit_mode_gui();
-	  break;
-	case 'Y':
-	  sscanf(&(ecommand[1]),"%f", &f);
-	  angle = f;
-	  printf("Rotate about %c by %f\n",c,angle);
-	  CopyStaticBuffer();
-	  angle *= PI_180;
-	  m[0][0] = (float)cos(angle);
-	  m[0][2] = (float)sin(angle);
-	  m[2][0] = (float)(-1.0*sin(angle));
-	  m[2][2] = (float)cos(angle);
-	  movingpiece = curpiece;
-	  Move1Part(curpiece, m);
-	  DrawMovingPiece();
-	  Print1Part(curpiece, stdout);
-	  edit_mode_gui();
-	  break;
-	default:
-	  edit_mode_gui();
-	  break;
-	}
-	break;
-      case 8: // Backspace
-      case 127: // Delete
-	if (i > 1) // Don't backspace past the command char.
-	  ecommand[i-1] = 0;
-	edit_mode_gui(); // Redisplay the GUI
-	break;
-      default:
-	// printf("key = %d = '%c'\n",key,key);
-	// Just add to the command
-	ecommand[i] = key;
-	ecommand[i+1] = 0;
-	edit_mode_gui(); // Redisplay the GUI
-	break;
-      }
-      return;
-    }
-
-    switch(key) {
-    case 27:
-    case '/':
-      sprintf(eprompt[0], "File Edit View Turn Piece Options Goto");
-      ecommand[0] = '/';
-      ecommand[1] = 0;
-      edit_mode_gui();
-      return;
-    case 'a':
-      CopyStaticBuffer();
-      angle = (3.1415927/2.0);
-      m[0][0] = 0.0;  //(float)cos(angle);
-      m[0][2] = 1.0;  //(float)sin(angle);
-      m[2][0] = -1.0; //(float)(-1.0*sin(angle));
-      m[2][2] = 0.0;  //(float)cos(angle);
-      movingpiece = curpiece;
-      Move1Part(curpiece, m);
-      DrawMovingPiece();
-      Print1Part(curpiece, stdout);
-      edit_mode_gui();
-      return;
-    case 'i':
-      if (movingpiece >= 0)
-      {
-	if (SOLID_EDIT_MODE)
-	{
-	  // Add the current moving piece into the staticbuffer
-	  glDrawBuffer(staticbuffer); 
-	  DrawCurPart(-1); 
-	  glDrawBuffer(screenbuffer); 
-	}
-	else
-	{
-	  glDrawBuffer(staticbuffer); 
-	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	  render();
-	  glutSwapBuffers();
-	  glDrawBuffer(screenbuffer); 
-	}
-      }
-      else 
-	EraseCurPiece();
-      curpiece = Add1Part(curpiece);
-      // NOTE: This crashes SOLID_EDIT_MODE because the piece isn't moving.
-      movingpiece = curpiece;
-      DrawMovingPiece();
-      Print1Part(curpiece, stdout);
-      edit_mode_gui();
-      return;
-    case 'e':
-      printf("Erase and redraw screen (Shouldn't be needed)\n");
-      return;
-    case 'w':
-      printf("Swap current piece with next piece\n");
-      return;
-    case '\n':
-    case '\r':
-      printf("Draw the current piece (not needed?)\n");
-      return;
-    case 'x':
-    case 'y':
-    case 'z':
-      sprintf(eprompt[0], "%c: ", key);
-      ecommand[0] = key;
-      ecommand[1] = 0;
-      edit_mode_gui();
-      return;
-    case 'm':
-      if (moveXamount == 10.0)
-      {
-	moveXamount = 100.0; // Coarse movement.
-	moveZamount = 100.0;
-	moveYamount = 80.0;
-      }
-      else if (moveXamount == 100.0)
-      {
-	moveXamount = 1.0; // Fine movement.
-	moveZamount = 1.0;
-	moveYamount = 1.0;
-      }
-      else
-      {
-	moveXamount = 10.0; // Normal movement.
-	moveZamount = 10.0;
-	moveYamount = 8.0;
-      }
-      return;
-    case 'c':
-#if 1
-      sprintf(eprompt[0], "New Color: ");
-      ecommand[0] = 'c';
-      ecommand[1] = 0;
-      edit_mode_gui();
-      return;
-#endif
-      printf("New Color: ");
-      scanf("%d", &color);
-      CopyStaticBuffer(); // It would be nice to recolor without "moving" it.
-      movingpiece = curpiece;
-      Color1Part(curpiece, color);
-      DrawMovingPiece();
-      Print1Part(curpiece, stdout);
-      edit_mode_gui();
-      return;
-    case 'p':
-#if 1
-      sprintf(eprompt[0], "New Part: ");
-      ecommand[0] = 'p';
-      ecommand[1] = 0;
-      edit_mode_gui();
-      return;
-#endif
-      printf("New Part: ");
-      scanf("%s", partname);
-      CopyStaticBuffer();
-      movingpiece = curpiece;
-      Swap1Part(curpiece, partname);
-      DrawMovingPiece();
-      Print1Part(curpiece, stdout);
-      edit_mode_gui();
-      return;
-    case 'o':
-      Print1Model(datfilename);
-      return;
-    case 'd':
-    case 127: // Delete
-      CopyStaticBuffer(); 
-      if (SOLID_EDIT_MODE)
-      {
-	// CopyStaticBuffer() selects current piece in SOLID_EDIT_MODE
-      }
-      else
-	Select1Part(curpiece);
-      Delete1Part(curpiece);
-      movingpiece = -1;
-      curpiece--;
-      if (curpiece < 0) curpiece = 0;
-      XORcurPiece();
-      Print1Part(curpiece, stdout);
-      edit_mode_gui();
-      return;
-    }
   }
+
     switch(key) {
 #if 0
     case 'e':
@@ -3375,11 +3540,15 @@ void keyboard(unsigned char key, int x, int y)
     case 's':
     case '-':
         ldraw_commandline_opts.S *= 0.5;
+	if (glutModifiers & GLUT_ACTIVE_CTRL)
+	  ldraw_commandline_opts.S *= 0.9;
 	dirtyWindow = 1; //reshape(Width, Height);
 	break;
     case 'S':
     case '+':
         ldraw_commandline_opts.S *= (1.0 / 0.5);
+	if (glutModifiers & GLUT_ACTIVE_CTRL)
+	  ldraw_commandline_opts.S *= (1.0 / 0.9);
 	dirtyWindow = 1; //reshape(Width, Height);
 	break;
     case '0':
@@ -4731,6 +4900,7 @@ main(int argc, char **argv)
   output_file = fopen(output_file_name,"w+");
 #endif
 
+  strcpy(progname, basename(argv[0]));
   SetTitle(0);
 
 #ifdef USE_L3_PARSER
