@@ -545,7 +545,14 @@ void write_png(char *filename)
     else
 #endif
     if (use_png_alpha)
+    {
+      int j;
+      char *b = pix+3;
       glReadPixels(xoff, i+yoff, width, 1, GL_RGBA, GL_UNSIGNED_BYTE, pix);
+      for (j = 0; j < width; j++)
+	if (b[4*j])
+	  b[4*j] = 0xff; // Convert partial alpha to opaque.
+    }
     else
       glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, pix);
 
