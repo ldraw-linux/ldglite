@@ -6660,7 +6660,7 @@ void keyboard(unsigned char key, int x, int y)
 	reshape(Width, Height);
 	break;
 #endif
-    case 4: // toggle edit mode
+    case 6: // toggle edit mode
         if (editing)
 	  leaveEditMode();
 	else
