@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.0.1      ";
+char ldgliteVersion[] = "Version 1.0.2      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -2311,7 +2311,7 @@ void VISIBILITY(int state)
 }
 
 /***************************************************************/
-void getDisplayProperties();
+int getDisplayProperties();
 
 /***************************************************************/
 void reshape(int width, int height)
@@ -2322,7 +2322,14 @@ void reshape(int width, int height)
     // Should probably also do this when entering/leaving game mode.
     // NOTE:  I should probably break up this fn so I can skip this check
     // and the dirtyWindow when I just want to reset the projection matrix.
-    getDisplayProperties();
+    if (getDisplayProperties())
+    {
+      // Uh Oh.  The graphics mode changed.  Dump saved buffers & redraw.
+      if (editing)
+	NukeSavedDepthBuffer();
+      dirtyWindow = 1;
+      glutPostRedisplay();
+    }
 
 #if 0
     if (editing)
@@ -8052,7 +8059,7 @@ char *vendstr = "";
 char *rendstr = "";
 
 /***************************************************************/
-void getDisplayProperties()
+int getDisplayProperties()
 {
   char *str;
   int newcontext = 0;
@@ -8094,7 +8101,7 @@ void getDisplayProperties()
 
   // Reset all context dependent stuff when new context detected
   if (!newcontext)
-    return;
+    return newcontext;
 
   printf("GL_VERSION = %s\n", verstr);
   printf("GL_EXTENSIONS = %s\n", extstr);
@@ -8209,6 +8216,8 @@ void getDisplayProperties()
 #endif
     glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
 #endif
+
+  return newcontext;
 }
 
 #ifdef WINDOWS
