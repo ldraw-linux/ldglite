@@ -29,6 +29,8 @@
 extern int curstep;
 extern int cropping;
 extern int use_quads;
+extern float lineWidth;
+extern int zSolid;
 
 GLdouble model_mat[4*4];
 GLdouble proj_mat[4*4];
@@ -717,6 +719,10 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
   ZCOLOR zc, zs;
   
 #ifdef USE_OPENGL
+  if(zSolid) {
+    return;
+  };
+
   if (ldraw_commandline_opts.M == 'P')
   {
     // Non-continuous output stop after each step.
@@ -801,6 +807,14 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
     //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
     glColor3ub(zc.r, zc.g, zc.b);
   glCurColorIndex = c;
+  if (lineWidth > 0.0)
+  {
+    glBegin(GL_POINTS);
+    // LDRAW has the y value reversed, so negate the y.
+    glVertex3f(vp1->x, -vp1->y, -vp1->z+z_line_offset);
+    glVertex3f(vp2->x, -vp2->y, -vp2->z+z_line_offset);
+    glEnd();
+  }
   glBegin(GL_LINES);
   // LDRAW has the y value reversed, so negate the y.
   glVertex3f(vp1->x, -vp1->y, -vp1->z+z_line_offset);
@@ -1111,6 +1125,10 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
   GLdouble s4x, s4y, s4z;
 
 #ifdef USE_OPENGL
+  if(zSolid) {
+    return;
+  };
+
   if (ldraw_commandline_opts.M == 'P')
   {
     // Non-continuous output stop after each step.
@@ -1182,6 +1200,14 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
     //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
     glColor3ub(zc.r, zc.g, zc.b);
   glCurColorIndex = c;
+  if (lineWidth > 1.0)
+  {
+    glBegin(GL_POINTS);
+    // LDRAW has the y value reversed, so negate the y.
+    glVertex3f(vp1->x, -vp1->y, -vp1->z+z_line_offset);
+    glVertex3f(vp2->x, -vp2->y, -vp2->z+z_line_offset);
+    glEnd();
+  }
   glBegin(GL_LINES);
   // LDRAW has the y value reversed, so negate the y.
   glVertex3f(vp1->x, -vp1->y, -vp1->z+z_line_offset);

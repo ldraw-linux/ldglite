@@ -149,6 +149,9 @@ char dirpattern[256] = "*";
 char filepattern[256] = "*.dat";
 
 int drawAxis = 0;
+int qualityLines = 0;
+float lineWidth = 0.0;
+int zSolid = 0;
 
 // Camera movement variables
 #define MOVE_SPEED 10.0
@@ -1159,6 +1162,36 @@ void init(void)
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0, 1.0);
 
+    //NOTE: This only works well if I draw all the polys first, 
+    // then antialias the lines on top of them in a 2nd pass.
+    if (qualityLines)
+    {
+      glEnable( GL_LINE_SMOOTH ); 
+      glHint( GL_LINE_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
+      glLineWidth( 1.0 );
+      glEnable( GL_BLEND );
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    if (lineWidth > 1.0)
+    {
+      glLineWidth( lineWidth );
+
+      //NOTE:  I should draw round points at the ends of all lines (in stub.c).
+      // Otherwise I end up with flat ends (ugly at angled intersections).
+      // Apparently OpenGL has no line end style parameter?
+      glPointSize( lineWidth -0.5);
+#if 0
+      // This does NOT seem to work as well as I thought it would.
+      // Instead, just draw the points (unantialiased) BEFORE the lines.
+      if (qualityLines)
+      {
+	glEnable( GL_POINT_SMOOTH ); 
+	glHint( GL_POINT_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
+      }
+#endif
+    }
+
 #if 0
     // Make command lists for the eight stipple patterns.
 #define STIP_OFFSET 100
@@ -1453,7 +1486,19 @@ void display(void)
   }
   glCallList(1);
 #else
+  if (qualityLines && (zWire == 0))
+  {
+    zSolid = 1;
+  }
   DrawModel();
+  if (qualityLines && (zWire == 0))
+  {
+    zSolid = 0;
+    zWire = 1;
+    stepcount = 0; // NOTE: Not sure what effect this will have...
+    DrawModel();
+    zWire = 0;
+  }
 #endif
   }
   else
@@ -1473,6 +1518,10 @@ void display(void)
   }
   glCallList(1);
 #else
+  if (qualityLines && (zWire == 0))
+  {
+    zSolid = 1;
+  }
   mpd_subfile_name = NULL; // potential memory leak
   znamelist_push();
   ldlite_parse(datfilename, buf);
@@ -1507,6 +1556,46 @@ void display(void)
     sprintf(buf,"1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n", mpd_subfile_name);
     ldlite_parse(NULL,buf);
     znamelist_pop();
+  }
+  if (qualityLines && (zWire == 0))
+  {
+    zSolid = 0;
+    zWire = 1;
+
+    zcolor_init();
+
+    stepcount = 0; // NOTE: Not sure what effect this will have...
+
+    rc = zReset(&(client_rect_right),&(client_rect_bottom));
+    if (rc != 0) {
+      printf("Out of Memory, exiting");
+      exit(-1);
+    }
+
+    mpd_subfile_name = NULL; // potential memory leak
+    znamelist_push();
+    ldlite_parse(datfilename, buf);
+    znamelist_pop();
+    if (mpd_subfile_name != NULL) 
+    {
+      // set file name to first subfile
+      if (ldraw_commandline_opts.debug_level == 1)
+	printf("Draw MPD %s\n", mpd_subfile_name);
+
+      zcolor_init();
+
+      rc = zReset(&(client_rect_right),&(client_rect_bottom));
+      if (rc != 0) {
+	printf("Out of Memory, exiting");
+	exit(-1);
+      }
+
+      znamelist_push();
+      sprintf(buf,"1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n", mpd_subfile_name);
+      ldlite_parse(NULL,buf);
+      znamelist_pop();
+    }
+    zWire = 0;
   }
 #endif
   }
@@ -1782,6 +1871,42 @@ void keyboard(unsigned char key, int x, int y)
   glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
 
     switch(key) {
+#define AUTOSCALE_OPTION 1
+#ifdef AUTOSCALE_OPTION
+    case 'y':
+      // NOTE: this assumes cropping == 1 (which may not be true)
+      // I should really just get a bounding sphere
+      // and scale it to fit in the view frustrum.
+      // Calculate a bounding sphere from the bounding box of the model?
+      {
+	int width = Width;
+	int height = Height;
+	float xs, ys;
+
+	width = z.extent_x2 - z.extent_x1;
+	height = z.extent_y2 - z.extent_y1;
+
+	// NOTE: gluProject() seems to clip coords at the window edges
+	// so this will not scale down
+	printf("%d, %d\n", width, height);
+	if ((width <= 0) || (height <= 0)) break;
+	xs = (float) (Width) / (float) width;
+	ys = (float) (Height) / (float) height;
+	
+	printf("%0.3f, %0.3f\n", xs, ys);
+	// scale up by the smaller amount so it fits both ways.
+	if (xs > ys)
+	  xs = ys;
+        ldraw_commandline_opts.S *= xs;
+
+	// If its off center then center it.  Does not work too well.
+	fCamX -= (float)(z.extent_x2 - Width + z.extent_x1) / 2.0;
+	fCamY -= (float)(z.extent_y2 - Height + z.extent_y1) / 2.0;
+      }
+  
+	reshape(Width, Height);
+	break;
+#endif
     case 'z':
         ldraw_commandline_opts.S *= 0.9;
 	//reshape(Width, Height);
@@ -1933,6 +2058,27 @@ void keyboard(unsigned char key, int x, int y)
       list_made = 0; // Gotta reparse the file.
       break;
 #endif
+    case 'Q':
+    case 'q':
+      qualityLines ^= 1;
+      if (qualityLines)
+      {
+	glEnable( GL_LINE_SMOOTH ); 
+	glHint( GL_LINE_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
+	if (lineWidth > 1.0)
+	  glLineWidth( lineWidth );
+	else
+	  glLineWidth( 1.0 );
+	glEnable( GL_BLEND );
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      }
+      else
+      {
+	glDisable( GL_LINE_SMOOTH ); 
+	glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+	glDisable( GL_BLEND );
+      }
+      break;
     case 27:
 	exit(0);
 	break;
@@ -2861,6 +3007,10 @@ void ParseParams(int *argc, char **argv)
       case 'p':
 	ldraw_commandline_opts.poll= 1;
 	break;
+      case 'Q':
+      case 'q':
+	qualityLines = 1;
+	break;
       case 'R':
       case 'r':
 	sscanf(pszParam,"%c%s",&type, &output_file_name);
@@ -2916,6 +3066,17 @@ void ParseParams(int *argc, char **argv)
 	  ldraw_commandline_opts.V_y=1024;
 	  break;
 	}
+	break;
+#ifdef WINDOWS
+      case '&':
+	FreeConsole();
+	break;
+#endif
+      case 'W':
+      case 'w':
+	sscanf(pszParam,"%c%f",&type, &lineWidth);
+	if (lineWidth < 0.0)
+	  lineWidth = 0.0;
 	break;
       case 'X':
       case 'x':
@@ -3047,7 +3208,6 @@ main(int argc, char **argv)
   //glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL);
 #ifdef USE_DOUBLE_BUFFER
   glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
-  glDrawBuffer(GL_FRONT_AND_BACK);  // Effectively disable double buffer.
 #else
   glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH);
 #endif
@@ -3084,6 +3244,12 @@ main(int argc, char **argv)
   str = (char *) glGetString(GL_EXTENSIONS);
   printf("GL_EXTENSIONS = %s\n", str);
 
+#ifdef USE_DOUBLE_BUFFER
+  // NOTE: Mesa segfaults if I do this BEFORE CreateWindow/EnterGameMode
+  //glDrawBuffer(GL_FRONT_AND_BACK); // Hmm, why did I want FRONT_AND_BACK? 
+  glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
+#endif
+
   glutDisplayFunc(display);
   glutReshapeFunc(reshape);
   glutKeyboardFunc(keyboard);
@@ -3117,6 +3283,7 @@ main(int argc, char **argv)
   glutAddMenuEntry("Wireframe       ", 'w');
   glutAddMenuEntry("Normal          ", 'n');
   glutAddMenuEntry("Studs           ", 'f');
+  glutAddMenuEntry("Quality Lines   ", 'q');
   glutAddMenuEntry("Visible spin    ", 'v');
   glutAddMenuEntry("Continuous      ", 'c');
   glutAddMenuEntry("Polling         ", 'g');
@@ -3179,7 +3346,7 @@ main(int argc, char **argv)
 
   helpmenunum = glutCreateMenu(menu);
   glutAddMenuEntry(progname             , '\0');
-  glutAddMenuEntry("Version 0.7.2      ", '\0');
+  glutAddMenuEntry("Version 0.7.3      ", '\0');
 
   mainmenunum = glutCreateMenu(menu);
   glutAddSubMenu(  "File               ", filemenunum);
