@@ -1016,9 +1016,9 @@ void GetPartBox(struct L3LineS *LinePtr, int sc[4])
     for (i = 0; i < numpoints; i++)
     {
 	M4V3Mul(r,m_m,LinePtr->v[i]);
-	bb3d[0].x=r[0];
-	bb3d[0].y=r[1];
-	bb3d[0].z=r[2];
+	bb3d[i].x=r[0];
+	bb3d[i].y=r[1];
+	bb3d[i].z=r[2];
     }
   }
   else
@@ -1035,7 +1035,7 @@ void GetPartBox(struct L3LineS *LinePtr, int sc[4])
   s0x = Width;
   s0y = Height;
 
-  for (i = 0; i < 8; i++)
+  for (i = 0; i < numpoints; i++)
   {
     gluProject((GLdouble)bb3d[i].x, (GLdouble)-bb3d[i].y, (GLdouble)-bb3d[i].z,
 	       model_mat, proj_mat, view_mat,
