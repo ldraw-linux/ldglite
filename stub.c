@@ -24,6 +24,7 @@
 
 //**********************************************************************
 #include <GL/glut.h>
+#include "platform.h"
 
 #ifdef USE_L3_PARSER
 // The L3 parser fixes bowtie quads once during parsing.
@@ -72,8 +73,8 @@ int glCurColorIndex = -1;
 int glCurLighting = 1;
 
 // move lines closer before drawing (only if glPolygonOffset is broken)
-//float z_line_offset = 0.0; 
-float z_line_offset = 0.95; 
+float z_line_offset = 0.0; 
+//float z_line_offset = 0.95; 
 
 #define SamePoint(p1,p2) ((p1->x == p2->x) && (p1->y == p2->y) && (p1->z == p2->z))
 
