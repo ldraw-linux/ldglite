@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.0.8      ";
+char ldgliteVersion[] = "Version 1.0.9      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -8697,6 +8697,8 @@ main(int argc, char **argv)
   int exitcode;
   char *str, *verstr, *extstr, *vendstr, *rendstr;
   unsigned int displaymode;
+  int i;
+  int needargs = 0;
   
   platform_startup(&argc, &argv);
 	
@@ -8715,6 +8717,24 @@ main(int argc, char **argv)
   // I hope OSX glutinit() will ADD the filename of a dropped file to argv.
   // (I know it removes some things.)
   // So I call glutInit ahead of ParseParams.
+#include "getargv.h"
+  /* put paths of all files dropped onto the app into argv */
+  // Probably should look for one of those -psn* args before doing this.
+  // (glutInit() removes -psn* args, but does not insert the filenames)
+  for (i = 1; i < argc; i++)
+    if (!strncmp(argv[i], "-psn_", 5)) 
+    {
+      needargs = 1;
+      break;
+    }
+  // This replaces all args with stuff from the finder.
+  // Assume there will be no other args if if comes from the finder.
+  // That may not be the case if I figure out how to get ldglite.command
+  // script to call the ldglite executable in the bundle.
+  // Maybe I should call the bundled executable l3glite.
+  if (needargs)
+    argc = FTMac_GetArgv(&argv);
+
   if (OffScreenRendering == 0)
   {
     //The GLUT framework will chdir to the Resources folder of your 
@@ -8723,6 +8743,36 @@ main(int argc, char **argv)
     getcwd(cwdpath, 512);
     glutInit(&argc, argv);
     chdir(cwdpath); // problem with chdir to dir with spaces in win32.
+
+#ifdef __APPLE__
+    {
+      typedef struct
+      {
+	int  lo;
+	int  hi;
+      } PSN;
+    
+      extern "C" {
+	short CPSGetCurrentProcess(PSN *psn);
+	short CPSSetProcessName (PSN *psn, char *processname);
+	short CPSEnableForegroundOperation(PSN *psn, int _arg2, int _arg3, int _arg4, int _arg5);
+	short CPSSetFrontProcess(PSN *psn);
+      };
+
+      // PSN = Process serial number.  If I get something in argv like
+      // -psn_****** then I was launched from the finder (not cmdline.)
+      // This is a valuable hint that I need to use OSX to get the filename.
+      // Watch out though because glutinit() (above) removes this from argv.
+      PSN psn;  
+
+      // Keyboard focus hack (borrowed from FlightGear)
+      CPSGetCurrentProcess(&psn);
+      //CPSSetProcessName(&psn, argv[0]);
+      CPSEnableForegroundOperation(&psn,0x03,0x3C,0x2C,0x1103);
+      CPSSetFrontProcess(&psn);
+    }
+#endif
+
   }
 #  endif
 #endif
