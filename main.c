@@ -2177,29 +2177,24 @@ void TiledDisplay(void)
 }
 #endif
 
+/***************************************************************/
 // These symbols are defined in the MAX gfx.h header file
 #define GL_KTX_FRONT_REGION 0x0000
 #define GL_KTX_BACK_REGION 0x0001
 #define GL_KTX_Z_REGION 0x0002
 #define GL_KTX_STENCIL_REGION 0x0003
 
-extern GLuint glNewBufferRegion(GLenum type);
-extern void glDeleteBufferRegion(GLuint region);
-extern void glReadBufferRegion(GLuint region, GLint x, GLint y, GLsizei width, GLsizei height);
-extern void glDrawBufferRegion(GLuint region, GLint x, GLint y, GLsizei width, GLsizei height, GLint xDest, GLint yDest);
-extern GLuint glBufferRegionEnabled(void);
+typedef GLuint (* PFNGLNEWBUFFERREGIONPROC)(GLenum);
+typedef void (* PFNGLDELETEBUFFERREGIONPROC)(GLuint);
+typedef void (* PFNGLREADBUFFERREGIONPROC)(GLuint, GLint, GLint, GLsizei, GLsizei);
+typedef void (* PFNGLDRAWBUFFERREGIONPROC)(GLuint, GLint, GLint, GLsizei, GLsizei, GLint, GLint);
+typedef GLuint (* PFNGLBUFFERREGIONENABLEDPROC)(void);
 
-typedef GLuint (* PFNGLNEWBUFFERREGIONEXTPROC)(GLenum);
-typedef void (* PFNGLDELETEBUFFERREGIONEXTPROC)(GLuint);
-typedef void (* PFNGLREADBUFFERREGIONEXTPROC)(GLuint, GLint, GLint, GLsizei, GLsizei);
-typedef void (* PFNGLDRAWBUFFERREGIONEXTPROC)(GLuint, GLint, GLint, GLsizei, GLsizei, GLint, GLint);
-typedef GLuint (* PFNGLBUFFERREGIONENABLEDEXTPROC)(void);
-
-PFNGLNEWBUFFERREGIONEXTPROC glNewBufferRegionEXT = NULL;
-PFNGLDELETEBUFFERREGIONEXTPROC glDeleteBufferRegionEXT = NULL;
-PFNGLREADBUFFERREGIONEXTPROC glReadBufferRegionEXT = NULL;
-PFNGLDRAWBUFFERREGIONEXTPROC glDrawBufferRegionEXT = NULL;
-PFNGLBUFFERREGIONENABLEDEXTPROC glBufferRegionEnabledEXT = NULL;
+PFNGLNEWBUFFERREGIONPROC glNewBufferRegion = NULL;
+PFNGLDELETEBUFFERREGIONPROC glDeleteBufferRegion = NULL;
+PFNGLREADBUFFERREGIONPROC glReadBufferRegion = NULL;
+PFNGLDRAWBUFFERREGIONPROC glDrawBufferRegion = NULL;
+PFNGLBUFFERREGIONENABLEDPROC glBufferRegionEnabled = NULL;
 
 /***************************************************************/
 void test_ktx_buffer_region(char *str)
@@ -2208,32 +2203,37 @@ void test_ktx_buffer_region(char *str)
   {	
     printf("The GL_KTX_buffer_region extension is available\n");
 
-#if 0
-glNewBufferRegion = (GLuint (*)(GLenum))wglGetProcAddress("glNewBufferRegion");
-glDeleteBufferRegion = (void (*)(GLuint))wglGetProcAddress("glDeleteBufferRegion");
-glReadBufferRegion = (void (*)(GLuint, GLint, GLint, GLsizei, GLsizei))wglGetProcAddress("glReadBufferRegion");
-glDrawBufferRegion = (void (*)(GLuint, GLint, GLint, GLsizei, GLsizei, GLint, GLint))wglGetProcAddress("glDrawBufferRegion");
-glBufferRegionEnabled = (GLuint (*)(void))wglGetProcAddress("glBufferRegionEnabled");
+#if 1
+    glNewBufferRegion = (GLuint (*)(GLenum))
+      wglGetProcAddress("glNewBufferRegion");
+    glDeleteBufferRegion = (void (*)(GLuint))
+      wglGetProcAddress("glDeleteBufferRegion");
+    glReadBufferRegion = (void (*)(GLuint, GLint, GLint, GLsizei, GLsizei))
+      wglGetProcAddress("glReadBufferRegion");
+    glDrawBufferRegion = (void (*)(GLuint, GLint, GLint, GLsizei, GLsizei, GLint, GLint))
+      wglGetProcAddress("glDrawBufferRegion");
+    glBufferRegionEnabled = (GLuint (*)(void))
+      wglGetProcAddress("glBufferRegionEnabled");
+#else
+    glNewBufferRegion = (PFNGLNEWBUFFERREGIONPROC)
+      wglGetProcAddress("glNewBufferRegion");
+    printf("The GL_KTX_f1 = %p\n",glNewBufferRegion);
+    glDeleteBufferRegion = (PFNGLDELETEBUFFERREGIONPROC)
+      wglGetProcAddress("glDeleteBufferRegion");
+    printf("The GL_KTX_f1 = %p\n",glDeleteBufferRegion);
+    glReadBufferRegion = (PFNGLREADBUFFERREGIONPROC)
+      wglGetProcAddress("glReadBufferRegion");
+    printf("The GL_KTX_f1 = %p\n",glReadBufferRegion);
+    glDrawBufferRegion = (PFNGLDRAWBUFFERREGIONPROC)
+      wglGetProcAddress("glDrawBufferRegion");
+    printf("The GL_KTX_f1 = %p\n",glDrawBufferRegion);
+    glBufferRegionEnabled = (PFNGLBUFFERREGIONENABLEDPROC)
+      wglGetProcAddress("glBufferRegionEnabled");
+    printf("The GL_KTX_f1 = %p\n",glBufferRegionEnabled);
 #endif
 
-    glNewBufferRegionEXT = (PFNGLNEWBUFFERREGIONEXTPROC)
-      wglGetProcAddress("glNewBufferRegion");
-    printf("The GL_KTX_f1 = %p\n",glNewBufferRegionEXT);
-    glDeleteBufferRegionEXT = (PFNGLDELETEBUFFERREGIONEXTPROC)
-      wglGetProcAddress("glDeleteBufferRegion");
-    printf("The GL_KTX_f1 = %p\n",glDeleteBufferRegionEXT);
-    glReadBufferRegionEXT = (PFNGLREADBUFFERREGIONEXTPROC)
-      wglGetProcAddress("glReadBufferRegion");
-    printf("The GL_KTX_f1 = %p\n",glReadBufferRegionEXT);
-    glDrawBufferRegionEXT = (PFNGLDRAWBUFFERREGIONEXTPROC)
-      wglGetProcAddress("glDrawBufferRegion");
-    printf("The GL_KTX_f1 = %p\n",glDrawBufferRegionEXT);
-#if 0    
-    buffer_region = glNewBufferRegion(GL_KTX_Z_REGION);
-#else
-    cbuffer_region = glNewBufferRegionEXT(GL_KTX_BACK_REGION);
-    zbuffer_region = glNewBufferRegionEXT(GL_KTX_Z_REGION);
-#endif
+    cbuffer_region = glNewBufferRegion(GL_KTX_BACK_REGION);
+    zbuffer_region = glNewBufferRegion(GL_KTX_Z_REGION);
   }
 }
 
@@ -2278,8 +2278,8 @@ void SaveDepthBuffer(void)
 {
   if (zbuffer_region)
   {
-    glReadBufferRegionEXT(cbuffer_region,0,0,Width,Height);
-    glReadBufferRegionEXT(zbuffer_region,0,0,Width,Height);
+    glReadBufferRegion(cbuffer_region,0,0,Width,Height);
+    glReadBufferRegion(zbuffer_region,0,0,Width,Height);
   }
   else
   {
@@ -2659,8 +2659,8 @@ void CopyStaticBuffer(void)
     {
       glDrawBuffer(staticbuffer); 
       // On my card this call nukes the call stack so we crash on return below.
-      glDrawBufferRegionEXT(cbuffer_region,0,0,Width,Height,0,0);
-      glDrawBufferRegionEXT(zbuffer_region,0,0,Width,Height,0,0);
+      glDrawBufferRegion(cbuffer_region,0,0,Width,Height,0,0);
+      glDrawBufferRegion(zbuffer_region,0,0,Width,Height,0,0);
       glutSwapBuffers(); 
       glDrawBuffer(screenbuffer); 
       return;
@@ -3091,7 +3091,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	edit_mode_gui();
 	break;
       case 'o':
-	sprintf(eprompt[0], "%c: ", key);
+	sprintf(eprompt[0], "Options: ");
+	sprintf(eprompt[1], "Line-as-stud(on) Start-at-line");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
@@ -3271,7 +3272,49 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       }
       return 1;
     }
-
+    if (ecommand[0] == 'P') // Piece Menu
+    {
+      // Try to get submenu command
+      switch(key) {
+      case 'f':
+	sprintf(eprompt[0], "New Part: ");
+	ecommand[0] = 'p';
+	ecommand[1] = 0;
+	edit_mode_gui();
+	return 1;
+      case 'c':
+	sprintf(eprompt[0], "New Color: ");
+	ecommand[0] = 'c';
+	ecommand[1] = 0;
+	edit_mode_gui();
+	return 1;
+      case 'g':
+	sprintf(eprompt[0], "Goto Line: ");
+	ecommand[0] = toupper(key);
+	ecommand[1] = 0;
+	edit_mode_gui();
+	return 1;
+      }
+      return 1;
+    }
+    if (ecommand[0] == 'O') // Options Menu
+    {
+      // Try to get submenu command
+      switch(key) {
+      case 'l':
+	clear_edit_mode_gui();
+	ldraw_commandline_opts.F ^= STUDLESS_MODE;
+	dirtyWindow = 1;
+	glutPostRedisplay();
+	return 1;
+      case 's':
+	// Start display at curpiece
+	clear_edit_mode_gui();
+	edit_mode_gui();
+	return 1;
+      }
+      return 1;
+    }
 
     // Not looking for a submenu command.  Just process the keystroke.
     switch(key) {
@@ -3511,7 +3554,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     ecommand[1] = 0;
     edit_mode_gui();
     return 1;
-#endif
+#else
     printf("New Color: ");
     scanf("%d", &color);
     CopyStaticBuffer(); // It would be nice to recolor without "moving" it.
@@ -3521,6 +3564,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     Print1Part(curpiece, stdout);
     edit_mode_gui();
     return 1;
+#endif
   case 'p':
 #if 1
     sprintf(eprompt[0], "New Part: ");
@@ -3528,7 +3572,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     ecommand[1] = 0;
     edit_mode_gui();
     return 1;
-#endif
+#else
     printf("New Part: ");
     scanf("%s", partname);
     CopyStaticBuffer();
@@ -3538,6 +3582,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     Print1Part(curpiece, stdout);
     edit_mode_gui();
     return 1;
+#endif
   case 'o':
     sprintf(eprompt[0], "Offset: ");
     sprintf(eprompt[1], "X-axis Y-axis Z-axis");
