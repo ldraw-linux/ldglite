@@ -297,9 +297,9 @@ void hoser(float m[4][4], int color, int steps, int drawline,
     m1[2][1] = (sin(Xaxisrotation)*cos(Yaxisrotation));
     m1[2][2] = (cos(Xaxisrotation)*cos(Yaxisrotation));
     m1[2][3] = p[2];
-    m1[3][0] = 1;
-    m1[3][1] = 1;
-    m1[3][2] = 1;
+    m1[3][0] = 0;
+    m1[3][1] = 0;
+    m1[3][2] = 0;
     m1[3][3] = 1;
     hoseseg(segname, color, m1);
 #endif

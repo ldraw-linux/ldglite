@@ -1472,6 +1472,7 @@ int Hose1Part(int partnum, int steps)
     struct L3LineS *FirstPtr;
     struct L3LineS *LastPtr;
     struct L3PartS *PartPtr;
+    char *SubPartDatName;
     char           Comment[256];
     char *parttext = NULL;
     char *firstparttext = NULL;
@@ -1506,65 +1507,122 @@ int Hose1Part(int partnum, int steps)
     if (LastPtr->LineType != 1)
       return i;
 
+    // Get partname and color
+    PartPtr = LinePtr->PartPtr;
+    CurColor = LinePtr->Color;
+    if (PartPtr)
+      SubPartDatName = PartPtr->DatName;
+    else
+      SubPartDatName = strdup("");
+
     // Backup SelectedLinePtr
     PrevPtr = SelectedLinePtr;
 
-    // Add a 755.dat plug part at far end of the hose.
-    NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
-    memcpy(NextPtr, LastPtr, sizeof(struct L3LineS));
-    PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
-    memcpy(PartPtr, LastPtr->PartPtr, sizeof(struct L3PartS));
-    NextPtr->PartPtr = PartPtr;
-    // Link it in
-    NextPtr->NextLine = FirstPtr->NextLine; 
-    FirstPtr->NextLine = NextPtr;
-    // Switch to part 755.dat
-    SelectedLinePtr = NextPtr;
-    Swap1Part(i, "755.dat");
-    //rotate it 180 degrees around X.
-    Move1Part(i, m, 1);
-    //Rotate1Part(i, m);
+    if ((stricmp(SubPartDatName, "750.dat") == 0) ||
+	(stricmp(SubPartDatName, "752.dat") == 0))
+    {
+      // Add a 755.dat plug part at far end of the hose.
+      NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+      memcpy(NextPtr, LastPtr, sizeof(struct L3LineS));
+      PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
+      memcpy(PartPtr, LastPtr->PartPtr, sizeof(struct L3PartS));
+      NextPtr->PartPtr = PartPtr;
+      // Link it in
+      NextPtr->NextLine = FirstPtr->NextLine; 
+      FirstPtr->NextLine = NextPtr;
+      // Switch to part 755.dat
+      SelectedLinePtr = NextPtr;
+      Swap1Part(i, "755.dat");
+      //rotate it 180 degrees around X.
+      Move1Part(i, m, 1);
+      //Rotate1Part(i, m);
 
-    // Add a 755.dat plug part at near end of the hose.
-    NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
-    memcpy(NextPtr, FirstPtr, sizeof(struct L3LineS));
-    PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
-    memcpy(PartPtr, FirstPtr->PartPtr, sizeof(struct L3PartS));
-    NextPtr->PartPtr = PartPtr;
-    // Link it in
-    NextPtr->NextLine = FirstPtr->NextLine; 
-    FirstPtr->NextLine = NextPtr;
-    // Switch to part 755.dat
-    SelectedLinePtr = NextPtr;
-    Swap1Part(i, "755.dat");
-    //rotate it 180 degrees around X.
-    Move1Part(i, m, 1);
-    //Rotate1Part(i, m);
+      // Add a 755.dat plug part at near end of the hose.
+      NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+      memcpy(NextPtr, FirstPtr, sizeof(struct L3LineS));
+      PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
+      memcpy(PartPtr, FirstPtr->PartPtr, sizeof(struct L3PartS));
+      NextPtr->PartPtr = PartPtr;
+      // Link it in
+      NextPtr->NextLine = FirstPtr->NextLine; 
+      FirstPtr->NextLine = NextPtr;
+      // Switch to part 755.dat
+      SelectedLinePtr = NextPtr;
+      Swap1Part(i, "755.dat");
+      //rotate it 180 degrees around X.
+      Move1Part(i, m, 1);
+      //Rotate1Part(i, m);
+      
+      FirstPtr = LinePtr->NextLine; 
+      if (!FirstPtr)
+	return i;
+      if (FirstPtr->LineType != 1)
+	return i;
+      
+      NextPtr = FirstPtr->NextLine;
+      if (!NextPtr)
+	return i;
+      if (NextPtr->LineType != 1)
+	return i;
 
-    FirstPtr = LinePtr->NextLine; 
-    if (!FirstPtr)
-      return i;
-    if (FirstPtr->LineType != 1)
-      return i;
-    
-    NextPtr = FirstPtr->NextLine;
-    if (!NextPtr)
-      return i;
-    if (NextPtr->LineType != 1)
-      return i;
+      // Get the names of the hose parts.
+      firstparttext = strdup("756.dat");
+      FixDatName(firstparttext);
+      parttext = strdup("754.dat");
+      FixDatName(parttext);
 
-    LastPtr = NextPtr->NextLine; 
-    if (!LastPtr)
-      return i;
-    if (LastPtr->LineType != 1)
-      return i;
+      v1[1] = -5; // Offset in y of intermediate control points.
+    }
+    else if (stricmp(SubPartDatName, "755.dat") == 0)
+    {
+      // Found a plug.  Get the names of the hose parts.
+      firstparttext = strdup("756.dat");
+      FixDatName(firstparttext);
+      parttext = strdup("754.dat");
+      FixDatName(parttext);
 
-    // Get the color and the names of the hose parts.
-    CurColor = LinePtr->Color;
-    firstparttext = strdup("756.dat");
-    FixDatName(firstparttext);
-    parttext = strdup("754.dat");
-    FixDatName(parttext);
+      v1[1] = -5; // Offset in y of intermediate control points.
+    }
+    else if (stricmp(SubPartDatName, "76.dat") == 0)
+    {
+      // Found a flex tube.  Get the names of the hose parts.
+      firstparttext = strdup("77.dat");
+      FixDatName(firstparttext);
+      parttext = strdup("77.dat");
+      FixDatName(parttext);
+
+      v1[1] = 0; // Offset in y of intermediate control points.
+    }
+    else if (stricmp(SubPartDatName, "79.dat") == 0)
+    {
+      // Found a rib.  Get the names of the hose parts.
+      firstparttext = strdup("80.dat");
+      FixDatName(firstparttext);
+      parttext = strdup("80.dat");
+      FixDatName(parttext);
+
+      v1[1] = 0; // Offset in y of intermediate control points.
+    }
+    else if (stricmp(SubPartDatName, "stud3a.dat") == 0)
+    {
+      // Found a flex axle.  Get the names of the hose parts.
+      firstparttext = strdup("faxle1.dat"); // Gotta do faxle2 ... faxle5.dat
+      FixDatName(firstparttext);
+      parttext = strdup("axlehol8.dat");
+      FixDatName(parttext);
+
+      v1[1] = 0; // Offset in y of intermediate control points.
+    }
+    else
+    {
+      // Default to the names of the ribbed hose parts.
+      firstparttext = strdup("79.dat");
+      FixDatName(firstparttext);
+      parttext = strdup("80.dat");
+      FixDatName(parttext);
+
+      v1[1] = 0; // Offset in y of intermediate control points.
+    }
 
     // Get the 4 control points from the part locations.
     memcpy(m1, LinePtr->v, sizeof(LinePtr->v));
