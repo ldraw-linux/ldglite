@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 0.9.9d     ";
+char ldgliteVersion[] = "Version 0.9.9e     ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -259,6 +259,9 @@ GLint StencilBits = 0;
 GLuint cbuffer_region = 0;
 GLuint zbuffer_region = 0;
 static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
+static char *cbufdata = NULL;   // NOTE: gotta free when finished editing.
+
+/***************************************************************/
 extern int Find1PartMatrix(int partnum, float m[4][4]);
 extern int Find1Part(int partnum);
 extern int Draw1Part(int partnum, int Color);
@@ -643,6 +646,14 @@ void pasteCommand(int x, int y)
 }
 #endif
 
+//---------------OSX MAC TESTING BLOCK----------------------
+//#define SIMULATE_APPLE_BUGS 1
+//#define WINTIMER 1
+//#define SAVE_COLOR_ALL 1
+//#define SAVE_DEPTH_ALL 1
+//#define MACOS_X_TEST2 1
+//---------------OSX MAC TESTING BLOCK----------------------
+
 #ifdef WINTIMER
 #include <mmsystem.h>
 int starttime, finishtime, elapsedtime;
@@ -652,9 +663,6 @@ int starttime, finishtime, elapsedtime;
 
 #ifdef MACOS_X_TEST2
 /***************************************************************/
-static char *cbufdata = NULL;   // NOTE: gotta free when finished editing.
-
-/***************************************************************/
 void SaveColorBuffer(void)
 {
 #ifdef WINTIMER
@@ -662,6 +670,11 @@ void SaveColorBuffer(void)
 #endif
 
   {
+    glPixelStorei(GL_PACK_ALIGNMENT,1); //4
+    glPixelStorei(GL_PACK_ROW_LENGTH,0);
+    glPixelStorei(GL_PACK_SKIP_ROWS, 0);
+    glPixelStorei(GL_PACK_SKIP_PIXELS, 0);
+
 #ifndef SAVE_COLOR_ALL
     // Gotta figure out the src,dst stuff.  glTranslate()?
     //glRasterPos2i((int)sc[0], (int)sc[1]);
@@ -672,8 +685,13 @@ void SaveColorBuffer(void)
       free (cbufdata);  // NOTE: gotta free this when finished editing.
     cbufdata = (int *) malloc(sc[2] * sc[3] * 4 * sizeof(char));
     glReadBuffer(staticbuffer); // set pixel source
-    glReadPixels(sc[0],sc[1],sc[2],sc[3],GL_RGB,GL_UNSIGNED_BYTE,cbufdata);
+    glReadPixels(sc[0],sc[1],sc[2],sc[3],GL_RGBA,GL_UNSIGNED_BYTE,cbufdata);
 #else
+#ifndef RESTORE_DEPTH_ALL
+    Get1PartBox(curpiece, sc);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("sc_sbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
+#endif
     if (cbufdata) // NOTE: gotta free this when finished editing.
     {
       //cbufdata = realloc(zbufdata, Width * Height * sizeof(float));
@@ -681,7 +699,7 @@ void SaveColorBuffer(void)
     else
       cbufdata = (char *) malloc(Width * Height * 4 * sizeof(char));
     glReadBuffer(staticbuffer); // set pixel source
-    glReadPixels(0,0,Width,Height,GL_RGB,GL_UNSIGNED_BYTE,cbufdata);
+    glReadPixels(0,0,Width,Height,GL_RGBA,GL_UNSIGNED_BYTE,cbufdata);
 #endif
 }
 #ifdef WINTIMER
@@ -712,6 +730,40 @@ void RestoreColorBuffer(void)
     glDisable(GL_STENCIL_TEST);    
     glDisable(GL_FOG);
 
+    glDisable(GL_POLYGON_OFFSET_FILL);
+    glDisable(GL_COLOR_MATERIAL);
+
+  /*
+   * Disable stuff that's likely to slow down 
+   * glDrawPixels.(Omit as much of this as possible, 
+   * when you know in advance that the OpenGL state is
+   * already set correctly.)
+   */
+        glDisable(GL_ALPHA_TEST);
+        glDisable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_DITHER);
+        glDisable(GL_FOG);
+        glDisable(GL_LIGHTING);
+        glDisable(GL_LOGIC_OP);
+        glDisable(GL_STENCIL_TEST);
+        glDisable(GL_TEXTURE_1D);
+        glDisable(GL_TEXTURE_2D);
+        glPixelTransferi(GL_MAP_COLOR, GL_FALSE);
+        glPixelTransferi(GL_RED_SCALE, 1);
+        glPixelTransferi(GL_RED_BIAS, 0);
+        glPixelTransferi(GL_GREEN_SCALE, 1);
+        glPixelTransferi(GL_GREEN_BIAS, 0);
+        glPixelTransferi(GL_BLUE_SCALE, 1);
+        glPixelTransferi(GL_BLUE_BIAS, 0);
+        glPixelTransferi(GL_ALPHA_SCALE, 1);
+        glPixelTransferi(GL_ALPHA_BIAS, 0);
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT,1); //4
+	glPixelStorei(GL_UNPACK_ROW_LENGTH,0);
+	glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+	glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+
   // Turn off any smoothing or blending modes.
     glDisable( GL_POINT_SMOOTH ); 
     glDisable(GL_ALPHA_TEST);
@@ -741,10 +793,32 @@ void RestoreColorBuffer(void)
     glRasterPos2i(sc[0], sc[1]);
     if (ldraw_commandline_opts.debug_level == 1)
       printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
-    glDrawPixels(sc[2],sc[3],GL_RGB,GL_UNSIGNED_BYTE,cbufdata);
+    glDrawPixels(sc[2],sc[3],GL_RGBA,GL_UNSIGNED_BYTE,cbufdata);
 #else
-    glDrawPixels(Width,Height,GL_RGB,GL_UNSIGNED_BYTE,cbufdata);
+#ifdef RESTORE_COLOR_ALL 
+	glPixelStorei(GL_UNPACK_ALIGNMENT,1); //4
+        glPixelStorei(GL_UNPACK_ROW_LENGTH,0); //Width
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+
+    glDrawPixels(Width,Height,GL_RGBA,GL_UNSIGNED_BYTE,cbufdata);
+#else
+	glPixelStorei(GL_UNPACK_ALIGNMENT,1); //4
+        glPixelStorei(GL_UNPACK_ROW_LENGTH,Width); //Width
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, sc[1]);
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, sc[0]);
+    glRasterPos2i(sc[0], sc[1]);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
+    glDrawPixels(sc[2],sc[3],GL_RGBA,GL_UNSIGNED_BYTE,cbufdata);
 #endif
+#endif
+
+    glEnable(GL_COLOR_MATERIAL);
+    if (PolygonOffsetEnabled)
+    {
+      glEnable(GL_POLYGON_OFFSET_FILL);
+    }
 
     glPopMatrix();
     glEnable( GL_DEPTH_TEST ); 
@@ -787,8 +861,43 @@ void CopyColorBuffer(int srcbuffer, int destbuffer)
   glPushAttrib(GL_COLOR_BUFFER_BIT|GL_CURRENT_BIT|GL_DEPTH_BUFFER_BIT|
 	       GL_FOG_BIT|GL_LIGHTING_BIT|GL_VIEWPORT_BIT);
 
+  glPixelZoom(1, 1);
+  glDisable(GL_STENCIL_TEST);    
+  glDisable(GL_FOG);
+
+  glDisable(GL_POLYGON_OFFSET_FILL);
+  glDisable(GL_COLOR_MATERIAL);
+
   glReadBuffer(srcbuffer); // set pixel source
   glDrawBuffer(destbuffer); // set pixel destination
+
+  /*
+   * Disable stuff that's likely to slow down 
+   * glDrawPixels.(Omit as much of this as possible, 
+   * when you know in advance that the OpenGL state is
+   * already set correctly.)
+   */
+        glDisable(GL_ALPHA_TEST);
+        glDisable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_DITHER);
+        glDisable(GL_FOG);
+        glDisable(GL_LIGHTING);
+        glDisable(GL_LOGIC_OP);
+        glDisable(GL_STENCIL_TEST);
+        glDisable(GL_TEXTURE_1D);
+        glDisable(GL_TEXTURE_2D);
+        glPixelTransferi(GL_MAP_COLOR, GL_FALSE);
+        glPixelTransferi(GL_RED_SCALE, 1);
+        glPixelTransferi(GL_RED_BIAS, 0);
+        glPixelTransferi(GL_GREEN_SCALE, 1);
+        glPixelTransferi(GL_GREEN_BIAS, 0);
+        glPixelTransferi(GL_BLUE_SCALE, 1);
+        glPixelTransferi(GL_BLUE_BIAS, 0);
+        glPixelTransferi(GL_ALPHA_SCALE, 1);
+        glPixelTransferi(GL_ALPHA_BIAS, 0);
+
+
   glDisable( GL_DEPTH_TEST ); // Speed up copying
   glDisable(GL_LIGHTING);     // Speed up copying
   glDisable(GL_BLEND);        // Speed up copying
@@ -810,11 +919,20 @@ void CopyColorBuffer(int srcbuffer, int destbuffer)
   glDepthFunc(GL_LESS);
   glDrawBuffer(renderbuffer); // set pixel destination to the render buffer.
 
+  glEnable(GL_COLOR_MATERIAL);
+  if (PolygonOffsetEnabled)
+  {
+    glEnable(GL_POLYGON_OFFSET_FILL);
+  }
+
   glPopAttrib();
   
 #ifdef WINTIMER
   finishtime = timeGetTime();
-  printf("Copy Color Elapsed = %d\n", finishtime-starttime);
+  if (srcbuffer == GL_BACK)
+    printf("CopyIn Color Elapsed = %d\n", finishtime-starttime);
+  else
+    printf("CopyOut Color Elapsed = %d\n", finishtime-starttime);
 #endif
 
   savedirty = dirtyWindow; 
@@ -3202,10 +3320,12 @@ int NukeSavedDepthBuffer(void)
     free (zbufdata);  // NOTE: gotta free this when finished editing.
     zbufdata = NULL;
   }
-#if MACOS_X_TEST2
-  free (cbufdata);  // NOTE: gotta free this when finished editing.
-  cbufdata = NULL;
-#endif
+
+  if (cbufdata)
+  {
+    free (cbufdata);  // NOTE: gotta free this when finished editing.
+    cbufdata = NULL;
+  }
 }
 
 /***************************************************************/
@@ -3235,14 +3355,22 @@ void SaveDepthBuffer(void)
       printf("sbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
     if (zbufdata)
       free (zbufdata);  // NOTE: gotta free this when finished editing.
-    zbufdata = (int *) malloc(sc[2] * sc[3] * sizeof(float));
+    zbufdata = (int *) malloc(sc[2] * sc[3] * sizeof(int));
     glReadBuffer(staticbuffer); // set pixel source
-    glReadPixels(sc[0],sc[1],sc[2],sc[3],GL_DEPTH_COMPONENT,GL_FLOAT,zbufdata);
+    glReadPixels(sc[0],sc[1],sc[2],sc[3],GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
 #else
-    glPixelStorei(GL_PACK_ALIGNMENT,4);
-    glPixelStorei(GL_PACK_ROW_LENGTH,Width);
-    glPixelStorei(GL_PACK_SKIP_ROWS,0);
-    glPixelStorei(GL_PACK_SKIP_PIXELS,0);
+#ifndef RESTORE_DEPTH_ALL
+    sc[0] = sc[1] = 0;
+    sc[2] = Width;
+    sc[3] = Height;
+    Get1PartBox(curpiece, sc);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("sd_sbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
+#endif
+	glPixelStorei(GL_PACK_ALIGNMENT,1); //4
+        glPixelStorei(GL_PACK_ROW_LENGTH,0); //Width
+        glPixelStorei(GL_PACK_SKIP_ROWS,0);
+        glPixelStorei(GL_PACK_SKIP_PIXELS,0);
 
     if (zbufdata) // NOTE: gotta free this when finished editing.
     {
@@ -3288,6 +3416,26 @@ void RestoreDepthBuffer(void)
     glDisable(GL_STENCIL_TEST);    
     glDisable(GL_FOG);
 
+        glDisable(GL_ALPHA_TEST);
+        glDisable(GL_BLEND);
+        //glDisable(GL_DEPTH_TEST);
+        glDisable(GL_DITHER);
+        glDisable(GL_FOG);
+        glDisable(GL_LIGHTING);
+        glDisable(GL_LOGIC_OP);
+        glDisable(GL_STENCIL_TEST);
+        glDisable(GL_TEXTURE_1D);
+        glDisable(GL_TEXTURE_2D);
+        glPixelTransferi(GL_MAP_COLOR, GL_FALSE);
+        glPixelTransferi(GL_RED_SCALE, 1);
+        glPixelTransferi(GL_RED_BIAS, 0);
+        glPixelTransferi(GL_GREEN_SCALE, 1);
+        glPixelTransferi(GL_GREEN_BIAS, 0);
+        glPixelTransferi(GL_BLUE_SCALE, 1);
+        glPixelTransferi(GL_BLUE_BIAS, 0);
+        glPixelTransferi(GL_ALPHA_SCALE, 1);
+        glPixelTransferi(GL_ALPHA_BIAS, 0);
+
     glPixelTransferi(GL_DEPTH_SCALE,1);
     glPixelTransferi(GL_DEPTH_BIAS,0);
 
@@ -3319,12 +3467,13 @@ void RestoreDepthBuffer(void)
     glRasterPos2i(sc[0], sc[1]);
     if (ldraw_commandline_opts.debug_level == 1)
       printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
-    glDrawPixels(sc[2],sc[3],GL_DEPTH_COMPONENT,GL_FLOAT,zbufdata);
+    glDrawPixels(sc[2],sc[3],GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
 #else
-    glPixelStorei(GL_UNPACK_ALIGNMENT,4);
-    glPixelStorei(GL_PACK_ROW_LENGTH,Width);
-    glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
-    glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+#ifdef RESTORE_DEPTH_ALL
+	glPixelStorei(GL_UNPACK_ALIGNMENT,1); //4
+        glPixelStorei(GL_UNPACK_ROW_LENGTH,0); //Width
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
 
     // This is PAINFULLY slow! (almost a second on TNT)
     // Consider this:
@@ -3336,6 +3485,16 @@ void RestoreDepthBuffer(void)
     // UNSIGNED_INT is about 20% faster on Windows/TNT
     //glDrawPixels(Width,Height,GL_DEPTH_COMPONENT,GL_FLOAT,zbufdata);
     glDrawPixels(Width,Height,GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
+#else
+	glPixelStorei(GL_UNPACK_ALIGNMENT,1); //4
+        glPixelStorei(GL_UNPACK_ROW_LENGTH,Width); //Width
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, sc[1]);
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, sc[0]);
+    glRasterPos2i(sc[0], sc[1]);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
+    glDrawPixels(sc[2],sc[3],GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
+#endif
 #endif
     glPopMatrix();
     glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
@@ -3531,7 +3690,7 @@ glPopAttrib();
 // GL_KTX_buffer_region
 
 /***************************************************************/
-void CopyStaticBuffer(void)
+void CopyStaticBuffer(int forcedsave)
 {
   int goodZ = 0;
 
@@ -3546,6 +3705,11 @@ void CopyStaticBuffer(void)
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       render();
 
+      SaveDepthBuffer();
+      goodZ = 1; // No need to copy depth back in yet.
+    }
+    else if (forcedsave)
+    {
       SaveDepthBuffer();
       goodZ = 1; // No need to copy depth back in yet.
     }
@@ -3582,8 +3746,13 @@ void CopyStaticBuffer(void)
     // get fresh copy of static data
 #ifdef MACOS_X_TEST2
     if (goodZ) // If we just rendered on a mac, backup colorbuf to RAM.
+    {
       SaveColorBuffer();
-    RestoreColorBuffer();
+      glDrawBuffer(screenbuffer); // set pixel destination
+      CopyColorBuffer(staticbuffer, screenbuffer);
+    }
+    else
+      RestoreColorBuffer();
 #else
     glDrawBuffer(screenbuffer); // set pixel destination
     CopyColorBuffer(staticbuffer, screenbuffer);
@@ -3669,6 +3838,9 @@ void DrawMovingPiece(void)
 {
   if (SOLID_EDIT_MODE)
   {
+    Get1PartBox(curpiece, sc);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("dp_sbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
 #ifndef SAVE_DEPTH_ALL
     // Save depth buffer BEFORE drawing the current part into it.
     SaveDepthBuffer();
@@ -3752,7 +3924,7 @@ void display(void)
 	    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	    render();
 	    SaveDepthBuffer();
-	    CopyStaticBuffer();
+	    CopyStaticBuffer(1);
 	  }	  
 	  else 
 	  {
@@ -4008,7 +4180,7 @@ void EraseCurPiece(void)
 /***************************************************************/
 void TranslateCurPiece(float m[4][4])
 {
-  CopyStaticBuffer();
+  CopyStaticBuffer(0);
   Translate1Part(curpiece, m);
   movingpiece = curpiece;
   DrawMovingPiece();
@@ -4110,7 +4282,7 @@ void InsertNewPiece(void)
   if (SOLID_EDIT_MODE)
   {
     movingpiece = -1; // Make sure movingpiece != curpiece so we save z-buffer.
-    CopyStaticBuffer(); 
+    CopyStaticBuffer(1); 
   }
   movingpiece = curpiece;
   DrawMovingPiece();
@@ -4128,10 +4300,10 @@ void InsertNewPiece(void)
 /***************************************************************/
 void DelCurPiece(void)
 {
-  CopyStaticBuffer(); 
+  CopyStaticBuffer(0); 
   if (SOLID_EDIT_MODE)
   {
-    // CopyStaticBuffer() selects current piece in SOLID_EDIT_MODE
+    // CopyStaticBuffer(0) selects current piece in SOLID_EDIT_MODE
   }
   else
     Select1Part(curpiece);
@@ -4558,7 +4730,7 @@ int runplugin(int n)
     // Might be a busted opengl context.  SaveDepthBuffer() chokes.
     InsertNewPiece();
 
-    CopyStaticBuffer();
+    CopyStaticBuffer(0);
     movingpiece = curpiece;
     if (strrchr(partname, '.') == NULL)
       strcat(partname, use_uppercase ? ".DAT" : ".dat");
@@ -5424,7 +5596,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	break;
       case 'c':
 	sscanf(&(ecommand[1]),"%d", &color);
-	CopyStaticBuffer();//It would be nice to recolor without "moving" it.
+	CopyStaticBuffer(0);//It would be nice to recolor without "moving" it.
 	movingpiece = curpiece;
 	Color1Part(curpiece, color);
 	DrawMovingPiece();
@@ -5457,7 +5629,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 
 	for (i = 1; ecommand[i] == ' '; i++); // Strip leading spaces
 	strcpy(partname, &(ecommand[i]));
-	CopyStaticBuffer();
+	CopyStaticBuffer(0);
 	movingpiece = curpiece;
 	if (strrchr(partname, '.') == NULL)
 	  strcat(partname, use_uppercase ? ".DAT" : ".dat");
@@ -5474,7 +5646,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	m[1][3] = v[0][1];
 	m[2][3] = v[0][2];
 	printf("Locating at %f, %f, %f\n", v[0][0], v[0][1], v[0][2]);
-	CopyStaticBuffer();//It would be nice to relocate without "moving" it.
+	CopyStaticBuffer(0);//It would be nice to relocate without "moving" it.
 	Locate1Part(curpiece, m, 1);
 	movingpiece = curpiece;
 	DrawMovingPiece();
@@ -5489,7 +5661,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	m[1][1] = v[0][1];
 	m[2][2] = v[0][2];
 	printf("Scaling by %f, %f, %f\n", m[0][0], m[1][1], m[2][2]);
-	CopyStaticBuffer();//It would be nice to rescale without "moving" it.
+	CopyStaticBuffer(0);//It would be nice to rescale without "moving" it.
 	movingpiece = curpiece;
         //Move1Part(curpiece, m, 1);
 	Move1Part(curpiece, m, 2);
@@ -5510,7 +5682,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	       v[1][0], v[1][1], v[1][2],
 	       v[2][0], v[2][1], v[2][2],
 	       v[3][0], v[3][1], v[3][2]);
-	CopyStaticBuffer();//It would be nice to reorient without "moving" it.
+	CopyStaticBuffer(0);//It would be nice to reorient without "moving" it.
 	Locate1Part(curpiece, m, 0);
 	movingpiece = curpiece;
 	DrawMovingPiece();
@@ -5576,7 +5748,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	sscanf(&(ecommand[1]),"%f", &f);
 	angle = f;
 	printf("Rotate about %c by %f\n",c,angle);
-	CopyStaticBuffer();
+	CopyStaticBuffer(0);
 	angle *= PI_180;
 	m[1][1] = (float)cos(angle);
 	m[1][2] = (float)(-1.0*sin(angle));
@@ -5603,7 +5775,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	sscanf(&(ecommand[1]),"%f", &f);
 	angle = f;
 	printf("Rotate about %c by %f\n",c,angle);
-	CopyStaticBuffer();
+	CopyStaticBuffer(0);
 	angle *= PI_180;
 	m[0][0] = (float)cos(angle);
 	m[0][2] = (float)sin(angle);
@@ -5630,7 +5802,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	sscanf(&(ecommand[1]),"%f", &f);
 	angle = f;
 	printf("Rotate about %c by %f\n",c,angle);
-	CopyStaticBuffer();
+	CopyStaticBuffer(0);
 	angle *= PI_180;
 	m[0][0] = (float)cos(angle);
 	m[1][0] = (float)sin(angle);
@@ -5783,7 +5955,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 
 	  for (i = 1; eresponse[i] == ' '; i++); // Strip leading spaces
 	  strcpy(partname, &(eresponse[i]));
-	  CopyStaticBuffer();
+	  CopyStaticBuffer(0);
 	  movingpiece = curpiece;
 	  if (strrchr(partname, '.') == NULL)
 	    strcat(partname, use_uppercase ? ".DAT" : ".dat");
@@ -5826,7 +5998,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     edit_mode_gui();
     return 1;
   case 'a':
-    CopyStaticBuffer();
+    CopyStaticBuffer(0);
     angle = (3.1415927/2.0);
     m[0][0] = 0.0;  //(float)cos(angle);
     m[0][2] = 1.0;  //(float)sin(angle);
