@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
+#include <float.h>
 
 #include "plugins.h"
 
@@ -93,6 +94,8 @@ char *plugin(plugstruct *plug,
 
   FreeLibrary(hTME); //free library after use
 
+  _fpreset(); // Borland DLL fix.
+  
   if (strlen(plugoutfilename))
     return plugoutfilename;
   else
@@ -175,5 +178,9 @@ plugstruct *pluginfo(char *dllname)
   // 2 = Plugin can only be called if a portion of text is selected
 
   FreeLibrary(hTME); //free library after use
+
+  _fpreset(); // Borland DLL fix.
+  
   return plug;
 }
+ 
