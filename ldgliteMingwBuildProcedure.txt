@@ -42,7 +42,7 @@ download and compile ldglite
 - note: I put mine in \projects\ldglite\
 - note: I had to recompile libpng and libz because I kept getting a linker
   error for "__imp__iob"
-- remove glfont.c from the src list
+- delete the files in the ldglite\win directory.  It's older png stuff.
 - not necessary, but you may want to change the "cp ldglite.exe *" commands
   to "copy ldglite.exe *"
 - make
