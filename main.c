@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 0.9.9c     ";
+char ldgliteVersion[] = "Version 0.9.9d     ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -183,6 +183,10 @@ char ObliqueProjection[] = "1.4142,0,0,0,1.2196,-0.1124,0,-0.7171,1.2247";
 
 extern int glCurColorIndex;
 extern float z_line_offset; 
+
+int PolygonOffsetEnabled = 1;
+GLfloat PolygonOffsetFactor = 1.0;
+GLfloat PolygonOffsetunits = 1.0;
 
 extern ZIMAGE z;
 
@@ -1972,8 +1976,11 @@ void init(void)
     //glLineWidth(1.25);
 
     // Nudge back the zbuffer values of surfaces so the hilited edges show.
-    glEnable(GL_POLYGON_OFFSET_FILL);
-    glPolygonOffset(1.0, 1.0);
+    if (PolygonOffsetEnabled)
+    {
+      glEnable(GL_POLYGON_OFFSET_FILL);
+      glPolygonOffset(PolygonOffsetFactor, PolygonOffsetunits);
+    }
 
     linequalitysetup();
 
@@ -2061,9 +2068,18 @@ void VISIBILITY(int state)
 }
 
 /***************************************************************/
+void getDisplayProperties();
+
+/***************************************************************/
 void reshape(int width, int height)
 {
     GLdouble left, right, top, bottom, aspect, znear, zfar, fov;
+
+    // Check for new opengl context on reshape() calls.
+    // Should probably also do this when entering/leaving game mode.
+    // NOTE:  I should probably break up this fn so I can skip this check
+    // and the dirtyWindow when I just want to reset the projection matrix.
+    getDisplayProperties();
 
 #if 0
     if (editing)
@@ -2958,6 +2974,13 @@ PFNGLBUFFERREGIONENABLEDPROC glBufferRegionEnabled = NULL;
 /***************************************************************/
 void test_ktx_buffer_region(char *str)
 {
+  // Reset to defaults in case this is done on resize.
+  glNewBufferRegion = NULL;
+  glDeleteBufferRegion = NULL;
+  glReadBufferRegion = NULL;
+  glDrawBufferRegion = NULL;
+  glBufferRegionEnabled = NULL;
+
   if (strstr(str,"GL_KTX_buffer_region") )
   {	
     printf("The GL_KTX_buffer_region extension is available\n");
@@ -7233,9 +7256,20 @@ void ParseParams(int *argc, char **argv)
 	    EPS_OUTPUT_FIGURED_OUT = 1;
 	else
 	{
-	  sscanf(pszParam,"%c%f",&type,&z_line_offset);
+	  int j;
+	  float pfact, punit;
+	  j = sscanf(pszParam,"%c%f,%f,%f",&type,&z_line_offset,&pfact,&punit);
 	  if (z_line_offset > 1.0)
 	    z_line_offset = 1.0;
+	  printf("z_line_offset = %f\n", z_line_offset);
+	  if (pszParam[0] == 'E')      // For Capital E use z_line_offset
+	    PolygonOffsetEnabled = 0;  // instead of glpolygonoffset.
+	  if (j == 4)
+	  {
+	    PolygonOffsetFactor = pfact;
+	    PolygonOffsetunits = punit;
+	    printf("polygonoffset(%f, %f)\n", pfact, punit);
+	  }
 	}
 	break;
       case 'F':
@@ -7677,18 +7711,50 @@ int registerGlutCallbacks()
 }
 
 /***************************************************************/
+char *verstr = "";
+char *extstr = "";
+char *vendstr = "";
+char *rendstr = "";
+
+/***************************************************************/
 void getDisplayProperties()
 {
-  char *str, *verstr, *extstr, *vendstr, *rendstr;
+  char *str;
+  int newcontext = 0;
 
-  verstr = (char *) glGetString(GL_VERSION);
+  str = (char *) glGetString(GL_VERSION);
+  if (str && strcmp(str, verstr))
+  {
+    newcontext = 1;
+    verstr = strdup(str);
+  }
+  str = (char *) glGetString(GL_EXTENSIONS);
+  if (str && strcmp(str, extstr))
+  {
+    newcontext = 1;
+    extstr = strdup(str);
+  }
+  str = (char *)glGetString(GL_VENDOR);
+  if (str && strcmp(str, vendstr))
+  {
+    newcontext = 1;
+    vendstr = strdup(str);
+  }
+  str = (char *)glGetString(GL_RENDERER);
+  if (str && strcmp(str, rendstr))
+  {
+    newcontext = 1;
+    rendstr = strdup(str);
+  }
+
+  // Reset all context dependent stuff when new context detected
+  if (!newcontext)
+    return;
+
   printf("GL_VERSION = %s\n", verstr);
-
-  extstr = (char *) glGetString(GL_EXTENSIONS);
   printf("GL_EXTENSIONS = %s\n", extstr);
-
-  printf("GL_VENDOR ='%s'\n", (vendstr = (char *)glGetString(GL_VENDOR)));
-  printf("GL_RENDERER ='%s'\n", (rendstr = (char *)glGetString(GL_RENDERER)));
+  printf("GL_VENDOR ='%s'\n", vendstr);
+  printf("GL_RENDERER ='%s'\n", rendstr);
   
   glGetIntegerv(GL_RED_BITS, &rBits);
   glGetIntegerv(GL_GREEN_BITS, &gBits);
@@ -7710,6 +7776,13 @@ void getDisplayProperties()
 
   glGetIntegerv(GL_STENCIL_BITS, &StencilBits);
   printf("GL_STENCIL_BITS = %d\n", StencilBits);
+
+  // Reset to default buffer_swap_mode in case this is done on resize.
+#ifdef MESA
+  buffer_swap_mode = SWAP_TYPE_NODAMAGE;
+#else
+  buffer_swap_mode = SWAP_TYPE_UNDEFINED;
+#endif
 
   // This will leave "Mesa Offscreen" with SWAP_TYPE_UNDEFINED (OK)
   if (!strcmp(rendstr, "Mesa X11"))
