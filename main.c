@@ -176,6 +176,7 @@ extern int Draw1Part(int partnum, int Color);
 extern int Move1Part(int partnum, float m[4][4], int premult);
 extern int Rotate1Part(int partnum, float m[4][4]);
 extern int Translate1Part(int partnum, float m[4][4]);
+extern int Locate1Part(int partnum, float m[4][4], int moveonly);
 extern int Color1Part(int partnum, int Color);
 extern int Add1Part(int partnum);
 extern int Select1Part(int partnum);
@@ -2471,7 +2472,8 @@ void SaveDepthBuffer(void)
     // Gotta figure out the src,dst stuff.  glTranslate()?
     //glRasterPos2i((int)sc[0], (int)sc[1]);
     Get1PartBox(curpiece, sc);
-    printf("sbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("sbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
     if (zbufdata)
       free (zbufdata);  // NOTE: gotta free this when finished editing.
     zbufdata = (int *) malloc(sc[2] * sc[3] * sizeof(int));
@@ -2742,7 +2744,8 @@ void CopyStaticBuffer(void)
 #ifdef SAVE_DEPTH_BOX
       // Gotta figure out the src,dst stuff.  glTranslate()?
       glRasterPos2i(sc[0], sc[1]);
-      printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
+      if (ldraw_commandline_opts.debug_level == 1)
+	printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
       glDrawPixels(sc[2],sc[3],GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
 #else
       //glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
@@ -3503,6 +3506,7 @@ int edit_mode_fnkeys(int key, int x, int y)
 #define OFFSET_X_ID	'1'
 #define OFFSET_Y_ID	'2'
 #define OFFSET_Z_ID	'3'
+#define OFFSET_V_ID	'4'
 
 #define FILE_LOAD_ID 	'L'
 #define FILE_SAVE_ID 	'S'
@@ -3515,18 +3519,45 @@ int edit_mode_fnkeys(int key, int x, int y)
 #define MOVE_X_ID	'x'
 #define MOVE_Y_ID	'y'
 #define MOVE_Z_ID	'z'
+#define MOVE_V_ID	'v'
 
 #define GOTO_MENU_ID	'G'
 #define COLOR_MENU_ID	'c'
 #define PART_SWAP_ID	'p'
+#define PART_SCALE_ID	's'
+#define PART_MATRIX_ID	'm'
+#define PART_LOC_ID	'l'
 
-#define EDIT_LINE_ID    'l'
+#define EDIT_LINE_ID    'e'
 #define EDIT_COMMENT_ID 'C'
 
 #define LINETYPE_2_ID	2
 #define LINETYPE_3_ID	3
 #define LINETYPE_4_ID	4
 #define LINETYPE_5_ID	5
+
+/*****************************************************************************/
+char *ScanPoints(float m[4][4], int numpoints, char *str)
+{
+    int  i, j;
+    char seps[] = "()[]{}<> ,\t"; // Allow parens and commas for readability.
+    char *token;
+      
+    for (i = 0, j = 0,token = strtok( str, seps );
+	 token != NULL;
+	 token = strtok( NULL, seps ), i++ )
+    {
+      if (i > 2)
+      {
+	i = 0;
+	j++;
+      }
+      if (j >= numpoints)
+	break;
+      sscanf(token, "%f", &m[j][i]);
+    }
+    return token; // This is not NULL if there is more of str left to parse.
+}
 
 /***************************************************************/
 int edit_mode_keyboard(unsigned char key, int x, int y)
@@ -3540,6 +3571,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     {0.0,0.0,1.0,0.0},
     {0.0,0.0,0.0,1.0}
   };
+  float v[4][4];
   double angle;
   float f;
   int i, color;
@@ -3586,14 +3618,14 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	break;
       case 'p':
 	sprintf(eprompt[0], "Piece: ");
-	sprintf(eprompt[1], "File Color Goto");
+	sprintf(eprompt[1], "File Color Goto    Location Scale Matrix");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
 	break;
       case 'o':
 	sprintf(eprompt[0], "Options: ");
-	sprintf(eprompt[1], "Line-as-stud(on) Start-at-line Draw-to-current");
+	sprintf(eprompt[1], "Line-as-stud Start-at-line Draw-to-current");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
@@ -3624,6 +3656,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	ecommand[0] = '2';
       if (key == 'z')
 	ecommand[0] = '3';
+      if (key == 'v')
+	ecommand[0] = '4';
       ecommand[1] = 0;
       edit_mode_gui();
       return 1;
@@ -3692,13 +3726,13 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	clear_edit_mode_gui();
 	sprintf(eprompt[0], "Line Type: ");
 	sprintf(eprompt[1], "Piece Comment Step 2 3 4 5");
-	ecommand[0] = tolower(key); // FILE_LOAD_ID == toupper('l');
+	ecommand[0] = 'e'; // EDIT_LINE_ID
 	edit_mode_gui();
 	return 1;
       }
       return 1;
     }
-    if (ecommand[0] == 'l') // Edit Linetype Menu
+    if (ecommand[0] == 'e') // Edit Linetype Menu
     {
       // Try to get submenu command
       switch(key) {
@@ -3819,12 +3853,14 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       switch(key) {
       case 'f':
 	sprintf(eprompt[0], "New Part: ");
+	eprompt[1][0] = 0;
 	ecommand[0] = 'p';
 	ecommand[1] = 0;
 	edit_mode_gui();
 	return 1;
       case 'c':
         sprintf(eprompt[0], "New Color: ");
+	eprompt[1][0] = 0;
 	ecommand[0] = 'c';
 	ecommand[1] = 0;
 	edit_mode_gui();
@@ -3832,6 +3868,28 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       case 'g':
 	sprintf(eprompt[0], "Goto Line: ");
 	ecommand[0] = toupper(key);
+	ecommand[1] = 0;
+	edit_mode_gui();
+	return 1;
+      case 'l':
+        sprintf(eprompt[0], "New Location (x y z): ");
+	eprompt[1][0] = 0;
+	ecommand[0] = 'l';
+	ecommand[1] = 0;
+	edit_mode_gui();
+	return 1;
+      case 's':
+        sprintf(eprompt[0], "New Scale (sx sy sz): ");
+	eprompt[1][0] = 0;
+	ecommand[0] = 's';
+	ecommand[1] = 0;
+	edit_mode_gui();
+	return 1;
+      case 'm':
+        sprintf(eprompt[0], "New Matrix: ");
+	sprintf(eprompt[1], "(x y z)(a b c d e f h i j)");
+	//eprompt[1][0] = 0;
+	ecommand[0] = 'm';
 	ecommand[1] = 0;
 	edit_mode_gui();
 	return 1;
@@ -3912,7 +3970,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	break;
       case 'p':
 	//sscanf(&(ecommand[1]),"%s", partname);
-	strcpy(partname, &(ecommand[1]));
+	for (i = 1; ecommand[i] == ' '; i++); // Strip leading spaces
+	strcpy(partname, &(ecommand[i]));
 	CopyStaticBuffer();
 	movingpiece = curpiece;
 	if (strrchr(partname, '.') == NULL)
@@ -3921,6 +3980,56 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	DrawMovingPiece();
 	if (ldraw_commandline_opts.debug_level == 1)
 	    Print1Part(curpiece, stdout);
+	edit_mode_gui();
+	break;
+      case 'l':
+	v[0][0] = v[0][1] = v[0][2] = 0.0; // Default location to (0, 0, 0)
+	ScanPoints(v, 1, &(ecommand[1]));
+	m[0][3] = v[0][0];
+	m[1][3] = v[0][1];
+	m[2][3] = v[0][2];
+	printf("Locating at %f, %f, %f\n", v[0][0], v[0][1], v[0][2]);
+	CopyStaticBuffer();//It would be nice to relocate without "moving" it.
+	Locate1Part(curpiece, m, 1);
+	movingpiece = curpiece;
+	DrawMovingPiece();
+	if (ldraw_commandline_opts.debug_level == 1)
+	  Print1Part(curpiece, stdout);
+	edit_mode_gui();
+	break;
+      case 's':
+	v[0][0] = v[0][1] = v[0][2] = 1.0; // Default scale to (1, 1, 1)
+	ScanPoints(v, 1, &(ecommand[1]));
+	m[0][0] = v[0][0];
+	m[1][1] = v[0][1];
+	m[2][2] = v[0][2];
+	printf("Scaling by %f, %f, %f\n", m[0][0], m[1][1], m[2][2]);
+	CopyStaticBuffer();//It would be nice to rescale without "moving" it.
+	movingpiece = curpiece;
+        Move1Part(curpiece, m, 1);
+	DrawMovingPiece();
+	if (ldraw_commandline_opts.debug_level == 1)
+	    Print1Part(curpiece, stdout);
+	edit_mode_gui();
+	break;
+      case 'm':
+	memset(&v, 0, sizeof(v)); // Probably SHOULD default to identity matrix.
+	ScanPoints(v, 4, &(ecommand[1]));
+	m[0][0] = v[1][0]; m[1][0] = v[1][1]; m[2][0] = v[1][2];
+	m[0][1] = v[2][0]; m[1][1] = v[2][1]; m[2][1] = v[2][2];
+	m[0][2] = v[3][0]; m[1][2] = v[3][1]; m[2][2] = v[3][2];
+	m[0][3] = v[0][0]; m[1][3] = v[0][1]; m[2][3] = v[0][2];
+	printf("Orientation = %f, %f, %f %f, %f, %f %f, %f, %f %f, %f, %f\n", 
+	       v[0][0], v[0][1], v[0][2],
+	       v[1][0], v[1][1], v[1][2],
+	       v[2][0], v[2][1], v[2][2],
+	       v[3][0], v[3][1], v[3][2]);
+	CopyStaticBuffer();//It would be nice to reorient without "moving" it.
+	Locate1Part(curpiece, m, 0);
+	movingpiece = curpiece;
+	DrawMovingPiece();
+	if (ldraw_commandline_opts.debug_level == 1)
+	  Print1Part(curpiece, stdout);
 	edit_mode_gui();
 	break;
       case 'x':
@@ -3936,6 +4045,14 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       case 'y':
 	sscanf(&(ecommand[1]),"%f", &f);
 	m[1][3] += f;
+	TranslateCurPiece(m);
+	break;
+      case 'v':
+	v[0][0] = v[0][1] = v[0][2] = 0.0;
+	ScanPoints(v, 1, &(ecommand[1]));
+	m[0][3] += v[0][0];
+	m[1][3] += v[0][1];
+	m[2][3] += v[0][2];
 	TranslateCurPiece(m);
 	break;
       case 'L':
@@ -4027,6 +4144,14 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       case '3':
 	sscanf(&(ecommand[1]),"%f", &f);
 	ldraw_commandline_opts.O.z = -f;
+	edit_mode_gui();
+	break;
+      case '4':
+	m[0][0] = m[0][1] = m[0][2] = 0.0;
+	ScanPoints(m, 1, &(ecommand[1]));
+	ldraw_commandline_opts.O.x = -m[0][0];
+	ldraw_commandline_opts.O.y = -m[0][1];
+	ldraw_commandline_opts.O.z = -m[0][2];
 	edit_mode_gui();
 	break;
       case 'C':
@@ -4128,6 +4253,12 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     ecommand[1] = 0;
     edit_mode_gui();
     return 1;
+  case 'v':
+    sprintf(eprompt[0], "vector (x y z): ");
+    ecommand[0] = key;
+    ecommand[1] = 0;
+    edit_mode_gui();
+    return 1;
   case 'm':
     if (moveXamount == 10.0)
     {
@@ -4163,7 +4294,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     return 1;
   case 'o':
     sprintf(eprompt[0], "Offset: ");
-    sprintf(eprompt[1], "X-axis Y-axis Z-axis");
+    sprintf(eprompt[1], "X-axis Y-axis Z-axis   Vector");
     ecommand[0] = key;
     ecommand[1] = 0;
     edit_mode_gui();
