@@ -250,7 +250,11 @@ The Piece menu now also contains:
 
 			LEDIT emulation quirks
 
-Part lookup is not currently supported.
+Part lookup is not currently supported.  Try the printable parts catalog.
+  http://moon.pr.erau.edu/~sayrew/lego.html
+Windows users can also use ldlist or the VEC from LDAO for part lookup.
+  http://user.tninet.se/~hbh828t/ldlist.htm
+  http://www.ldraw.org/download/software/ldao
 
 Empty lines are discarded by the L3 parser.  Use a blank comment instead.
 
