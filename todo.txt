@@ -5,6 +5,10 @@ choices than just bitmap.  Maybe a whole picture submenu.
 
 How about a spinmode submenu?  What else in the menus can be fixed now?
 
+Make more nested submenus off of View menu:
+View/Zoom (in(+), out(-), enlarge, reduce)
+View/FOV submenu = (+1, -1, +10, -10)
+
 ----------------------------------------------------------------------
 Reread Karim's Artemis project pages and see how ldglite fits into
 that particular vision now that it supports plugins and all.
