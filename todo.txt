@@ -1,4 +1,9 @@
 ----------------------------------------------------------------------
+Add a wrapper around the keyboard() fn and convert the key to an int
+so I can use high numbers for things that come from the menus and not
+via the GLUT keyboard callback.
+
+----------------------------------------------------------------------
 Test ~/foo.dat in the MUI open file dialog in linux (and OSX).
 
 ----------------------------------------------------------------------
