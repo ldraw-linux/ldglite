@@ -300,6 +300,7 @@ int drawAxis = 0;
 int qualityLines = 0;
 float lineWidth = 0.0;
 int LineChecking = 0;
+int preprintstep = 0;
 
 #ifdef TILE_RENDER_OPTION
 #include "tr.h"
@@ -1010,7 +1011,8 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
   char filename[256];
 
   if (ldraw_commandline_opts.debug_level == 1)
-    printf("platform_step(%d, %d, %d)\n", step, level, pause);
+    printf("platform_step(%d, %d, %d) %c\n", step, level, pause,
+	   ldraw_commandline_opts.M);
 
   // This is probably a great place to handle begin & end display lists.
   if (step == INT_MAX) {
@@ -1032,6 +1034,13 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
     if ((step == INT_MAX) && (pause == 0)) {
       // do nothing
     } 
+    else if (preprintstep) {
+      // Early stage of Multistage draw.  Do not save bitmap yet.
+    }
+    else if (qualityLines && (step != curstep)) {
+      // qualityLines = Multistage drawing.  Must count steps.
+      //	curstep++; // Move on to next step
+    }
     else if (level<=ldraw_commandline_opts.maxlevel) {
       // save bitmap
       platform_step_filename(step, filename);
@@ -1867,6 +1876,8 @@ render(void)
   {
     ldraw_commandline_opts.F |= TYPE_F_NO_LINES;
     linequalitysetup();
+    if (ldraw_commandline_opts.M == 'S')
+      preprintstep = 1; //Tell platform_step() NOT to save file now.
     DrawModel();
     ldraw_commandline_opts.F &= ~(TYPE_F_NO_LINES);
     linequalitysetup();
@@ -1874,6 +1885,7 @@ render(void)
     stepcount = 0; // NOTE: Not sure what effect this will have...
     if (qualityLines)
       z_line_offset += 0.2; // Nudge antialiased lines up in depth buffer.
+    preprintstep = 0; //Tell platform_step() its OK to save file now.
     DrawModel();
     if (qualityLines)
       z_line_offset -= 0.2; // Nudge antialiased lines up in depth buffer.
@@ -1917,6 +1929,8 @@ render(void)
       || LineChecking)
   {
     ldraw_commandline_opts.F |= TYPE_F_NO_LINES;
+    if (ldraw_commandline_opts.M == 'S')
+      preprintstep = 1; //Tell platform_step() NOT to save file now.
   }
   linequalitysetup();
   mpd_subfile_name = NULL; // potential memory leak
@@ -1959,6 +1973,7 @@ render(void)
     ldraw_commandline_opts.F |= TYPE_F_NO_POLYGONS; // zWire = 1;
     if (qualityLines)
       z_line_offset += 0.2; // Nudge antialiased lines up in depth buffer.
+    preprintstep = 0; //Tell platform_step() its OK to save file now.
 
     zcolor_init();
 
@@ -2018,6 +2033,21 @@ void DrawScene(void)
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   render();
+  if ((ldraw_commandline_opts.M == 'S') && qualityLines)
+  {
+    //NOTE: This may NOT fix qualityLines for tiled render
+    // because it puts us in opts.M = 'P' mode.
+    // Could check if (tiledRendering == 1)
+    // Or maybe tiled rendering is ok BECAUSE of the forced 'P' mode.
+    // If so, the new preprintstep checks in stub.c may hose it up.
+    // I may only want to check preprintstep if (opts.M == 'S').
+    while (stepcount != curstep)
+    {
+      curstep++;
+      render();
+    }
+  }
+  
 
   glFlush();
 
@@ -2991,7 +3021,17 @@ void display(void)
 #endif
 
   render();
-
+  if ((ldraw_commandline_opts.M == 'S') && qualityLines)
+  {
+    //NOTE: should do this in DrawScene() to fix qualityLines 
+    // in tiled render and offscreen render.
+    while (stepcount != curstep)
+    {
+      curstep++;
+      render();
+    }
+  }
+  
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
 

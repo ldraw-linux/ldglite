@@ -34,7 +34,9 @@ extern int dirtyWindow;
 extern int use_quads;
 extern float lineWidth;
 
+extern int qualityLines;
 extern int LineChecking;
+extern int preprintstep;
 
 // Ambient and diffusion properties for front and back faces.
 extern GLfloat full_mat[];
@@ -193,7 +195,8 @@ void render_stud(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
   };
 
 #ifdef USE_OPENGL
-  if (ldraw_commandline_opts.M == 'P')
+  if ((ldraw_commandline_opts.M == 'P') || preprintstep ||
+      ((ldraw_commandline_opts.M == 'S') && qualityLines))
   {
     // Non-continuous output stop after each step.
 #ifndef ALWAYS_REDRAW
@@ -287,7 +290,8 @@ void render_line(vector3d *vp1, vector3d *vp2, int c)
 	};
 
 #ifdef USE_OPENGL
-  if (ldraw_commandline_opts.M == 'P')
+  if ((ldraw_commandline_opts.M == 'P') || preprintstep ||
+      ((ldraw_commandline_opts.M == 'S') && qualityLines))
   {
     // Non-continuous output stop after each step.
 #ifndef ALWAYS_REDRAW
@@ -434,7 +438,8 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
 	};
 
 #ifdef USE_OPENGL
-  if (ldraw_commandline_opts.M == 'P')
+  if ((ldraw_commandline_opts.M == 'P') || preprintstep ||
+      ((ldraw_commandline_opts.M == 'S') && qualityLines))
   {
     // Non-continuous output stop after each step.
 #ifndef ALWAYS_REDRAW
@@ -584,7 +589,8 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
 	};
 
 #ifdef USE_OPENGL
-  if (ldraw_commandline_opts.M == 'P')
+  if ((ldraw_commandline_opts.M == 'P') || preprintstep ||
+      ((ldraw_commandline_opts.M == 'S') && qualityLines))
   {
     // Non-continuous output stop after each step.
 #ifndef ALWAYS_REDRAW
@@ -811,7 +817,8 @@ void render_five(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
 	};
 
 #ifdef USE_OPENGL
-  if (ldraw_commandline_opts.M == 'P')
+  if ((ldraw_commandline_opts.M == 'P') || preprintstep ||
+      ((ldraw_commandline_opts.M == 'S') && qualityLines))
   {
     // Non-continuous output stop after each step.
 #ifndef ALWAYS_REDRAW
@@ -1658,7 +1665,8 @@ void zClear()
 #ifdef USE_OPENGL
   // Got "0 CLEAR"
   // May want to do something else here when in editing mode.
-  if (ldraw_commandline_opts.M == 'P')
+  if ((ldraw_commandline_opts.M == 'P') || preprintstep ||
+      ((ldraw_commandline_opts.M == 'S') && qualityLines))
   {
     // Non-continuous output stop after each step.
 #ifndef ALWAYS_REDRAW
