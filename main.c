@@ -1333,6 +1333,8 @@ DoMenuString( float x, float y, char *s )
   int accelcolor = 0;
 
 #ifdef USE_GLFONT
+  char ss[2];
+
   if (fontname)
   {
     glScalef(fontwidth, fontwidth, 1.0f);
@@ -1344,7 +1346,25 @@ DoMenuString( float x, float y, char *s )
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glFontBegin (&Font); //Needs to be called before text output
-    glFontTextOut (s, x/fontwidth, y/fontwidth+2, 1);
+    //glFontTextOut (s, x/fontwidth, y/fontwidth+2, 1);
+    ss[1] = 0;
+    for( ; ( c = *s ) != '\0'; s++ )
+    {
+      if (c == '&')
+      {
+	glColor4f( 0.0, 0.0, 0.5, 1.0 );	/* Current char is dark blue */
+	accelcolor = 1;
+	continue;
+      }
+      ss[0] = c; // glutBitmapCharacter()
+      glFontTextOut (ss, x/fontwidth, y/fontwidth+2, 1); 
+      x += (Font.Char[c-Font.IntStart].dx * fontwidth); // glutBitmapWidth()
+      if (accelcolor)
+      {
+	glColor4f( 0.0, 0.0, 0.0, 1.0 );  // Black
+	accelcolor = 0;
+      }
+    }
     glFontEnd (); //Needs to be called after text output
 
     glDisable( GL_BLEND );
@@ -1352,6 +1372,7 @@ DoMenuString( float x, float y, char *s )
     glDisable(GL_TEXTURE_2D);
     //glLoadIdentity();
     glScalef(1.0/fontwidth, 1.0/fontwidth, 1.0f);
+
     return;
   }
 #endif
@@ -7809,7 +7830,7 @@ void myGlutIdle( void )
     // Gotta handle polling.
     // Check to see if timestamp on filename has changed.
     concat_path(datfilepath, datfilename, filename);
-    ret = stat(datfilename, &datstat);
+    ret = stat(filename, &datstat);
     if (!init) 
     {
       init = 1;
@@ -8946,6 +8967,12 @@ main(int argc, char **argv)
   unsigned int displaymode;
   int i;
   int needargs = 0;
+
+#if 0
+  for (i = 0; i < argc; i++)
+    printf("%s ", argv[i]);
+  printf("\n");
+#endif
   
   platform_startup(&argc, &argv);
 	
@@ -9185,6 +9212,7 @@ main(int argc, char **argv)
   if (fontname)
   {
     int n = 0;
+    char *TexBytes;
 
     /* just to be safe... */
     //glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // Unpacking alignement not used.
@@ -9200,21 +9228,49 @@ main(int argc, char **argv)
     printf("Loaded glfont %s (%g, %g) (%d, %d, %d, %d)\n", fontname,
 	   fontwidth, fontheight,
 	   Font.TexWidth, Font.TexHeight, Font.IntStart, Font.IntEnd);
-#if 0
+#if 1
+    fp = fopen(fontname, "rb");
+    n = sizeof(GLFONT);
+    n += sizeof(GLFONTCHAR) * (Font.IntEnd - Font.IntStart + 1);
+    fseek (fp , n, SEEK_SET);
+    n = Font.TexWidth * Font.TexHeight * 2;
+  	
+    TexBytes = (char *)malloc(n);
+    fread(TexBytes, sizeof(char), n, fp);
+    fclose(fp);
+
+    if ((fp = fopen ("glfariel.c", "w")) != NULL)
+    {
+      fprintf(fp, "\nGLFONT arielFont = {\n  {%d, %d, %d, %d, %d},\n", Font.Tex,
+	     Font.TexWidth, Font.TexHeight, Font.IntStart, Font.IntEnd);
+      fprintf(fp, "\nGLFONTCHAR arielChars = {\n");
+      for (n = 0; n < 1+Font.IntEnd-Font.IntStart; n++)
+      {
+	fprintf(fp,"  {%g, %g, %g, %g, %g, %g},\n", 
+		Font.Char[n].dx, Font.Char[n].dy,
+		Font.Char[n].tx1, Font.Char[n].ty1, 
+		Font.Char[n].tx2, Font.Char[n].ty2);
+      }
+      fprintf(fp, "  }\n");
+      fprintf(fp, "\nchar arielTex[] = {\n  ");
+      for (n = 0; n < (Font.TexWidth * Font.TexHeight * 2); n+=2)
+      {
+	fprintf(fp, "0x%02X, 0x%02X, ", TexBytes[n], TexBytes[n+1]);
+	if (n % 8 == 0)
+	  fprintf(fp, "\n ");
+      }
+	      
+      fprintf(fp, "  }\n");
+      fclose (fp);
+    }
+#endif
+
     // dy/dx = ratio of height to width of each char
     // dy is always the same number (the ratio of height to the avg char)
     // dx varies depending on the width of the char.  It averages 1.
-    for (n = 0; n < Font.IntEnd-Font.IntStart; n++)
-    {
     printf("(%g, %g) (%g, %g, %g, %g)\n", Font.Char[n].dx, Font.Char[n].dy,
 	   Font.Char[n].tx1, Font.Char[n].ty1, 
 	   Font.Char[n].tx2, Font.Char[n].ty2);
-    }
-#else
-    printf("(%g, %g) (%g, %g, %g, %g)\n", Font.Char[n].dx, Font.Char[n].dy,
-	   Font.Char[n].tx1, Font.Char[n].ty1, 
-	   Font.Char[n].tx2, Font.Char[n].ty2);
-#endif
 
   }
 #endif
