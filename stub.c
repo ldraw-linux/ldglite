@@ -22,6 +22,7 @@
 #include "math.h"
 #include "string.h"
 
+#ifdef USE_OPENGL
 //**********************************************************************
 #include <GL/glut.h>
 #include "platform.h"
@@ -176,6 +177,7 @@ double dotprod(float a[3], float b[3])
 
 
 //**********************************************************************
+#endif
 
 #undef GREYSCALE  // Define to force everything to 2-bit 4-level grey for Gameboy & WinCE devices
 
@@ -808,6 +810,7 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
     break;
   }
 
+#ifdef USE_OPENGL
 #if 0
   fprintf(output_file,"render_line(%.2f,%.2f,%.2f) (%.2f,%.2f,%.2f) %d = (%d, %d, %d) or (%d, %d, %d)\n",
 	  vp1->x, vp1->y, vp1->z, vp2->x, vp2->y, vp2->z, 
@@ -869,6 +872,7 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
   //glDepthFunc(GL_LESS);
 
   //glFlush();
+#endif
 }
 
 void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
@@ -922,6 +926,7 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
     break;
   }
 
+#ifdef USE_OPENGL
 #if 0
   fprintf(output_file,"triangle { <%.2f,%.2f,%.2f> <%.2f,%.2f,%.2f> <%.2f,%.2f,%.2f> %d = (%d, %d, %d) or (%d, %d, %d)\n",
 	  vp1->x, vp1->y, vp1->z, vp2->x, vp2->y, vp2->z,
@@ -988,6 +993,7 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
     //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
   }
   //glFlush();
+#endif
 }
 
 int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
@@ -1108,7 +1114,10 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
     p3.z = (int)(0.5+Z_SCALE_FACTOR * vp4->z);
     zAddTriangle(&z, &p1, &p2, &p3, &zc, &zs);
   }
+#endif
+#endif
 
+#ifdef USE_OPENGL
 #if 0
   fprintf(output_file,"quad { <%.2f,%.2f,%.2f> <%.2f,%.2f,%.2f> <%.2f,%.2f,%.2f> <%.2f,%.2f,%.2f> %d = (%d, %d, %d) or (%d, %d, %d)\n",
 	  vp1->x, vp1->y, vp1->z, vp2->x, vp2->y, vp2->z,
@@ -1217,10 +1226,7 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
     //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
   }
   //glFlush();
-
 #endif
-#endif
-
 }
 
 void render_five(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int c)
@@ -1228,13 +1234,13 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
   ZPOINT p1, p2;
   ZCOLOR zc, zs;
 
+#ifdef USE_OPENGL
   // Gotta convert to screen coords first for opengl.
   GLdouble s1x, s1y, s1z;
   GLdouble s2x, s2y, s2z;
   GLdouble s3x, s3y, s3z;
   GLdouble s4x, s4y, s4z;
 
-#ifdef USE_OPENGL
   if(zSolid) {
     return;
   };
@@ -1254,7 +1260,6 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
     if (stepcount > curstep)
       return;  // Do NOT render since we have not reached this step yet.
   }
-#endif
 
   gluProject((GLdouble)vp1->x, (GLdouble)-vp1->y, (GLdouble)-vp1->z,
 	     model_mat, proj_mat, view_mat,
@@ -1334,6 +1339,7 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
 
   //glFlush();
   }
+#endif
   
   if ((vp1->x == vp2->x) && (vp1->y == vp2->y)) return;
   if (vp1->x == vp2->x) {
@@ -1389,6 +1395,8 @@ void calc_zplane_z(ZPLANE *zpl, ZPOINT *p)
 #endif
 
 
+#ifdef USE_OPENGL
+
 #if defined(UNIX) || defined(MAC) 
 // Stub out a few windows structs for now. 
 // Should go back and remove them with #ifdef USE_OPENGL someday.
@@ -1397,6 +1405,11 @@ void calc_zplane_z(ZPLANE *zpl, ZPOINT *p)
 /* Windows */
 #include "wtypes.h"
 /* #include "wingdi.h" */
+#endif
+
+#else
+#include "wtypes.h"
+#include "wingdi.h"
 #endif
 
 int init_zimage(ZIMAGE *zp, int rows, int cols)
@@ -1419,6 +1432,9 @@ int init_zimage(ZIMAGE *zp, int rows, int cols)
 #endif
     if (zp->dib != NULL) free (zp->dib);
 #ifdef USE_OPENGL_NOT
+    // Hmmm, why do I malloc the whole dib?  I SHOULD only need the header...
+    // Well, actually the header and bytes 40-42 used below...
+    // Since I have it, I should use this for printing, especially BMP8.
     zp->dib = malloc(sizeof(BITMAPINFOHEADER) + 256);
 #else
     zp->dib = malloc(sizeof(BITMAPINFOHEADER) + 3*rows*cols);
