@@ -17,7 +17,9 @@ OFFSCREEN_LIBS= -framework AGL
 
 # Comment these out to disable the test GUI made with MUI.
 #
-GUI_FLAGS=-DTEST_MUI_GUI -I./mui/include
+# Define both MUI and GLUT to access the MUI GUI via the GLUT menu.
+GUI_FLAGS=-DTEST_MUI_GUI -I./mui/include -DUSE_GLUT_MENUS
+#GUI_FLAGS=-DTEST_MUI_GUI -I./mui/include
 GUI_SRC=ldglgui.c
 GUI_LIBS=-L./mui/lib/mui -lmui
 LIBS = libmui.a
