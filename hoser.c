@@ -123,8 +123,11 @@ void hoser(float m[4][4], int color, int steps, int drawline,
   strcat(maintext, helper);
 #endif
 
+  // For some reason it works better to calculate distance on one less step.
+  // Gotta think about this.
+  steps--;
   cumulatedptpdistance=0;
-  for (i = 0; i < steps; i++)
+  for (i = 0; i < steps-1; i++)
   {
     Bernstein(p, ((float)i / steps), m);
     Bernstein(nextp, ((float)(i+1) / steps), m);
@@ -150,6 +153,7 @@ void hoser(float m[4][4], int color, int steps, int drawline,
   ITV = 0;
   NTV = 0;
   PrevNTV = 0;
+  steps++;
   for (i =0; i < steps; i++)
   {
     Bernstein(p, ((float)i / steps), m);
@@ -182,6 +186,13 @@ void hoser(float m[4][4], int color, int steps, int drawline,
     // Now we need to create the rotation matrix for this hose step.
     // Im sure theres an easier to understand way to write this, but since
     // I cant follow it, I cant make it easier for someone else to read. 
+
+    // Perhaps a quaternion would help here.
+    // We already have the location vector p for this segment.
+    // We need to calculate the tangent to the curve here and
+    // convert it into a rotation matrix.
+    // I guess we use prevp and nextp to get the tangent.
+    // Whats with all the special cases?
     if ((nextp[0]<p[0]) && (nextp[1]<p[1]) && (nextp[2]<p[2])) {
       Xaxisrotation=-(atan(sqrt(((nextp[0]-p[0])*(nextp[0]-p[0]))+((nextp[2]-p[2])*(nextp[2]-p[2])))/(nextp[1]-p[1])));
       Yaxisrotation=(atan((nextp[0]-p[0])/(nextp[2]-p[2])));}
@@ -266,6 +277,14 @@ void hoser(float m[4][4], int color, int steps, int drawline,
       segname = firstparttext;
     else 
       segname = parttext;
+    if (i==(steps-1))
+    {
+      // Turn the last part 180 degrees to make it face out of the hose.
+      if (Xaxisrotation < 0)
+	  Xaxisrotation += pi; 
+      else
+	  Xaxisrotation -= pi; 
+    }
 
     // Format the new hose segment.
 #ifdef TESTING

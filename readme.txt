@@ -346,12 +346,15 @@ The Piece menu now also contains:
   an (x,y,z) location option 
   an (x,y,z) scale option (use negative numbers to mirror)
   a matrix replacement option.
-  an part inliner option.
+  a part inliner option.
 
 The Turn menu now also contains:
   an (x,y,z) origin option to select an arbitrary turn center.
   an option to toggle display of the three axis through the turn center.
   a rotate option (uses the part origin instead of the turn center)
+
+The Edit menu now also contains:
+  a hoser function.  Insert 2 hose end parts.  Type /EH50 at the first part.
 
 A Rotate menu has been added:  Like the rotate option on the Turn menu.
 
