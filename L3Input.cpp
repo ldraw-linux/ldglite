@@ -2077,6 +2077,10 @@ void                 LoadModelPost(void)
 #endif
 
 #ifdef USE_OPENGL
+#include "L3Edit.c"
+#endif
+
+#ifdef USE_OPENGL
 }
 #endif /* __cplusplus */
 

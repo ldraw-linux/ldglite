@@ -283,8 +283,11 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 }
 
 
+#ifdef USE_OPENGL
+float	m_m[4][4];
+#else
 static	float	m_m[4][4];
-
+#endif
 
 int SetViewMatrix(char *Values) 
 {
@@ -305,9 +308,9 @@ int SetViewMatrix(char *Values)
 }
 
 
-void DrawModel(void)
-{
 #ifdef USE_OPENGL
+void InitViewMatrix(void)
+{
 	static char matrix_string[256];
 
 	// put the center at the origin for opengl.
@@ -327,7 +330,116 @@ void DrawModel(void)
 #ifdef USE_GL_TWIRL
 	sprintf(matrix_string,"1.00 0.00 0.00 0.00 1.00 0.00 0.00 0.00 1.00");
 #endif
+	if (ldraw_commandline_opts.debug_level == 1)
+	  printf("SetViewMatrix(%s);\n", matrix_string);
+	SetViewMatrix(matrix_string);
+}
+
+int Draw1PartPtr(struct L3LineS *LinePtr, int Color)
+{
+	float          m1[4][4];
+	int CurColor = 7;
+
+	InitViewMatrix();
+
+	if (Color < 0) 
+	    Color = LinePtr->Color;
+	switch (Color)
+	{
+	case 16:
+	    Color = CurColor;
+	    break;
+	case 24:
+	    if (0 <= CurColor  &&  CurColor <= 15)
+		Color = edge_color(CurColor);
+	    else
+		Color = 0;
+	    break;
+	default:
+	    break;
+	}
+	
+	switch (LinePtr->LineType)
+	{
+	case 0:
+	    break;
+	case 1:
+	    M4M4Mul(m1,m_m,LinePtr->v);
+	    DrawPart(0,LinePtr->PartPtr,Color,m1);
+	    break;
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+	default:
+	    break;
+	}
+	
+	return 1;
+}
+
+int Draw1Part(int partnum, int Color)
+{
+	float          m1[4][4];
+	int            i;
+	struct L3LineS *LinePtr;
+
+	int CurColor = 7;
+
+	InitViewMatrix();
+
+	i = 0;
+	for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+	{
+	    if (i == partnum)
+	    {
+		if (Color < 0) 
+		  Color = LinePtr->Color;
+		switch (Color)
+		{
+		case 16:
+			Color = CurColor;
+			break;
+		case 24:
+			if (0 <= CurColor  &&  CurColor <= 15)
+				Color = edge_color(CurColor);
+			else
+				Color = 0;
+			break;
+		default:
+			break;
+		}
+		
+		switch (LinePtr->LineType)
+		{
+		case 0:
+			break;
+		case 1:
+			M4M4Mul(m1,m_m,LinePtr->v);
+			DrawPart(0,LinePtr->PartPtr,Color,m1);
+			break;
+		case 2:
+		case 3:
+		case 4:
+		case 5:
+		default:
+			break;
+		}
+
+		return 1;
+	    }
+	    i++;
+	}
+	return 0; //partnum not found
+}
+
+#endif
+
+void DrawModel(void)
+{
 	if (!nParts) return;
+#ifdef USE_OPENGL
+	InitViewMatrix();
 
 	if (ldraw_commandline_opts.output > 0) {
 	  if ((output_file = fopen(output_file_name,"w+"))==NULL) {
@@ -335,9 +447,6 @@ void DrawModel(void)
 	  }
 	}
 
-	if (ldraw_commandline_opts.debug_level == 1)
-	  printf("SetViewMatrix(%s);\n", matrix_string);
-	SetViewMatrix(matrix_string);
 	DrawPart(1,&Parts[0], 7, m_m);
 
 	//if (ldraw_commandline_opts.output != 1) zStep(INT_MAX, 0);
@@ -350,7 +459,6 @@ void DrawModel(void)
 	if (ldraw_commandline_opts.debug_level == 1)
 	  printf("Done\n");
 #else
-	if (!nParts) return;
 	SetViewMatrix("1 0 1  .5 1 -.5  -1 0 1");
 	DrawPart(1,&Parts[0], 7, m_m);
 #endif
