@@ -128,6 +128,24 @@ void muiHideAll(int uilist, int state)
 }
 
 /***************************************************************/
+void muiMoveAll(int uilist, int x, int y)
+{
+    muiCons *mcons;
+    muiObject *obj;
+
+    if ((mcons = muiGetListCons(uilist)) == (muiCons *)0) return;
+    muiBackgroundClear();
+    while (mcons) {
+      obj = mcons->object;
+      obj->xmin += x;
+      obj->ymin += y;
+      obj->xmax += x;
+      obj->ymax += y;
+      mcons = mcons->next;
+    }
+}
+
+/***************************************************************/
 void mui_cleanup(void)
 {
   printf("MUI OK callback\n");
@@ -1052,6 +1070,25 @@ void unMUI_viewport()
   {
     ow = (Width-dw)/2;
     oh = (Height-dh)/2;
+  }
+  else
+  {
+    int dx = ow;        // Save old offset (x, y)
+    int dy = oh;
+    
+    ow = (Width-dw)/2;
+    oh = (Height-dh)/2; // Calculate new offset (x, y)
+
+    dx = ow - dx;       // Find difference in offset (dx, dy)
+    dy = oh - dy;
+
+    muiMoveAll(MAIN_UILIST, dx, dy);
+    muiMoveAll(FILE_UILIST, dx, dy);
+    muiMoveAll(VIEW_UILIST, dx, dy);
+    muiMoveAll(DRAW_UILIST, dx, dy);
+    muiMoveAll(OPTS_UILIST, dx, dy);
+    muiMoveAll(BACK_UILIST, dx, dy);
+    muiMoveAll(HELP_UILIST, dx, dy);
   }
   MUIstarted = 1;
 
