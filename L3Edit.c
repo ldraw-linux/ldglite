@@ -1611,8 +1611,8 @@ int Hose1Part(int partnum, int steps)
       return i;
 
     // Get partname and color
-    PartPtr = LinePtr->PartPtr;
-    CurColor = LinePtr->Color;
+    PartPtr = FirstPtr->PartPtr;
+    CurColor = LastPtr->Color; // Get color from last part for easier cleanup.
     if (PartPtr)
       SubPartDatName = PartPtr->DatName;
     else
@@ -1712,6 +1712,7 @@ int Hose1Part(int partnum, int steps)
       v[1] -= 30; // Increase the velocity to clear any technic pins.
 
       // Automatically locate technic pin ends, otherwise use a topstud.
+      PartPtr = FirstPtr->PartPtr;
       for (NextPtr = PartPtr->FirstLine; NextPtr; NextPtr = NextPtr->NextLine)
       {
 	PartPtr = NextPtr->PartPtr;
@@ -1814,6 +1815,7 @@ int hoseseg(char *segname, int color, float m[4][4])
     PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
     memcpy(PartPtr, LinePtr->PartPtr, sizeof(struct L3PartS));
     NextPtr->PartPtr = PartPtr;
+    NextPtr->Color = color;
 
     // Link it in
     NextPtr->NextLine = LinePtr->NextLine; 
