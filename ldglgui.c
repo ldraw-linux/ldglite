@@ -136,7 +136,7 @@ void muiMoveAll(int uilist, int x, int y)
     muiObject *obj;
 
     if ((mcons = muiGetListCons(uilist)) == (muiCons *)0) return;
-    muiBackgroundClear();
+    //muiBackgroundClear();
     while (mcons) {
       obj = mcons->object;
       obj->xmin += x;
@@ -873,6 +873,8 @@ void	handlefileselection(muiObject *obj, enum muiReturnValue value)
     if (value == MUI_TEXTLIST_RETURN_CONFIRM) {
 	selectedfile = muiGetTLSelectedItem(obj);
 	fname = filelist[selectedfile];
+	if (fname == NULL)
+	  return;
 	printf("Selected file %s\n", fname);
 	len = strlen(fname);
 	if (fname[len-1] == '/') {
@@ -902,6 +904,8 @@ void handleaccept(muiObject *obj, enum muiReturnValue value)
       if (selectedfile == -1) return;
       fname = filelist[selectedfile];
     }
+    if (fname == NULL)
+      return;
     len = strlen(fname);
     if (fname[len-1] == '/') {
 	fname[len-1] = 0;
@@ -1115,13 +1119,19 @@ void unMUI_viewport()
     dx = ow - dx;       // Find difference in offset (dx, dy)
     dy = oh - dy;
 
-    muiMoveAll(MAIN_UILIST, dx, dy);
-    muiMoveAll(FILE_UILIST, dx, dy);
-    muiMoveAll(VIEW_UILIST, dx, dy);
-    muiMoveAll(DRAW_UILIST, dx, dy);
-    muiMoveAll(OPTS_UILIST, dx, dy);
-    muiMoveAll(BACK_UILIST, dx, dy);
-    muiMoveAll(HELP_UILIST, dx, dy);
+    if (dx || dy)
+    {
+      //NOTE: somehow this gives me a grey background on the whole window.
+      printf("muiMoveAll(%d, %d)\n", dx, dy);
+      //muiBackgroundClear();
+      muiMoveAll(MAIN_UILIST, dx, dy);
+      muiMoveAll(FILE_UILIST, dx, dy);
+      muiMoveAll(VIEW_UILIST, dx, dy);
+      muiMoveAll(DRAW_UILIST, dx, dy);
+      muiMoveAll(OPTS_UILIST, dx, dy);
+      muiMoveAll(BACK_UILIST, dx, dy);
+      muiMoveAll(HELP_UILIST, dx, dy);
+    }
   }
   MUIstarted = 1;
 
@@ -1132,6 +1142,7 @@ void unMUI_viewport()
   glLoadIdentity();
   glRasterPos2i(0, 0);
 
+  //Draw a black rectangle just larger than the GUI (a cheesy frame)
   glColor3ub(0, 0, 0);
   glColor4ub(0, 0, 0, 0);
   glBegin(GL_QUADS);
@@ -1158,7 +1169,8 @@ void unMUI_Reshape(int width, int height)
   // so we need to clear the window then adjust the SCISSOR.
   glDisable(GL_SCISSOR_TEST);
   //muiBackgroundClear();
-  glClearColor(1.0, 1.0, 1.0, 0.0);
+  //NOTE: This should use the current background color, but we need to save it in main.c
+  glClearColor(1.0, 1.0, 1.0, 0.0);  
   glClear(GL_COLOR_BUFFER_BIT);
   unMUI_viewport();
 
