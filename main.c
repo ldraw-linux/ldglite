@@ -765,6 +765,7 @@ void platform_zDraw(ZIMAGE *zp,void *zDC)
 }
 
 #if defined(UNIX) || defined(MAC)
+// These should really move to platform.c and platform.h
 /***************************************************************/
 int GetProfileInt(char *appName, char *appVar, int varDefault)
 {
@@ -789,7 +790,6 @@ int GetPrivateProfileString(char *appName, char *appVar, char *varDefault,
   strcpy (retString, varDefault);
   return (strlen(varDefault));
 }
-
 #endif
 
 /***************************************************************/
@@ -1476,21 +1476,24 @@ GLUT_BITMAP_HELVETICA_18
   //int glutStrokeLength(void *font, const unsigned char *string);
 #endif
 
-  if (ldraw_commandline_opts.M == 'P')
+  if (!panning)
   {
-    sprintf(buf,"Step %d of %d.  ",curstep+1, stepcount+1);
-    // Non-continuous output stop after each step.
-    if (stepcount == curstep)
+    if (ldraw_commandline_opts.M == 'P')
     {
-      strcat(buf, "Finished.");
-      curstep = 0; // Reset to first step
+      sprintf(buf,"Step %d of %d.  ",curstep+1, stepcount+1);
+      // Non-continuous output stop after each step.
+      if (stepcount == curstep)
+      {
+	strcat(buf, "Finished.");
+	curstep = 0; // Reset to first step
+      }
+      else 
+      {
+	strcat(buf, "Click on drawing to continue.");
+	curstep++; // Move on to next step
+      }
+      platform_step_comment(buf);
     }
-    else 
-    {
-      strcat(buf, "Click on drawing to continue.");
-      curstep++; // Move on to next step
-    }
-    platform_step_comment(buf);
   }
 
   glFlush();
@@ -1780,6 +1783,23 @@ void keyboard(unsigned char key, int x, int y)
       else 
 	pan_visible = (BBOX_MODE | WIREFRAME_MODE);
       return;
+    case 'c':
+      // NOTE: I could toggle the menu strings but that would require
+      // setting them right initially, and making sure its not fullscreen.
+      // Right now than means checking  if (ldraw_commandline_opts.V_x >= -1)
+      //glutSetMenu(opts); // Reset the current menu to the main menu.
+      if (ldraw_commandline_opts.M == 'C')
+      {	
+	ldraw_commandline_opts.M = 'P';
+	//glutChangeToMenuEntry(3, "Continuous         ", 'c');
+      }
+      else
+      {	
+	ldraw_commandline_opts.M = 'C'; //Switch to continuous output.
+	//glutChangeToMenuEntry(3, "Pause              ", 'c');
+      }
+      curstep = 0; // Reset to first step
+      return;
     case 27:
 	exit(0);
 	break;
@@ -2022,6 +2042,8 @@ mouse(int button, int state, int x, int y)
     if (ldraw_commandline_opts.debug_level == 1)
       printf("pdn(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
     panning = 0;
+    glutSetCursor(GLUT_CURSOR_INHERIT);
+    glutWarpPointer(Width/2, Height/2);
     return;
   }
   else if (panning)
@@ -2091,6 +2113,8 @@ mouse(int button, int state, int x, int y)
 #endif
 
     panning = 0;
+    glutSetCursor(GLUT_CURSOR_INHERIT);
+    glutWarpPointer(Width/2, Height/2);
   }
 
   glutPostRedisplay();
@@ -2129,6 +2153,7 @@ motion(int x, int y)
       ldraw_commandline_opts.F = pan_visible; 
       zWire = (ldraw_commandline_opts.F & WIREFRAME_MODE);
     }
+    glutSetCursor(GLUT_CURSOR_NONE);
     panning = 1;
 
     if (pan_visible & INVISIBLE_MODE) // Draw the rubberband line
@@ -2900,6 +2925,7 @@ main(int argc, char **argv)
   glutAddMenuEntry("Normal          ", 'n');
   glutAddMenuEntry("Studs           ", 'f');
   glutAddMenuEntry("Visible spin    ", 'v');
+  glutAddMenuEntry("Continuous      ", 'c');
   glutAddMenuEntry("                ", '\0');
   glutAddMenuEntry("Zoom out        ", 'z');
   glutAddMenuEntry("Zoom in         ", 'Z');
