@@ -2495,6 +2495,37 @@ void SaveDepthBuffer(void)
   //NOTE:  I have to reallocate zbufdata whenever we resize the window.
 }
 
+/***************************************************************/
+void RestoreDepthBuffer(void)
+{
+  // get fresh copy of static data
+  if (buffer_swap_mode == SWAP_TYPE_KTX)
+  {
+    glDrawBufferRegion(zbuffer_region,0,0,Width,Height,0,0);
+  }
+  else
+  {
+    glMatrixMode( GL_PROJECTION );
+    glLoadIdentity();
+    gluOrtho2D(0, Width, 0, Height);
+    glMatrixMode( GL_MODELVIEW );
+    glPushMatrix();
+    glLoadIdentity();
+    glRasterPos2i(0, 0);
+#ifdef SAVE_DEPTH_BOX
+    // Gotta figure out the src,dst stuff.  glTranslate()?
+    glRasterPos2i(sc[0], sc[1]);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
+    glDrawPixels(sc[2],sc[3],GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
+#else
+    //glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
+    glDrawPixels(Width,Height,GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
+#endif
+    rendersetup();
+  }
+}
+
 //#define TNT2_TEST
 /***************************************************************/
 int XORcurPiece()
