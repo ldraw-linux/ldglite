@@ -17,6 +17,9 @@
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#define NOT_WARPING 1
+#define VISIBLE_SPIN_CURSOR 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6444,7 +6447,7 @@ mouse(int button, int state, int x, int y)
     pan_start_sx = x; // Save start point for when we pass hysteresis.
     pan_start_sy = y;
     // Do not hide or warp the pointer until past hysteresis.
-#ifdef VISIBLE_WARP_CHECK
+#ifdef VISIBLE_SPIN_CURSOR
     //glutSetCursor(GLUT_CURSOR_INHERIT);
 #else
     //glutSetCursor(GLUT_CURSOR_NONE);
@@ -6532,7 +6535,9 @@ mouse(int button, int state, int x, int y)
     panning = 0;
     dirtyWindow = 1;  // Do not increment step counter on post pan redraw.
     glutSetCursor(GLUT_CURSOR_INHERIT);
+#ifndef NOT_WARPING
     glutWarpPointer(Width/2, Height/2);
+#endif
   }
 
   glutPostRedisplay();
@@ -6584,10 +6589,12 @@ motion(int x, int y)
       ldraw_commandline_opts.F = pan_visible; 
 
       // Pretend we skipped hysteresis check and warped pointer right away.
+#ifndef NOT_WARPING
       x += (Width/2) - pan_start_sx;
       y += (Height/2) - pan_start_sy;
+#endif
     }
-#ifdef VISIBLE_WARP_CHECK
+#ifdef VISIBLE_SPIN_CURSOR
     glutSetCursor(GLUT_CURSOR_INHERIT);
 #else
     glutSetCursor(GLUT_CURSOR_NONE);
@@ -6673,8 +6680,12 @@ motion(int x, int y)
       angle *= 5.0;
       angle *= (180.0/3.1415927);
 #else
+#  ifndef NOT_WARPING
       //angle = 2.0 * max(fabs(x*3.1415927/Width), fabs(y*3.1415927/Width));
       angle = 0.5 * max(fabs(x-(Width/2.0)), fabs(y-(Height/2.0)));
+#  else
+      angle = 0.5 * max(fabs(x-pan_start_sx), fabs(y-pan_start_sy));
+#  endif
 #endif
       if (ldraw_commandline_opts.debug_level == 1)
 	printf("ROTATING about(%0.2f, %0.2f) by angle %0.2f\n", pan_y, -pan_x, angle);
@@ -6743,6 +6754,9 @@ motion(int x, int y)
 	pan_start_x = 0;
 	pan_start_y = 0;
       }
+#else
+      pan_start_sx = x; // Save new start point.
+      pan_start_sy = y;
 #endif
 
       //printModelMat("ModelM");
