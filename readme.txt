@@ -156,6 +156,9 @@ Command line options (see also the original ldlite docs for more):
 -p turns on polling mode.
 -ld forces the program to use the ldlite parser.
 -l3 forces the program to use the l3 parser.
+-wN sets linewidth to N.
+-q quality lines (antialiased)
+-& windows mode.  Detach from the console window.  Windows version only.
 
 NOTE: if no DAT filename is given on the command line ldglite will read
 from stdin.  (l3glite does not do this)  Try this:
@@ -191,6 +194,8 @@ f toggles stud drawing.
 v toggles visible spin mode.
 p prints a BMP file.
 P prints a PNG file.
+y attempts to scale the model to fit the window.  Needs work though.
+q toggles line quality (antialiasing)
 Esc quits.
 
 
