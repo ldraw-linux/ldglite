@@ -2550,6 +2550,14 @@ void VISIBILITY(int state)
 int getDisplayProperties();
 
 /***************************************************************/
+void reshapeCB(int width, int height)
+{
+  reshape(width, height);
+  printf("reshape(%d, %d) -> (Width=%d, Height=%d)\n", 
+	 width, height, Width, Height);
+}
+
+/***************************************************************/
 void reshape(int width, int height)
 {
     GLdouble left, right, top, bottom, aspect, znear, zfar, fov;
@@ -8514,7 +8522,7 @@ int setGlutCallbacks()
 {
   // I think I have to reregister all of these again for gamemode.
   glutDisplayFunc(display);
-  glutReshapeFunc(reshape);
+  glutReshapeFunc(reshapeCB);
   glutKeyboardFunc(keyboard);
   glutSpecialFunc(fnkeys);
   glutMouseFunc(mouse);
@@ -8987,7 +8995,10 @@ main(int argc, char **argv)
 
   ParseParams(&argc, argv);
 
+#ifdef MACOS_X
+  // Go work in HOME dir for icon clickers.
   platform_sethome();
+#endif
 
 #if !defined(MAC)
 #  ifndef MACOS_X
