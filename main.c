@@ -106,6 +106,20 @@ char dirfilepath[256];
 char dirpattern[256] = "*";
 char filepattern[256] = "*";
 
+int drawAxis = 0;
+
+// Camera movement variables
+#define MOVE_SPEED 10.0
+#define PI 3.141569
+#define PI_180 (PI/180.0)
+float fCamX = 0.0;
+float fCamY = 0.0;
+float fCamZ = 0.0;
+
+float fXRot = 0.0;
+float fYRot = 0.0;
+float fZRot = 0.0;
+
 /***************************************************************/
 void draw_string(void *font, const char* string) 
 {
@@ -133,7 +147,7 @@ DoRasterString( float x, float y, char *s )
   glRasterPos2f( x, y );
   for( ; ( c = *s ) != '\0'; s++ )
   {
-    glutBitmapCharacter( GLUT_BITMAP_TIMES_ROMAN_24, c );
+    glutBitmapCharacter( GLUT_BITMAP_HELVETICA_12, c );
   }
 }
 
@@ -611,12 +625,20 @@ int platform_step_comment(char *comment_string)
 {
   printf("%s\n", comment_string);
 
-  //glMatrixMode( GL_MODELVIEW );
-  //glPushMatrix();
-  //glLoadIdentity();
-  glColor3f( 0.3, 0.3, 0.3 );		/* grey  	*/
-  DoRasterString( 40.0, 40.0, comment_string );
-  //glPopMatrix();
+  glMatrixMode( GL_PROJECTION );
+  glLoadIdentity();
+  gluOrtho2D( 0., 100., 0., 100. ); /* "percent units" */
+  glMatrixMode( GL_MODELVIEW );
+  glPushMatrix();
+  glLoadIdentity();
+  glColor4f( 0.3, 0.3, 0.3, 0.5 );		/* grey  	*/
+  glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
+  DoRasterString( 1.0, 1.0, comment_string );
+  glEnable( GL_DEPTH_TEST ); 
+  glPopMatrix();
+
+  // Reset the projection matrix.
+  reshape(Width, Height);
 }
 
 /***************************************************************/
@@ -1170,20 +1192,29 @@ void display(void)
 
   glColor3f(1.0, 1.0, 1.0); // White.
 
-#ifdef USE_GL_TWIRL
-  glMatrixMode(GL_MODELVIEW);
-#endif
-#ifdef USE_QUATERNION
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
+
+#ifdef USE_QUATERNION
+  // NOTE:  This does NOT work since I'm doing the spin transform BEFORE
+  // the gluLookAt() transform, so the model moves around the camera 
+  // rather than the camera orbiting the model.
   if (qspin[3] == 0.0)
   {
     glLoadIdentity();
   }
-  
 #else
-  glPushMatrix();
   glLoadIdentity();
+#endif
+
+#define ORBIT_THE_CAMERA_ABOUT_THE_MODEL 1
+
+#ifdef ORBIT_THE_MODEL_ABOUT_THE_CAMERA
+  // Do camera translation/rotation BEFORE GluLookAt()
+  glRotatef(fXRot, 1.0f, 0.0f, 0.0f);
+  glRotatef(360 - fYRot, 0.0f, 1.0f, 0.0f);
+  glTranslatef(fCamX, fCamY, fCamZ);        
+  // Draw everything else below after gluLookAt()
 #endif
 
   // ldlite_parse seems to offset x,y coords by half the window size.
@@ -1193,9 +1224,21 @@ void display(void)
 
   // from, toward, upvector
 #if WIDE_ANGLE_VIEW
-  gluLookAt(0.0, 100.0, 1000.0, 0.0, 100.0, 0.0, 0.0, 1.0, 0.0);
+  // Height/6 moves the origin from halfway to 2/3 of the way down the screen.
+  // Original LdLite uses zGetRowsize() and zGetColsize() to do this.
+  // I stubbed them to return 0 for OpenGL since its origin is the window
+  // center, not the corner.  See LDRAW_COMPATIBLE_CENTER in LdliteVR_main.c.
+  gluLookAt(0.0, Height/6.0, 1000.0, 0.0, Height/6.0, 0.0, 0.0, 1.0, 0.0);
 #else
-  gluLookAt(0.0, 100.0, 2000.0, 0.0, 100.0, 0.0, 0.0, 1.0, 0.0);
+  gluLookAt(0.0, Height/6.0, 2000.0, 0.0, Height/6.0, 0.0, 0.0, 1.0, 0.0);
+#endif
+
+#ifdef ORBIT_THE_CAMERA_ABOUT_THE_MODEL
+  // Do camera translation/rotation AFTER the GluLookAt camera transform.
+  glRotatef(fXRot, 1.0f, 0.0f, 0.0f);
+  glRotatef(-fYRot, 0.0f, 1.0f, 0.0f);
+  glTranslatef(fCamX, fCamY, fCamZ);        
+  // Draw everything else below
 #endif
 
 #ifdef USE_GL_TWIRL
@@ -1209,29 +1252,25 @@ void display(void)
     glRotatef((float)-twirl_angle, 0.0, 1.0, 0.0);
 #endif
 #ifdef USE_QUATERNION
-#define DRAW_AXIS 1
   printf("spin(%0.2f, %0.2f, %0.2f, %0.2f)\n", 
 	 qspin[3], qspin[0], qspin[1], qspin[2]);
   glRotatef(qspin[3], qspin[0], qspin[1], qspin[2]);
 #endif
 
-#ifdef DRAW_AXIS
-  glColor3f(1.0, 0.0, 0.0); // r
-  glBegin(GL_LINES);
-  glVertex3f(0.0, 0.0, 0.0);
-  glVertex3f(1000.0, 0.0, 0.0);
-  glEnd();
-  glColor3f(0.0, 1.0, 0.0); // g
-  glBegin(GL_LINES);
-  glVertex3f(0.0, 0.0, 0.0);
-  glVertex3f(0.0, 500.0, 0.0);
-  glEnd();
-  glColor3f(0.0, 0.0, 1.0); // b
-  glBegin(GL_LINES);
-  glVertex3f(0.0, 0.0, 0.0);
-  glVertex3f(0.0, 0.0, 400.0);
-  glEnd();
-#endif
+  if (drawAxis)
+  {
+    glBegin(GL_LINES);
+    glColor3f(1.0, 0.0, 0.0); // r
+    glVertex3f(0.0, 0.0, 0.0);
+    glVertex3f(1000.0, 0.0, 0.0);
+    glColor3f(0.0, 1.0, 0.0); // g
+    glVertex3f(0.0, 0.0, 0.0);
+    glVertex3f(0.0, 500.0, 0.0);
+    glColor3f(0.0, 0.0, 1.0); // b
+    glVertex3f(0.0, 0.0, 0.0);
+    glVertex3f(0.0, 0.0, 400.0);
+    glEnd();
+  }
 
   glColor3f(1.0, 1.0, 1.0); // White.
 
@@ -1327,7 +1366,7 @@ void display(void)
   glutWireCube(20.0);
 #endif
 
-#if 0  
+#if 0
   glMatrixMode( GL_PROJECTION );
   glLoadIdentity();
   gluOrtho2D( 0., 100., 0., 100. ); /* "percent units" */
@@ -1361,7 +1400,7 @@ GLUT_BITMAP_HELVETICA_18
   glTranslatef(-Width/2, -60, 0);
   draw_string(GLUT_STROKE_MONO_ROMAN, "Hello!");
   glPopMatrix();
-  gluOrtho2D(-Width/2, Width/2, -Height/2, Height/2);
+  gluOrtho2D(0, Width, 0, Height);
   glRasterPos2f(0, 0);
   draw_string_bitmap(GLUT_BITMAP_HELVETICA_12, "HELLO!");
   //rx+=glutBitmapWidth(GLUT_BITMAP_9_BY_15,'H'); 
@@ -1407,6 +1446,81 @@ GLUT_BITMAP_HELVETICA_18
       exit(0); //quit the program
   }
 
+}
+
+/***************************************************************/
+void initCamera(void)
+{
+  fCamX = 0.0;
+  fCamY = 0.0;
+  fCamZ = 0.0;
+  fXRot = 0.0;
+  fYRot = 0.0;
+  fZRot = 0.0;
+}
+
+/***************************************************************/
+void fnkeys(int key, int x, int y)
+{
+  /*
+    This will rotate you around x and y and translate you along x, y, and z. 
+    It shouldn't take much to add rotation around the z axis.
+  */
+
+  // The PG_UP, PG_DN keys seem to zoom in and out (only in perspective mode)
+  // You can NOT zoom in or out in orthographic mode, only scale.
+  switch(key) {
+  case GLUT_KEY_PAGE_UP:
+    fCamX += (float)sin(fYRot*PI_180) * MOVE_SPEED * 20;
+    fCamZ += (float)cos(fYRot*PI_180) * MOVE_SPEED * 20;
+    fCamY += (float)sin(fXRot*PI_180) * MOVE_SPEED * 20;
+    break;
+  case GLUT_KEY_PAGE_DOWN:
+    fCamX -= (float)sin(fYRot*PI_180) * MOVE_SPEED * 20;
+    fCamZ -= (float)cos(fYRot*PI_180) * MOVE_SPEED * 20;
+    fCamY -= (float)sin(fXRot*PI_180) * MOVE_SPEED * 20;
+    break;
+  case GLUT_KEY_RIGHT:
+    fYRot -= MOVE_SPEED / 2;
+    if(fYRot < -360.0)			
+      fYRot += 360.0;
+    break;
+  case GLUT_KEY_LEFT:
+    fYRot += MOVE_SPEED / 2;
+    if(fYRot > 360.0)
+      fYRot -= 360.0;	
+    break;
+  case GLUT_KEY_UP:
+    fXRot -= MOVE_SPEED / 2;
+    if(fXRot < -360.0)
+      fXRot += 360.0;
+    break;
+  case GLUT_KEY_DOWN:
+    fXRot += MOVE_SPEED / 2;
+    if(fXRot > 360.0)
+      fXRot -= 360.0;
+    break;
+  default:
+    return;
+  }
+
+  printf("Cam = (%.2f, %.2f, %.2f)\n", fCamX, fCamY, fCamZ);
+  printf("Rot = (%.2f, %.2f, %.2f)\n", fXRot, fYRot, fZRot);
+
+  glutPostRedisplay();
+
+  /*
+    Then, all you have to do is this
+    at the beginning of your display function to implement your camera.
+    
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();	
+    // Do camera translation/rotation
+    glRotatef(fXRot, 1.0f, 0.0f, 0.0f);
+    glRotatef(360 - fYRot, 0.0f, 1.0f, 0.0f);
+    glTranslatef(fCamX, fCamY, fCamZ);        
+    // Draw everything else below
+  */
 }
 
 /***************************************************************/
@@ -2252,6 +2366,10 @@ void ParseParams(int *argc, char **argv)
 	  break;
 	}
 	break;
+      case 'X':
+      case 'x':
+	drawAxis = 1;
+	break;
       case 'Z':
       case 'z':
 	{
@@ -2379,6 +2497,7 @@ main(int argc, char **argv)
   glutDisplayFunc(display);
   glutReshapeFunc(reshape);
   glutKeyboardFunc(keyboard);
+  glutSpecialFunc(fnkeys);
   glutMouseFunc(mouse);
   glutMotionFunc(motion);
   glutIdleFunc(myGlutIdle);
