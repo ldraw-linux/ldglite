@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.0.10     ";
+char ldgliteVersion[] = "Version 1.0.11     ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -1953,7 +1953,6 @@ void platform_setpath()
   concat_path(pathname, use_uppercase ? "P" : "p", primitivepath);
   concat_path(pathname, use_uppercase ? "PARTS" : "parts", partspath);
   concat_path(pathname, use_uppercase ? "MODELS" : "models", modelspath);
-
 }
 
 /***************************************************************/
@@ -2179,9 +2178,16 @@ void linequalitysetup()
       glAlphaFunc(GL_GREATER,.5);
     }
 #endif
+#ifdef LEQUAL_TESTING
+    glDepthFunc(GL_LEQUAL);  // Let antialiased lines blend together.
+#endif
   }
   else
   {
+#ifdef LEQUAL_TESTING
+    // Watch out!  There is one place where I use GL_EQUAL.
+    glDepthFunc(GL_LESS);
+#endif
 #if 1
     if (lineWidth > 1.0)
     {
@@ -8263,12 +8269,47 @@ void ParseParams(int *argc, char **argv)
 /***************************************************************/
 int InitInstance()
 {
+  char *env_str;
+
   // Probably should use basename(argv[0]) instead of "ldlite"
   // Big switch from ldlite.  Turn shading is on by default.
   zShading = GetProfileInt("ldlite","shading",1);
   //	zDetailLevel = TYPE_P; // should checkmark the menu item later!
   zDetailLevel = GetProfileInt("ldlite","detail",TYPE_P);
   zWire = GetProfileInt("ldlite","wireframe",0);
+
+  // Initialize the default ldglite commandline info structure.
+  CldliteCommandLineInfo();
+
+  // Get any default command line args from the environment.
+  env_str = platform_getenv("LDGLITEARGS");
+  if (env_str != NULL)
+  {
+    int  i;
+    char *argv[32];
+    char seps[] = " \t"; 
+    char *token;
+    char *str;
+
+    str = strdup(env_str);
+    argv[0] = NULL;
+    for (i = 1,token = strtok( str, seps );
+	 token != NULL;
+	 token = strtok( NULL, seps ))
+    {
+      argv[i] = token;
+      i++;
+      if (i == 32)
+      {
+	ParseParams(&i, argv);
+	i = 1;
+      }
+    }
+    
+    if (i >1)
+      ParseParams(&i, argv);
+  }
+
 }
 
 /***************************************************************/
@@ -8717,7 +8758,6 @@ main(int argc, char **argv)
 
   InitInstance();
   platform_setpath();
-  CldliteCommandLineInfo();
 
 #if !defined(MAC)
 #  ifdef MACOS_X
