@@ -351,6 +351,7 @@ int edit_mode_fnkeys(int key, int x, int y);
 void mouse(int button, int state, int x, int y);
 
 /***************************************************************/
+static int prevlookup = 0;
 static char *partlistbuf = NULL;
 static int partlookup = 0;
 static char **partlistptr = NULL;
@@ -3955,6 +3956,8 @@ char *loadpartlist(void)
   if (partlistbuf)
   {
     resetpartlist();
+    if (prevlookup > 0)
+      partlookup = prevlookup;
     return(partlistbuf);
   }
   
@@ -4073,12 +4076,23 @@ int limitpartlist(char *str)
 }
 
 /***************************************************************/
-/***************************************************************/
 int resetpluglist()
 {
   memcpy(pluglistptr, plugliststr, sizeof (char *) *pluglisttotal);
   pluglistsize = pluglisttotal;
   pluglookup = 1;
+}
+
+/***************************************************************/
+int saveprevlookup()
+{
+  int n;
+
+  for (n = 0; n < partlisttotal; n++)
+    if ( partlistptr[partlookup] == partliststr[n] )
+      return n;
+
+  return 0;
 }
 
 /***************************************************************/
@@ -4691,6 +4705,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     {
       // Abort the command
       ecommand[0] = 0;
+      prevlookup = saveprevlookup();
       partlookup = 0;
       pluglookup = 0;
       clear_edit_mode_gui();
@@ -5165,6 +5180,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	  if (token = strpbrk(&(ecommand[1])," \t"))
 	    *token = 0;
 
+	  prevlookup = saveprevlookup();
 	  partlookup = 0;
 	}
 	else if (ecommand[1] == 0)
@@ -5518,7 +5534,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	  break;
 	}
 	loadpartlist();
-	if (partlookup)
+	if (ecommand[1])
 	  limitpartlist(&(ecommand[1]));
 	edit_mode_gui(); // Redisplay the GUI
 	break;

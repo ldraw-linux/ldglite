@@ -1,4 +1,29 @@
 ----------------------------------------------------------------------
+
+In the part lookup, how about if the last part you looked up is
+automatically selected each time you open the lookup menu, so that you
+can quickly get to nearby pieces in the list? Since a lot of pieces
+are grouped together (all the plates, all the minifig parts, etc) this
+would speed things up if you were working on something that made heavy
+use of a certain type of part (and would have no impact otherwise).
+
+Also: how hard would it be to implement a new ledit command for
+creating a new part, that would simply create a blank part (or
+something basic like 3001) and go directly to the part selection
+prompt? Basically, so that you could insert a new piece without
+duplicating whatever the presently selected one, and to cut the number
+of keystrokes in half (from "i" "p" to whatever the create-new-part
+key is). The only reason the current insert method is ever a problem
+(usually its good), is if its a complicated piece, or even worse an
+entire sub-model, which would be duplicated before letting you specify
+what new part it should be.
+
+What if I leave the current LEDIT compatible method alone and
+implement a new command that combines these two ideas into a new
+speedy insert command?  If I can't find a suitable key I suppose I
+could use capital "I".  I wonder if "n" is available.
+
+----------------------------------------------------------------------
 Figure out how to display stud logos so they're never mirrored.
 Multiply the transformation matrix for each stud by it's determinant.
 Or traverse Parts[0..nParts] looking for PartPtr->FromPARTS.  Then
