@@ -821,6 +821,7 @@ int Print1Model(char *filename)
 	printf("Could not open %s\n", filename);
 	return(0);
     }
+
     for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
     {
       Print1LineP(LinePtr, s);
@@ -829,6 +830,46 @@ int Print1Model(char *filename)
       //if (ldraw_commandline_opts.debug_level == 1)
       //  fprintf(stdout, "%s\n", s);
     }
+
+    // Print out MPD subfiles after the main file.
+    LinePtr = Parts[0].FirstLine;
+    if (LinePtr->LineType == 0)
+    {
+      char *c;
+
+      // Skip whitespace
+      for (c = LinePtr->Comment; *c != 0; c++)
+      {
+	if ((*c != ' ') && (*c != '\t'))
+	  break;
+      }
+      if (strncmp(c,"FILE ",5) == 0)
+      {
+	int i;
+	printf("MPD file.  Need to save subfiles\n");
+	for (i = 1; i < nParts; i++)
+	{
+	  if (Parts[i].IsMPD)
+	  {
+	    sprintf(s, "0 FILE %s",Parts[i].DatName);
+	    fprintf(f, "%s\n", s);
+	    //if (ldraw_commandline_opts.debug_level == 1)
+	    //  fprintf(stdout, "%s\n", s);
+	    for (LinePtr = Parts[i].FirstLine; 
+		 LinePtr; 
+		 LinePtr = LinePtr->NextLine)
+	    {
+	      Print1LineP(LinePtr, s);
+	      fprintf(f, "%s\n", s);
+	      
+	      //if (ldraw_commandline_opts.debug_level == 1)
+	      //  fprintf(stdout, "%s\n", s);
+	    }
+	  }
+	}
+      }
+    }
+
     fclose(f);
     return 0;
 }

@@ -1430,6 +1430,9 @@ static int           ReadDatFile(FILE *fp, struct L3PartS * PartPtr,
                         continue;
                      PartPtr = NewPartPtr;
                      PartPtr->FirstLine = NULL;
+#ifdef USE_OPENGL
+                     PartPtr->IsMPD = 1;
+#endif
                      LinePtrPtr = &(PartPtr->FirstLine);
                      continue;
                   }
