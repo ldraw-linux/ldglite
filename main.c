@@ -3293,8 +3293,40 @@ void SetTitle(int showit)
   else
     sprintf(title, "%s - %s", progname, filename);
 
+  // NOTE:  This might crash in fullscreen game mode.  Should check first.
   if (showit)
     glutSetWindowTitle(title);
+}
+
+/***************************************************************/
+void loadnewdatfile(char *datpath, char *datfile)
+{
+  strcpy(datfilename, datfile);
+  strcpy(datfilepath, datpath);
+  strcpy(dirfilepath, datpath);
+
+  SetTitle(1); // Change title of the window to show the new dat filename.
+  
+#ifdef USE_L3_PARSER
+  if (parsername == L3_PARSER)
+    list_made = 0; // Gotta reparse the file.
+#endif
+  curstep = 0; // Reset to first step
+  dirtyWindow = 1;
+  glutPostRedisplay();
+}
+
+/***************************************************************/
+void saveasdatfile(char *datpath, char *datfile)
+{
+#ifdef USE_L3_PARSER
+  strcpy(datfilename, datfile);
+  strcpy(datfilepath, datpath);
+  strcpy(dirfilepath, datpath); // I think this is only used by glut menus.
+
+  Print1Model(datfilename);
+  SetTitle(1); // Change the title of the window.
+#endif
 }
 
 /***************************************************************/
@@ -4152,9 +4184,9 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	sscanf(&(ecommand[i]),"%s", &datfilename);
 	i = UnSelect1Part(curpiece); // Link part back in before printing
 	Print1Model(datfilename);
+	SetTitle(1); // Change the title of the window.
 	if (i != -1)
 	  Select1Part(curpiece); // Unlink part again if needed.
-	SetTitle(1); // Change the title of the window.
 	edit_mode_gui();
 	break;
       case 24:
@@ -4524,7 +4556,7 @@ void fnkeys(int key, int x, int y)
     rotate_about(1.0, 0.0, 0.0, -1.0 );
     break;
 #ifdef TEST_MUI_GUI
-  case GLUT_KEY_F3:
+  case GLUT_KEY_F8:
     mui_test();
     return;
 #endif
@@ -5562,21 +5594,7 @@ void filemenu(int item)
     if (ldraw_commandline_opts.debug_level == 1)
       printf("selected file %d = %s\n", item, DateiListe[item-1]);
     if (item <= DateiCount)
-    {
-      strcpy(datfilename, basename(DateiListe[item-1]));
-      strcpy(datfilepath, dirname(DateiListe[item-1]));
-      strcpy(dirfilepath, dirname(DateiListe[item-1]));
-
-      SetTitle(1); // Change title of the window to show the new dat filename.
-
-#ifdef USE_L3_PARSER
-      if (parsername == L3_PARSER)
-        list_made = 0; // Gotta reparse the file.
-#endif
-      curstep = 0; // Reset to first step
-      dirtyWindow = 1;
-      glutPostRedisplay();
-    }
+      loadnewdatfile(dirname(DateiListe[item-1]),basename(DateiListe[item-1]));
   }
 }
 
