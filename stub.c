@@ -488,6 +488,41 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
 	  c, zc.r, zc.g, zc.b, zs.r, zs.g, zs.b);
 #endif
 
+  if (cropping)
+  {
+    // Gotta convert to screen coords first for opengl.
+    GLdouble s1x, s1y, s1z;
+    GLdouble s2x, s2y, s2z;
+    GLdouble s3x, s3y, s3z;
+
+    gluProject((GLdouble)vp1->x, (GLdouble)-vp1->y, (GLdouble)-vp1->z,
+	     model_mat, proj_mat, view_mat,
+	     &s1x, &s1y, &s1z);
+
+    gluProject((GLdouble)vp2->x, (GLdouble)-vp2->y, (GLdouble)-vp2->z,
+	     model_mat, proj_mat, view_mat,
+	     &s2x, &s2y, &s2z);
+
+    gluProject((GLdouble)vp3->x, (GLdouble)-vp3->y, (GLdouble)-vp3->z,
+	     model_mat, proj_mat, view_mat,
+	     &s3x, &s3y, &s3z);
+
+    z.extent_x1 = min(s1x,z.extent_x1);
+    z.extent_x2 = max(s1x,z.extent_x2);
+    z.extent_y1 = min(s1y,z.extent_y1);
+    z.extent_y2 = max(s1y,z.extent_y2);
+
+    z.extent_x1 = min(s2x,z.extent_x1);
+    z.extent_x2 = max(s2x,z.extent_x2);
+    z.extent_y1 = min(s2y,z.extent_y1);
+    z.extent_y2 = max(s2y,z.extent_y2);
+
+    z.extent_x1 = min(s3x,z.extent_x1);
+    z.extent_x2 = max(s3x,z.extent_x2);
+    z.extent_y1 = min(s3y,z.extent_y1);
+    z.extent_y2 = max(s3y,z.extent_y2);
+  }
+
   if ((c > 32) && (c < 64)) // Translucent colors
   {
     glEnable(GL_POLYGON_STIPPLE);
@@ -687,6 +722,51 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
 	  vp3->x, vp3->y, vp3->z, vp4->x, vp4->y, vp4->z,
 	  c, zc.r, zc.g, zc.b, zs.r, zs.g, zs.b);
 #endif
+
+  if (cropping)
+  {
+    // Gotta convert to screen coords first for opengl.
+    GLdouble s1x, s1y, s1z;
+    GLdouble s2x, s2y, s2z;
+    GLdouble s3x, s3y, s3z;
+    GLdouble s4x, s4y, s4z;
+
+    gluProject((GLdouble)vp1->x, (GLdouble)-vp1->y, (GLdouble)-vp1->z,
+	     model_mat, proj_mat, view_mat,
+	     &s1x, &s1y, &s1z);
+
+    gluProject((GLdouble)vp2->x, (GLdouble)-vp2->y, (GLdouble)-vp2->z,
+	     model_mat, proj_mat, view_mat,
+	     &s2x, &s2y, &s2z);
+
+    gluProject((GLdouble)vp3->x, (GLdouble)-vp3->y, (GLdouble)-vp3->z,
+	     model_mat, proj_mat, view_mat,
+	     &s3x, &s3y, &s3z);
+
+    gluProject((GLdouble)vp4->x, (GLdouble)-vp4->y, (GLdouble)-vp4->z,
+	     model_mat, proj_mat, view_mat,
+	     &s4x, &s4y, &s4z);
+
+    z.extent_x1 = min(s1x,z.extent_x1);
+    z.extent_x2 = max(s1x,z.extent_x2);
+    z.extent_y1 = min(s1y,z.extent_y1);
+    z.extent_y2 = max(s1y,z.extent_y2);
+
+    z.extent_x1 = min(s2x,z.extent_x1);
+    z.extent_x2 = max(s2x,z.extent_x2);
+    z.extent_y1 = min(s2y,z.extent_y1);
+    z.extent_y2 = max(s2y,z.extent_y2);
+
+    z.extent_x1 = min(s3x,z.extent_x1);
+    z.extent_x2 = max(s3x,z.extent_x2);
+    z.extent_y1 = min(s3y,z.extent_y1);
+    z.extent_y2 = max(s3y,z.extent_y2);
+
+    z.extent_x1 = min(s4x,z.extent_x1);
+    z.extent_x2 = max(s4x,z.extent_x2);
+    z.extent_y1 = min(s4y,z.extent_y1);
+    z.extent_y2 = max(s4y,z.extent_y2);
+  }
 
   // opengl render it as a quad
   if ((c > 32) && (c < 64)) // Translucent colors
