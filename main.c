@@ -1617,6 +1617,8 @@ void reshape(int width, int height)
   extern void resetCamera();
   extern void applyCamera();
   extern int specialFunc( int key, int x, int y );
+  extern void turnCamera( GLfloat turnX, GLfloat turnY, GLfloat turnZ );
+  extern void truckCamera( GLfloat truckBy, int truckX, int truckY, int truckZ );
 #endif
 
 /***************************************************************/
@@ -5428,6 +5430,12 @@ mouse(int button, int state, int x, int y)
 #endif
     if (ldraw_commandline_opts.debug_level == 1)
       printf("rotating about(%0.2f, %0.2f) by angle %0.2f\n", pan_y, -pan_x, angle);
+#ifdef USE_F00_CAMERA
+    if (glutModifiers & GLUT_ACTIVE_ALT)
+    {
+    }
+    else
+#endif
     rotate_about(pan_y, -pan_x, 0.0, angle );
 #endif
 
@@ -5575,6 +5583,33 @@ motion(int x, int y)
 #endif
       if (ldraw_commandline_opts.debug_level == 1)
 	printf("ROTATING about(%0.2f, %0.2f) by angle %0.2f\n", pan_y, -pan_x, angle);
+#ifdef USE_F00_CAMERA
+      if (glutModifiers & GLUT_ACTIVE_ALT)
+      {
+	x_angle = x-(Width/2.0); // dx
+	y_angle = y-(Height/2.0); // dy
+	if ((x_angle != 0.0) || (y_angle != 0.0))
+	{
+	  //printf("(DX,DY) about(%0.2f, %0.2f) by angle %0.2f\n", x_angle, y_angle, angle);
+	  if (glutModifiers & GLUT_ACTIVE_SHIFT)
+	  {
+	    x_angle = angle * (x_angle / (fabs(x_angle) + fabs(y_angle)));
+	    y_angle = angle * (y_angle / (fabs(x_angle) + fabs(y_angle)));
+	    turnCamera( (GLfloat)(y_angle), (GLfloat)x_angle, 0.0 );
+	    //printf("TURNING about(%0.2f, %0.2f) by angle %0.2f\n", x_angle, y_angle, angle);
+	  }
+	  else
+	  {
+	    if (x_angle != 0)
+	      truckCamera( x_angle, true, false, false );
+	    if (y_angle != 0)
+	      truckCamera( y_angle, false, true, false );
+	  }
+	    
+	}
+      }
+      else
+#endif
       rotate_about(pan_y, -pan_x, 0.0, angle );
 
       pan_start_x = p_x; //Set next pan_start coords.

@@ -53,7 +53,7 @@ applyCamera()
   glTranslatef( -camX, -camY, -camZ );
 }
 
-/***************************************************************/
+/***************************************************************/
 // This is called when we wish to reset the viewpoint.
 void 
 resetCamera()
@@ -102,9 +102,19 @@ truckCamera( GLfloat truckBy, bool truckX, bool truckY, bool truckZ )
   camZ += dirZ * truckBy;
 }
 
+/***************************************************************/
+// This is called when we want to turn the camera.
+void
+turnCamera( GLfloat turnX, GLfloat turnY, GLfloat turnZ )
+{
+  f00Quat_postMult_3( &camOrient, turnX, turnY, turnZ );
+}
+
+/***************************************************************/
 #pragma argsused
 // We trap 'special' keystrokes here.
 int
+/***************************************************************/
 specialFunc( int key, int x, int y )
 {
   int retval = 1;
