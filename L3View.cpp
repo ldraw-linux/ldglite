@@ -140,10 +140,14 @@ void DrawPartBox(struct L3PartS *PartPtr,int CurColor,float m[4][4],int wire)
   float          r2[4];
   vector3d       bb3d[8];
 
+#ifdef SIXTEEN_EDGE_COLORS
   if (0 <= CurColor  &&  CurColor <= 15)
     Color = edge_color(CurColor);
   else
     Color = 0;
+#else
+    Color = edge_color(CurColor);
+#endif
   
   Color = CurColor;
 #if 0	    
@@ -189,10 +193,14 @@ void DrawPartLine(struct L3PartS *PartPtr,int CurColor,float m[4][4])
   float          r2[4];
   vector3d       bb3d[8];
 
+#ifdef SIXTEEN_EDGE_COLORS
   if (0 <= CurColor  &&  CurColor <= 15)
     Color = edge_color(CurColor);
   else
     Color = 0;
+#else
+    Color = edge_color(CurColor);
+#endif
   
   //Color = CurColor;
 
@@ -291,10 +299,14 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			Color = CurColor;
 			break;
 		case 24:
+#ifdef SIXTEEN_EDGE_COLORS
 			if (0 <= CurColor  &&  CurColor <= 15)
 				Color = edge_color(CurColor);
 			else
 				Color = 0;
+#else
+			Color = edge_color(CurColor);
+#endif
 			break;
 		default:
 			Color = LinePtr->Color;
@@ -649,10 +661,14 @@ int Draw1PartPtr(struct L3LineS *LinePtr, int Color)
 	    Color = CurColor;
 	    break;
 	case 24:
+#ifdef SIXTEEN_EDGE_COLORS
 	    if (0 <= CurColor  &&  CurColor <= 15)
 		Color = edge_color(CurColor);
 	    else
 		Color = 0;
+#else
+	    Color = edge_color(CurColor);
+#endif
 	    break;
 	default:
 	    break;
