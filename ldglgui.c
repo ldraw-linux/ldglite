@@ -1753,7 +1753,7 @@ void makefileui(char *s)
     muiSetCallback(b1, handleoriginal);
 
     b2 = muiNewButton(ow+dw-30, ow+dw-4, oh+dh-24, oh+dh-2);
-    muiLoadButton(b2, "..");
+    muiLoadButton(b2, "Up"); // For the Mac...  muiLoadButton(b2, "..");
     muiSetCallback(b2, handleupdir);
 
     tl = muiNewTextList(ow+4, oh+30, ow+dw-25, 8);
