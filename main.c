@@ -2141,8 +2141,6 @@ void parse_view(char *viewMatrix)
 }
 
 /***************************************************************/
-#define TEST_MUI_GUI 1
-/***************************************************************/
 void fnkeys(int key, int x, int y)
 {
   /*
@@ -3876,7 +3874,7 @@ main(int argc, char **argv)
 
   helpmenunum = glutCreateMenu(menu);
   glutAddMenuEntry(progname             , '\0');
-  glutAddMenuEntry("Version 0.7.4      ", '\0');
+  glutAddMenuEntry("Version 0.8.0      ", '\0');
 
   mainmenunum = glutCreateMenu(menu);
   glutAddSubMenu(  "File               ", filemenunum);
