@@ -1,13 +1,6 @@
 CC=gcc
 
-CFLAGS=-ggdb -DUSE_OPENGL 
-#CFLAGS=-ggdb -DUSE_OPENGL -mwindows
-
-# NOTE: -mwindows makes it detach from the console.
-#       This is good for gui apps but bad if launched from dos
-#       because we lose stdin.  Perhaps I should make 2 versions
-#       or make it a makefile option.
-#
+CFLAGS= -I../../include
 
 AR = ar
 RANLIB = ranlib
@@ -15,13 +8,10 @@ RANLIB = ranlib
 SRCS = gizmo.c glutmui.c displaylist.c uicolor.c miscui.c mui.c vslider.c textlist.c button.c pulldown.c hslider.c
 OBJS = $(SRCS:.c=.o)
 
-all	: libmui.a mui_test.exe browser.exe
+all	: libmui.a
 
-libmui_a_OBJECTS = button.o glutmui.o mui.o uicolor.o displaylist.o \
-hslider.o pulldown.o vslider.o gizmo.o miscui.o textlist.o
-
-libmui.a: $(libmui_a_OBJECTS) 
+libmui.a: $(OBJS) 
 	-rm -f libmui.a
-	$(AR) cru libmui.a $(libmui_a_OBJECTS)
+	$(AR) cru libmui.a $(OBJS)
 	$(RANLIB) libmui.a
 
