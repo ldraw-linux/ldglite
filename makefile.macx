@@ -45,6 +45,9 @@ ldglite:   $(OBJS) $(LIBS)
 	rm -rf l3gledit
 	ln -s ldglite l3gledit
 
+libmui.a:
+	if [ -d mui/lib/mui ] ; then cd mui/lib/mui ; $(MAKE) -f Makefile $@ ; fi
+
 l3glite:   ldglite
 
 ldglitepng:   ldglite
