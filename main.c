@@ -235,6 +235,8 @@ int turnAxisVisible = 0;
 // screenbuffer is where the final composite goes
 int staticbuffer = GL_BACK;
 int screenbuffer = GL_FRONT; 
+// renderbuffer is where we render to.  Need to know for -ms step saving.
+int renderbuffer = GL_FRONT; 
 // Buffer pointers and IDs for speedier opengl extension functions.
 
 GLint rBits, gBits, bBits, aBits;
@@ -341,6 +343,49 @@ float fZRot = 0.0;
 void reshape(int width, int height);
 void rendersetup(void);
 
+/***************************************************************/
+void CopyColorBuffer(int srcbuffer, int destbuffer)
+{
+  int savedirty;
+
+  if ((srcbuffer == staticbuffer) && (destbuffer == screenbuffer))
+  {
+    if ((buffer_swap_mode == SWAP_TYPE_COPY) ||
+	(buffer_swap_mode == SWAP_TYPE_NODAMAGE))
+    {
+      glutSwapBuffers(); // Found GL_WIN_swap_hint extension
+      return;
+    }
+  }
+
+  // get fresh copy of static data
+  glReadBuffer(srcbuffer); // set pixel source
+  glDrawBuffer(destbuffer); // set pixel destination
+  glDisable( GL_DEPTH_TEST ); // Speed up copying
+  glDisable(GL_LIGHTING);     // Speed up copying
+  glMatrixMode( GL_PROJECTION );
+  glLoadIdentity();
+  gluOrtho2D(0, Width, 0, Height);
+  glMatrixMode( GL_MODELVIEW );
+  glPushMatrix();
+  glLoadIdentity();
+  glRasterPos2i(0, 0);
+  glDepthMask(GL_FALSE); // disable updates to depth buffer
+  glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
+  glCopyPixels(0, 0, Width, Height, GL_COLOR);
+  glDepthMask(GL_TRUE); // enable updates to depth buffer
+  glPopMatrix();
+  glEnable(GL_LIGHTING);
+  glEnable( GL_DEPTH_TEST ); 
+  glDepthFunc(GL_LESS);
+  glDrawBuffer(renderbuffer); // set pixel destination to the render buffer.
+  
+  savedirty = dirtyWindow; 
+  reshape(Width, Height);
+  dirtyWindow = savedirty; 
+  rendersetup();
+}
+      
 /***************************************************************/
 void printModelMat(char *name)
 {
@@ -983,11 +1028,10 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
   // Copy substep to front buffer for visual progress.
   // This SLOWS things WAY WAY down!
 
-  if ((zDetailLevel > TYPE_P) &&
+  if ((zDetailLevel > TYPE_P) && (zDetailLevel < TYPE_MODEL) &&
       (!panning) && (!editing) && (!OffScreenRendering))
   {
-    CopyColorBuffer(staticbuffer, screenbuffer);
-    glDrawBuffer(staticbuffer); // set pixel destination
+    CopyColorBuffer(renderbuffer, screenbuffer);
   }
 
   if (ldraw_commandline_opts.debug_level == 1)
@@ -1522,6 +1566,46 @@ void init(void)
     // if (result) render internal geometry
     // else don't render
 #endif
+}
+
+/***************************************************************/
+void visibility(int state)
+{
+  switch (state)
+  {
+  case GLUT_HIDDEN:
+    printf("visibility = GLUT_HIDDEN\n");
+    break;
+  case GLUT_FULLY_COVERED:
+    printf("visibility = GLUT_FULLY_COVERED\n");
+    break;
+  case GLUT_FULLY_RETAINED:
+    printf("visibility = GLUT_FULLY_RETAINED\n");
+    break;
+  case GLUT_PARTIALLY_RETAINED:
+    printf("visibility = GLUT_PARTIALLY_RETAINED\n");
+    break;
+  default:
+    printf("visibility = UNKNOWN\n");
+    break;
+  }
+}
+
+/***************************************************************/
+void VISIBILITY(int state)
+{
+  switch (state)
+  {
+  case GLUT_VISIBLE:
+    printf("VISIBILITY = GLUT_VISIBLE\n");
+    break;
+  case GLUT_NOT_VISIBLE:
+    printf("VISIBILITY = GLUT_NOT_VISIBLE\n");
+    break;
+  default:
+    printf("VISIBILITY = UNKNOWN\n");
+    break;
+  }
 }
 
 /***************************************************************/
@@ -2756,49 +2840,6 @@ glPopAttrib();
 #endif
 
 /***************************************************************/
-void CopyColorBuffer(int srcbuffer, int destbuffer)
-{
-  int savedirty;
-
-  if ((srcbuffer == staticbuffer) && (destbuffer == screenbuffer))
-  {
-    if ((buffer_swap_mode == SWAP_TYPE_COPY) ||
-	(buffer_swap_mode == SWAP_TYPE_NODAMAGE))
-    {
-      glutSwapBuffers(); // Found GL_WIN_swap_hint extension
-      return;
-    }
-  }
-
-  // get fresh copy of static data
-  glReadBuffer(srcbuffer); // set pixel source
-  glDrawBuffer(destbuffer); // set pixel destination
-  glDisable( GL_DEPTH_TEST ); // Speed up copying
-  glDisable(GL_LIGHTING);     // Speed up copying
-  glMatrixMode( GL_PROJECTION );
-  glLoadIdentity();
-  gluOrtho2D(0, Width, 0, Height);
-  glMatrixMode( GL_MODELVIEW );
-  glPushMatrix();
-  glLoadIdentity();
-  glRasterPos2i(0, 0);
-  glDepthMask(GL_FALSE); // disable updates to depth buffer
-  glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
-  glCopyPixels(0, 0, Width, Height, GL_COLOR);
-  glDepthMask(GL_TRUE); // enable updates to depth buffer
-  glPopMatrix();
-  glEnable(GL_LIGHTING);
-  glEnable( GL_DEPTH_TEST ); 
-  glDepthFunc(GL_LESS);
-  glDrawBuffer(screenbuffer); // set pixel destination
-  
-  savedirty = dirtyWindow; 
-  reshape(Width, Height);
-  dirtyWindow = savedirty; 
-  rendersetup();
-}
-      
-/***************************************************************/
 /***************************************************************/
 // CopyStaticBuffer is fairly slow but should always work.
 // I could speed this up with opengl extensions when I get more time
@@ -3033,9 +3074,13 @@ void display(void)
 
   if (editing) 
   {
+    renderbuffer = screenbuffer;
     glDrawBuffer(screenbuffer); 
-    if (res = glutLayerGet(GLUT_NORMAL_DAMAGED))
+    if (res = glutLayerGet(GLUT_NORMAL_DAMAGED)) // Expose event?
+    {
+      printf("DAMAGED window during editing\n");
       dirtyWindow = 1;
+    }
 
     if (panning || dirtyWindow)
     {
@@ -3101,25 +3146,22 @@ void display(void)
   }
 
 #ifdef USE_DOUBLE_BUFFER
-  if (panning)
-    glDrawBuffer(GL_BACK);  // Enable double buffer for spin mode.
-#ifdef AGL_DOUBLE_BUFFER_HACK
-  else if (!panning)        // AMesa has trouble with GL_FRONT in
-    glDrawBuffer(GL_BACK);  // double buffer mode.
-#endif
-  else if (zDetailLevel > TYPE_P)
+  // If this is just an expose event (and !panning), then restore from backup.
+  if ((!panning) && glutLayerGet(GLUT_NORMAL_DAMAGED) && (dirtyWindow == 0))
   {
-    if (glutLayerGet(GLUT_NORMAL_DAMAGED) && (dirtyWindow == 0))
-    {
-      // If this is just an expose event, then restore from backup.
-      CopyColorBuffer(staticbuffer, screenbuffer);
-      return;
-    }
-    glDrawBuffer(GL_BACK);  // double buffer mode.
+    CopyColorBuffer(renderbuffer, screenbuffer);
+    return;
   }
+
+  if (panning)
+    renderbuffer = GL_BACK;  // Enable double buffer for spin mode.
+  else if (zDetailLevel > TYPE_P)
+    renderbuffer = GL_BACK;  // double buffer mode.
   else
 #endif
-    glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
+    renderbuffer = GL_FRONT;  // Effectively disable double buffer.
+
+  glDrawBuffer(renderbuffer);
 
   if (res = glutLayerGet(GLUT_NORMAL_DAMAGED))
     dirtyWindow = 1;
@@ -3164,11 +3206,6 @@ void display(void)
   }
   else
   {
-#ifdef AGL_DOES_NOT_FIX_PROBLEM
-    // This does NOT work!  glClear must switch to BACK after clear.
-    if (!panning)        // AMesa has trouble with GL_FRONT in
-      glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
-#endif
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   }
 
@@ -3176,8 +3213,8 @@ void display(void)
   // This works!  Does glClear switch to back buffer after clearing?
   // But GlutSwapBuffer() should also switch to FRONT before
   // Unhiding the cursor.
-  if (!panning)        // AMesa has trouble with GL_FRONT in
-    glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
+  if (!panning) // AMesa has trouble with GL_FRONT in double buffer mode.
+    glDrawBuffer(GL_FRONT);
 #endif
 
   render();
@@ -3278,13 +3315,15 @@ GLUT_BITMAP_HELVETICA_18
 #ifdef USE_DOUBLE_BUFFER
   if (panning)
     glutSwapBuffers();
-#ifdef AGL_DOUBLE_BUFFER_HACK
-  else                 // AMesa has trouble with GL_FRONT in
-    glutSwapBuffers(); // double buffer mode.
-#endif
   else if (zDetailLevel > TYPE_P)
     // Get every last update (including text) into the front buffer.
-    CopyColorBuffer(staticbuffer, screenbuffer);
+    CopyColorBuffer(renderbuffer, screenbuffer);
+  else 
+  {
+    // Copy every last update (including text) into the back buffer.
+    renderbuffer = GL_BACK; // Pretend we rendered it there (for expose events)
+    CopyColorBuffer(screenbuffer, staticbuffer);
+  }
 #endif
 
   dirtyWindow = 0;  // The window is nice and squeaky clean now.
@@ -3637,6 +3676,10 @@ int edit_mode_fnkeys(int key, int x, int y)
     // if (ldraw_commandline_opts.debug_level == 1)
     printf("Editing mode =  %d{%d}\n", editing, SOLID_EDIT_MODE);
     
+    // Just in case.  Make sure we draw to GL_FRONT buffer.
+    renderbuffer = screenbuffer;
+    glDrawBuffer(screenbuffer); 
+
     // Switch to continuous mode.
     editingprevmode = ldraw_commandline_opts.M;
     ldraw_commandline_opts.M = 'C';
@@ -6647,6 +6690,8 @@ int registerGlutCallbacks()
 #else
 #endif
 #endif
+  glutWindowStatusFunc(visibility);
+  glutVisibilityFunc(VISIBILITY);
 }
 
 /***************************************************************/
