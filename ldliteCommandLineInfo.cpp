@@ -19,7 +19,7 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-//#include "afxwin.h"
+#include "afxwin.h"
 #include "ldlite.h"
 #include "ldliteCommandLineInfo.h"
 extern "C" {
@@ -59,10 +59,17 @@ CldliteCommandLineInfo::CldliteCommandLineInfo()
 	ldraw_commandline_opts.V_y=0;
 	ldraw_commandline_opts.poll=0;
 	ldraw_commandline_opts.output=0;
+	ldraw_commandline_opts.output_depth=0;
 	ldraw_commandline_opts.rotate=0;
 	ldraw_commandline_opts.debug_level=0;
 	ldraw_commandline_opts.log_output=0;
+	ldraw_commandline_opts.W=1;
 	ldraw_commandline_opts.Z=INT_MIN;
+	ldraw_commandline_opts.clip=1;
+	ldraw_commandline_opts.image_filetype=4; // BMP24
+    ldraw_commandline_opts.center_at_origin=0;
+	ldraw_commandline_opts.emitter = 0;
+	ldraw_commandline_opts.maxlevel=32767;  // a huge number
 }
 
 CldliteCommandLineInfo::~CldliteCommandLineInfo()
@@ -103,6 +110,14 @@ void CldliteCommandLineInfo::ParseParam(const TCHAR * pszParam, BOOL bFlag, BOOL
 		case 'c':
 			sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.C));
 			break;
+		case 'D':
+		case 'd':
+			sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.maxlevel));
+			break;
+		case 'E':
+		case 'e':
+			sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.emitter));
+			break;
 		case 'F':
 		case 'f':
 			{
@@ -111,11 +126,14 @@ void CldliteCommandLineInfo::ParseParam(const TCHAR * pszParam, BOOL bFlag, BOOL
 				c = toupper(c);
 				switch (c) {
 				case 'S':
-					ldraw_commandline_opts.F = 1;
+					ldraw_commandline_opts.F |= TYPE_F_LOW_RES; /* use low quality primitives, ignored */
 					break;
 				case 'W':
-					ldraw_commandline_opts.F = 2;
+					ldraw_commandline_opts.F |= TYPE_F_NO_POLYGONS; /* do not draw polygon objects */
 					zWire = 1;
+					break;
+				case 'R':
+					ldraw_commandline_opts.F |= TYPE_F_NO_LINES; /* do not draw line objects */
 					break;
 				}
 			}
@@ -124,6 +142,25 @@ void CldliteCommandLineInfo::ParseParam(const TCHAR * pszParam, BOOL bFlag, BOOL
 		case 'G':
 		case 'g':
 			ldraw_commandline_opts.debug_level = 1;
+			break;
+		case 'I':
+		case 'i':
+			sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.image_filetype));
+			if (ldraw_commandline_opts.image_filetype < 0)
+			{
+				ldraw_commandline_opts.image_filetype = -1 * ldraw_commandline_opts.image_filetype;
+				ldraw_commandline_opts.clip = 1;
+			} else {
+				ldraw_commandline_opts.clip = 0;
+			}
+			if (ldraw_commandline_opts.image_filetype != 4)
+			{
+				ldraw_commandline_opts.image_filetype = 4;
+			}
+			break;
+		case 'K':
+		case 'k':
+			ldraw_commandline_opts.center_at_origin=1;
 			break;
 		case 'L':
 		case 'l':
@@ -152,6 +189,7 @@ void CldliteCommandLineInfo::ParseParam(const TCHAR * pszParam, BOOL bFlag, BOOL
 		case 'r':
 			sscanf(pszParam,"%c%s",&type, &output_file_name);
 			ldraw_commandline_opts.output=1;
+			ldraw_commandline_opts.output_depth=1;
 			break;
 		case 'S':
 		case 's':
@@ -160,6 +198,14 @@ void CldliteCommandLineInfo::ParseParam(const TCHAR * pszParam, BOOL bFlag, BOOL
 		case 'T':
 		case 't':
 			ldraw_commandline_opts.rotate = 1;
+			break;
+		case 'U': // replaces V
+		case 'u':
+			sscanf(pszParam,"%c%d,%d",&type, 
+				&(ldraw_commandline_opts.V_x),&(ldraw_commandline_opts.V_y));
+			// Round up to multiple of four to resolve windows dib problems
+			ldraw_commandline_opts.V_x = 4*((ldraw_commandline_opts.V_x+3) / 4);
+			ldraw_commandline_opts.V_y = 4*((ldraw_commandline_opts.V_y+3) / 4);
 			break;
 		case 'V':
 		case 'v':
@@ -194,6 +240,10 @@ void CldliteCommandLineInfo::ParseParam(const TCHAR * pszParam, BOOL bFlag, BOOL
 				ldraw_commandline_opts.V_y=1024;
 				break;
 			}
+			break;
+		case 'W': // line width
+		case 'w':
+			sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.W));
 			break;
 		case 'Z':
 		case 'z':

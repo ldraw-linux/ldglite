@@ -146,12 +146,12 @@ STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About LDLITE"
 FONT 8, "MS Sans Serif"
 BEGIN
-    ICON            IDR_MAINFRAME,IDC_STATIC,7,7,21,20
-    LTEXT           "LDLITE Version 1.6",IDC_STATIC,40,10,119,8,SS_NOPREFIX
-    LTEXT           "Copyright (C) 1999, Paul J. Gyugyi",IDC_STATIC,40,25,
-                    249,8
+    ICON            IDR_MAINFRAME,IDC_STATIC,7,7,20,20
+    LTEXT           "LDLITE Version 2.3",IDC_STATIC,40,10,119,8,SS_NOPREFIX
+    LTEXT           "Copyright (C) 1998-2001, Paul J. Gyugyi",IDC_STATIC,40,
+                    25,249,8
     DEFPUSHBUTTON   "OK",IDOK,257,7,32,14,WS_GROUP
-    LTEXT           "Design Credits: Paul Gyugyi, Steve Bliss, Lars Hassing, Leonardo Zide, Jeremy H. Sproat. LDLITE is a clone (a superset, actually) of LDRAW by James Jessman. Source and binaries are at: <http://www.gyugyi.com/l3g0/ldlite/>",
+    LTEXT           "Design Credits: Paul Gyugyi, Steve Bliss, Lars Hassing, Leonardo Zide, Jeremy H. Sproat, Don Heyse.\n LDLITE is a clone (a superset, actually) of LDRAW by James Jessman. Source and binaries are at: <http://sourceforge.net> in the LDLITE project.",
                     IDC_STATIC,7,49,282,49
     LTEXT           "LDLITE comes with ABSOLUTELY NO WARRANTY;  This is free software (GPL), and you are welcome to redistribute it under certain conditions; for details see the file COPYING distributed with this program.",
                     IDC_STATIC,7,105,282,33
@@ -265,12 +265,12 @@ BEGIN
             VALUE "FileDescription", "LDLITE MFC Application\0"
             VALUE "FileVersion", "1, 0, 0, 1\0"
             VALUE "InternalName", "LDLITE\0"
-            VALUE "LegalCopyright", "Copyright (C) 1998, Paul J. Gyugyi\0"
+            VALUE "LegalCopyright", "Copyright (C) 1998-2001, Paul J. Gyugyi\0"
             VALUE "LegalTrademarks", "\0"
             VALUE "OriginalFilename", "ldlite.EXE\0"
             VALUE "PrivateBuild", "\0"
             VALUE "ProductName", "LDLITE\0"
-            VALUE "ProductVersion", "1,6,0,0\0"
+            VALUE "ProductVersion", "2,2,0,0\0"
             VALUE "SpecialBuild", "\0"
         END
     END
@@ -458,7 +458,7 @@ END
 
 STRINGTABLE DISCARDABLE 
 BEGIN
-    ID_INDICATOR_TYPE0      "LDLITE Copyright 1999 Paul Gyugyi. Distributed by Gyugyi Cybernetics"
+    ID_INDICATOR_TYPE0      "LDLITE Copyright 1998-2001 Paul Gyugyi. Distributed by Gyugyi Cybernetics"
     ID_INDICATOR_STEP       "Step ######"
 END
 
