@@ -176,6 +176,8 @@ extern ZIMAGE z;
 
 GLint Width = 640;
 GLint Height = 480;
+GLint XwinPos = 0;
+GLint YwinPos = 0;
 int main_window = -1;
 
 double twirl_angle = 0.0;
@@ -2718,6 +2720,7 @@ void RestoreDepthBuffer(void)
     glPopMatrix();
       glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
       glDepthFunc(GL_LESS);
+    reshape(Width, Height);
     rendersetup();
   }
 }
@@ -2935,65 +2938,10 @@ void CopyStaticBuffer(void)
     }
 
     // get fresh copy of static data
-#ifdef USE_COPY_COLOR_BUFFER
-    // I WISH this worked!  But I have no idea why it doesnt.
+    glDrawBuffer(screenbuffer); // set pixel destination
+    CopyColorBuffer(staticbuffer, screenbuffer);
     if (!goodZ) // Don't bother with z restore if we just rendered.
       RestoreDepthBuffer();
-    CopyColorBuffer(staticbuffer, screenbuffer);
-#else
-    glReadBuffer(staticbuffer); // set pixel source
-    glDrawBuffer(screenbuffer); // set pixel destination
-    glDisable( GL_DEPTH_TEST ); // Speed up copying
-    glDisable(GL_LIGHTING);     // Speed up copying
-    glMatrixMode( GL_PROJECTION );
-    glLoadIdentity();
-    gluOrtho2D(0, Width, 0, Height);
-    glMatrixMode( GL_MODELVIEW );
-    glPushMatrix();
-    glLoadIdentity();
-    glRasterPos2i(0, 0);
-    glDepthMask(GL_FALSE); // disable updates to depth buffer
-    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
-    if ((buffer_swap_mode == SWAP_TYPE_COPY) ||
-	(buffer_swap_mode == SWAP_TYPE_NODAMAGE))
-      glutSwapBuffers(); // Found GL_WIN_swap_hint extension
-    else
-      glCopyPixels(0, 0, Width, Height, GL_COLOR);
-#ifdef DEPTH_BUFFER_MASK
-    // Enable depth test, but disable depth writes while moving the piece
-    // This would work well if the moving piece were depth sorted.
-    // As is, the moving piece is drawn in random depth order and looks bad.
-    // This could work with the half depth buffer trick using a split
-    // depth range.  
-    // The moving piece gets half the depth range with GL_GREATER...
-    glDepthMask(GL_FALSE); // disable updates to depth buffer
-#else
-    glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
-    glDepthMask(GL_TRUE); // enable updates to depth buffer
-    glEnable( GL_DEPTH_TEST ); 
-    glDepthFunc(GL_ALWAYS);
-    glRasterPos2i(0, 0);
-    if (!goodZ) // Don't bother with z restore if we just rendered.
-    {
-#ifdef SAVE_DEPTH_BOX
-      // Gotta figure out the src,dst stuff.  glTranslate()?
-      glRasterPos2i(sc[0], sc[1]);
-      if (ldraw_commandline_opts.debug_level == 1)
-	printf("bbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
-      glDrawPixels(sc[2],sc[3],GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
-#else
-      //glDrawPixels(Width, Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
-      glDrawPixels(Width,Height,GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
-#endif
-    }
-    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
-#endif
-    glPopMatrix();
-    reshape(Width, Height);
-    glEnable( GL_DEPTH_TEST ); 
-    glDepthFunc(GL_LESS);
-    rendersetup();
-#endif /* USE_COPY_COLOR_BUFFER */
     // screenbuffer is ready for dynamic data
   }
   else
@@ -6232,7 +6180,16 @@ void ParseParams(int *argc, char **argv)
   for (i = 1; i < *argc; i++)
   {
     pszParam = argv[i];
-    if (pszParam[0] != '-') 
+    if (pszParam[0] == '+') 
+    {
+      int n, wx, wy;
+      n = sscanf(pszParam,"%c%d,%d",&type, &wx, &wy);
+      if ((n > 1) && (wx >= 0))
+	XwinPos = wx;
+      if ((n > 2) && (wy >= 0))
+	YwinPos = wy;
+    }
+    else if (pszParam[0] != '-') 
     {
       // It must be a filename.  Save it for parsing.
       strcpy(datfilename, basename(argv[i]));
@@ -6805,6 +6762,10 @@ void getDisplayProperties()
     use_stencil_for_XOR = 0;
   }
 
+#ifdef GENERIC_MS_TEST
+  buffer_swap_mode = SWAP_TYPE_COPY;
+#endif
+
   printf("Buffer Swap Mode = %d\n", buffer_swap_mode);
 
 #ifdef USE_DOUBLE_BUFFER
@@ -6895,6 +6856,16 @@ main(int argc, char **argv)
       Height = ldraw_commandline_opts.V_y = 1024;
     }
   }
+  else if (OffScreenRendering == 0) 
+  {
+    // Using cmdline size, move away from the top left corner if possible.
+#if 0
+    if ((Width + 32) < glutGet(GLUT_SCREEN_WIDTH))
+      XwinPos = 32;
+    if ((Height + 32) < glutGet(GLUT_SCREEN_HEIGHT))
+      YwinPos = 32;
+#endif
+  }
 
 #if 0
   sprintf(output_file_name, "%s.log", datfilename);
@@ -6973,7 +6944,7 @@ main(int argc, char **argv)
 #endif
   {
     glutInitWindowSize(Width, Height);
-    glutInitWindowPosition(0, 0);
+    glutInitWindowPosition(XwinPos, YwinPos);
 
     main_window = glutCreateWindow(title);
 
