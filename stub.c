@@ -33,7 +33,7 @@
 #endif
 
 extern int curstep;
-extern int clipping;
+extern int cropping;
 
 GLdouble model_mat[4*4];
 GLdouble proj_mat[4*4];
@@ -770,7 +770,7 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
 	  c, zc.r, zc.g, zc.b, zs.r, zs.g, zs.b);
 #endif
 
-  if (clipping)
+  if (cropping)
   {
     // Gotta convert to screen coords first for opengl.
     GLdouble s1x, s1y, s1z;
@@ -1164,7 +1164,7 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
     return;
   }
 
-  if (clipping)
+  if (cropping)
   {
     z.extent_x1 = min(s1x,z.extent_x1);
     z.extent_x1 = min(s2x,z.extent_x1);
