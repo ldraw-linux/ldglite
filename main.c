@@ -351,6 +351,8 @@ float fZRot = 0.0;
 
 void reshape(int width, int height);
 void rendersetup(void);
+int edit_mode_keyboard(unsigned char key, int x, int y);
+void mouse(int button, int state, int x, int y);
 
 /***************************************************************/
 char *pastelist = NULL;
@@ -372,15 +374,16 @@ char *strrpbrk(const char *szString, const char *szChars)
 
 #ifdef WINDOWS
 /***************************************************************/
-void pasteCommand(int i)
+void pasteCommand(int x, int y)
 {
   char *str;
-  char *dst = &ecommand[i];
+  char *dst = &ecommand[1];
   char *whitespace = " \t\r\n";
   char *seps = "\r\n"; // Newline separator chars for DOS, MAC & UNIX.
   char *token;
   char *s;
   char *p;
+  int i;
 	  
   if (pastelist)
   {
@@ -397,9 +400,9 @@ void pasteCommand(int i)
     return;
     
   // For partname or filename, do not allow space or tab chars.
-  for (token = strtok( str, seps );
+  for (i = 0, token = strtok( str, seps );
        token != NULL;
-       token = strtok( NULL, seps ))
+       i++, token = strtok( NULL, seps ))
   {
     printf("got token <%s> from clipboard\n", token);
     
@@ -441,11 +444,13 @@ void pasteCommand(int i)
     
     if (token && strlen(token))
     {
-      if (ecommand[i] == 0)
+      if (i > 0)
       {
-	dst = &ecommand[i];
-	strcat(dst, token);
+	edit_mode_keyboard('\n', x, y);
+	edit_mode_keyboard('i', x, y);
+	edit_mode_keyboard('p', x, y);
       }
+      strcat(dst, token);
     }
   }
   
@@ -453,7 +458,6 @@ void pasteCommand(int i)
   
   printf("ecommand = <%s>\n", ecommand);
   
-  edit_mode_gui(); // Redisplay the GUI
 }
 #endif
 
@@ -4723,7 +4727,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 
     case 22: // Paste on Windows (CTRL-V)
 #ifdef WINDOWS
-      pasteCommand(i);
+      pasteCommand(x, y);
       edit_mode_keyboard('\n', x, y);
 #endif
       break;
@@ -4847,7 +4851,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
   case 22:
     edit_mode_keyboard('i', x, y);
     edit_mode_keyboard('p', x, y);
-    pasteCommand(1);
+    pasteCommand(x, y);
     edit_mode_keyboard('\n', x, y);
     return 1;
   }
@@ -7092,6 +7096,8 @@ MsgSubClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     TCHAR szNextFile [MAX_PATH];
     HDROP hdrop = (HDROP) wParam;
     UINT uFile;
+    char *s;
+    char *p;
     int n = 0;
 
     printf("WM_DROPFILES\n");
@@ -7115,7 +7121,21 @@ MsgSubClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
       if (uFile > 0)
 	strcat(pastelist, "\n");
       if ( DragQueryFile ( hdrop, uFile, szNextFile, MAX_PATH ) > 0 )
+      {
+	s = strdup (szNextFile);
+	platform_fixcase(s);
+	if (p = strstr(s, partspath))
+	  strcpy(szNextFile, p + strlen(partspath) + 1);
+	else if (p = strstr(s, modelspath))
+	  strcpy(szNextFile, p + strlen(modelspath) + 1);
+	else if (p = strstr(s, primitivepath))
+	  strcpy(szNextFile, p + strlen(primitivepath) + 1);
+	else if (p = strstr(s, datfilepath))
+	  strcpy(szNextFile, p + strlen(datfilepath) + 1);
+	printf("WM_dropfile <%s>\n", szNextFile);
 	strcat(pastelist, szNextFile);
+	free(s);
+      }
     }
 
     // Free up memory.
