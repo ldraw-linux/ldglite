@@ -27,7 +27,7 @@
 #include "dirscan.h"
 
 #ifndef TEST_MUI_GUI
-#define USE_GLUT_MENUS 1
+#  define USE_GLUT_MENUS 1
 #endif
 
 /***************************************************************/
