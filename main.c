@@ -128,6 +128,9 @@ int SOLID_EDIT_MODE = 0;
 static char eprompt[3][100];
 static char ecommand[100] = "";
 static char eresponse[100] = "";
+float moveXamount = 10.0;
+float moveYamount = 8.0;
+float moveZamount = 10.0;
 // staticbuffer is where our non-moving background goes
 // screenbuffer is where the final composite goes
 int staticbuffer = GL_BACK;
@@ -2631,6 +2634,22 @@ void HiLightCurPiece(int piecenum)
 }
 
 /***************************************************************/
+void SetTitle(int showit)
+{
+  char filename[256];
+
+  // Change the title of the window to show the new dat filename.
+  concat_path(datfilepath, datfilename, filename);
+  if (filename[0] == '.') // I hate the ./filename thing.
+    sprintf(title, "%s - %s", progname, datfilename);
+  else
+    sprintf(title, "%s - %s", progname, filename);
+  
+  if (showit)
+    glutSetWindowTitle(title);
+}
+
+/***************************************************************/
 void fnkeys(int key, int x, int y)
 {
   glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
@@ -2687,27 +2706,27 @@ void fnkeys(int key, int x, int y)
       HiLightCurPiece(curpiece+1);
       break;
     case GLUT_KEY_RIGHT:
-      m[0][3] += 10.0;
+      m[0][3] += moveXamount;
       TranslateCurPiece(m);
       break;
     case GLUT_KEY_LEFT:
-      m[0][3] -= 10.0;
+      m[0][3] -= moveXamount;
       TranslateCurPiece(m);
       break;
     case GLUT_KEY_UP:
-      m[2][3] += 10.0;
+      m[2][3] += moveZamount;
       TranslateCurPiece(m);
       break;
     case GLUT_KEY_DOWN:
-      m[2][3] -= 10.0;
+      m[2][3] -= moveZamount;
       TranslateCurPiece(m);
       break;
     case GLUT_KEY_HOME:
-      m[1][3] -= 8.0;
+      m[1][3] -= moveYamount;
       TranslateCurPiece(m);
       break;
     case GLUT_KEY_END:
-      m[1][3] += 8.0;
+      m[1][3] += moveYamount;
       TranslateCurPiece(m);
       break;
     default:
@@ -2934,6 +2953,12 @@ void keyboard(unsigned char key, int x, int y)
 	// Try to get submenu command
 	switch(key) {
 	case 'f':
+	  sprintf(eprompt[0], "File: ");
+	  sprintf(eprompt[1], "Load Save Exit");
+	  ecommand[0] = key;
+	  ecommand[1] = 0;
+	  edit_mode_gui();
+	  break;
 	case 'e':
 	case 'v':
 	case 'p':
@@ -2974,6 +2999,29 @@ void keyboard(unsigned char key, int x, int y)
 	  ecommand[1] = 0;
 	  edit_mode_gui();
 	  return;
+	}
+	return;
+      }
+      if (ecommand[0] == 'f') // File Menu
+      {
+	// Try to get submenu command
+	switch(key) {
+	case 'l':
+	  clear_edit_mode_gui();
+	  sprintf(eprompt[0], "Load file: ");
+	  ecommand[0] = toupper(key);
+	  sprintf(&(ecommand[1]), datfilename);
+	  edit_mode_gui();
+	  return;
+	case 's':
+	  clear_edit_mode_gui();
+	  sprintf(eprompt[0], "Save as: ");
+	  ecommand[0] = toupper(key);
+	  sprintf(&(ecommand[1]), datfilename);
+	  edit_mode_gui();
+	  return;
+	case 'e':
+	  exit(0);
 	}
 	return;
       }
@@ -3023,6 +3071,28 @@ void keyboard(unsigned char key, int x, int y)
 	  sscanf(&(ecommand[1]),"%f", &f);
 	  m[1][3] += f;
 	  TranslateCurPiece(m);
+	  break;
+	case 'L':
+	  // Load filename if new
+	  printf("loading file: %s\n", &(ecommand[1]));
+	  if (strcmp(&(ecommand[1]),datfilename))
+	  {
+	    sscanf(&(ecommand[1]),"%s", &datfilename);
+	    curstep = 0; // Reset to first step
+	    dirtyWindow = 1;
+	    curpiece = 0;
+	    movingpiece = -1;
+	    list_made = 0; // Gotta reparse the file.
+	    SetTitle(1); // Change the title of the window.
+	    glutPostRedisplay();
+	  }
+	  break;
+	case 'S':
+	  // Save as filename
+	  printf("Save as: %s\n", &(ecommand[1]));
+	  sscanf(&(ecommand[1]),"%s", &datfilename);
+	  Print1Model(datfilename);
+	  SetTitle(1); // Change the title of the window.
 	  break;
 	case 'X':
 	  sscanf(&(ecommand[1]),"%f", &f);
@@ -3143,6 +3213,16 @@ void keyboard(unsigned char key, int x, int y)
       Print1Part(curpiece, stdout);
       edit_mode_gui();
       return;
+    case 'e':
+      printf("Erase and redraw screen (Shouldn't be needed)\n");
+      return;
+    case 'w':
+      printf("Swap current piece with next piece\n");
+      return;
+    case '\n':
+    case '\r':
+      printf("Draw the current piece (not needed?)\n");
+      return;
     case 'x':
     case 'y':
     case 'z':
@@ -3152,7 +3232,24 @@ void keyboard(unsigned char key, int x, int y)
       edit_mode_gui();
       return;
     case 'm':
-      printf("Toggle Movement Mode between fine and normal\n");
+      if (moveXamount == 10.0)
+      {
+	moveXamount = 100.0; // Coarse movement.
+	moveZamount = 100.0;
+	moveYamount = 80.0;
+      }
+      else if (moveXamount == 100.0)
+      {
+	moveXamount = 1.0; // Fine movement.
+	moveZamount = 1.0;
+	moveYamount = 1.0;
+      }
+      else
+      {
+	moveXamount = 10.0; // Normal movement.
+	moveZamount = 10.0;
+	moveYamount = 8.0;
+      }
       return;
     case 'c':
 #if 1
@@ -4096,13 +4193,7 @@ void filemenu(int item)
       strcpy(datfilepath, dirname(DateiListe[item-1]));
       strcpy(dirfilepath, dirname(DateiListe[item-1]));
 
-      // Change the title of the window to show the new dat filename.
-      concat_path(datfilepath, datfilename, filename);
-      if (filename[0] == '.') // I hate the ./filename thing.
-	sprintf(title, "%s - %s", progname, datfilename);
-      else
-	sprintf(title, "%s - %s", progname, filename);
-      glutSetWindowTitle(title);
+      SetTitle(1); // Change title of the window to show the new dat filename.
 
 #ifdef USE_L3_PARSER
       if (parsername == L3_PARSER)
@@ -4640,12 +4731,7 @@ main(int argc, char **argv)
   output_file = fopen(output_file_name,"w+");
 #endif
 
-  strcpy(progname, basename(argv[0]));
-  concat_path(datfilepath, datfilename, filename);
-  if (filename[0] == '.') // I hate the ./filename thing.
-    sprintf(title, "%s - %s", progname, datfilename);
-  else
-    sprintf(title, "%s - %s", progname, filename);
+  SetTitle(0);
 
 #ifdef USE_L3_PARSER
   // If the parser type is not specified on the commandline 
