@@ -13,11 +13,17 @@ PNG_LIBS=-L. -lpng -lz
 CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS)
 #CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS) -mwindows
 
+AR = ar
+RANLIB = ranlib
+
+SRCS = ldliteVR_main.c platform.c dirscan.c ldglgui.c gleps.c camera.c f00QuatC.c quant.c stub.c y.tab.c lex.yy.c qbuf.c main.c L3Math.c L3Input.c L3View.c
+OBJS = $(SRCS:.c=.o)
+
 all	: ldglite
 
-ldglite:   ldliteVR_main.o platform.o dirscan.o camera.o f00QuatC.o quant.o stub.o y.tab.o lex.yy.o qbuf.o main.o L3Math.o L3Input.o L3View.o
-	$(CC) $(CFLAGS) ldliteVR_main.o platform.o dirscan.o camera.o f00QuatC.o quant.o stub.o y.tab.o lex.yy.o qbuf.o main.o L3Math.o L3Input.o L3View.o -o ldglite.exe -I. $(PNG_LIBS) -lglut32 -lglu32 -lopengl32
-	copy ldglite.exe l3glite.exe
+ldglite:   $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o ldglite.exe -I. $(PNG_LIBS) -lmui -lglut32 -lglu32 -lopengl32
+	cp ldglite.exe l3glite.exe
 
 l3glite:   ldglite
 
@@ -57,6 +63,12 @@ qbuf.o: qbuf.c
 
 dirscan.o: dirscan.c
 	$(CC) -c $(CFLAGS) dirscan.c
+
+ldglgui.o: ldglgui.c
+	$(CC) -c $(CFLAGS) ldglgui.c
+
+gleps.o: gleps.c
+	$(CC) -c $(CFLAGS) gleps.c
 
 L3Math.o: L3Math.cpp
 	$(CC) -c $(CFLAGS) L3Math.cpp
