@@ -4616,6 +4616,35 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       }
       break; // End of command finished processing.
 
+    case 22: // Paste on Windows (CTRL-V)
+#ifdef WINDOWS
+      {
+	char *str;
+	char *dst = &ecommand[i];
+	if(OpenClipboard(NULL))
+	{
+	  str = (char*)GetClipboardData(CF_TEXT);
+
+	  // For partname or filename, do not allow space or tab chars.
+	  if ((ecommand[0] == 'p') || 
+	      (ecommand[0] == 'L') || (ecommand[0] == 'S'))
+	  {
+	    if (dst = strchr(str, ' ')) 
+	      *dst = 0;
+	    if (dst = strchr(str, 9)) 
+	      *dst = 0;
+	  }
+	  dst = &ecommand[i];
+	  strcat(dst, str);
+
+	  printf("ecommand = <%s>\n", ecommand);
+	  
+	  edit_mode_gui(); // Redisplay the GUI
+	}
+	CloseClipboard(); 
+      }
+#endif
+      break;
     case 8: // Backspace
     case 127: // Delete
       if (i > 1) // Don't backspace past the command char.
