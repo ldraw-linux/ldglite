@@ -4074,6 +4074,7 @@ int edit_mode_fnkeys(int key, int x, int y)
 
 #define EDIT_LINE_ID    'e'
 #define EDIT_COMMENT_ID 'C'
+#define EDIT_HOSE_ID    'h'
 
 #define LINETYPE_2_ID	2
 #define LINETYPE_3_ID	3
@@ -4148,7 +4149,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	break;
       case 'e':
 	sprintf(eprompt[0], "Edit: ");
-	sprintf(eprompt[1], "Insert Delete Swap Line-type");
+	sprintf(eprompt[1], "Insert Delete Swap Line-type  Hoser");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
@@ -4330,6 +4331,13 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	sprintf(eprompt[0], "Line Type: ");
 	sprintf(eprompt[1], "Piece Comment Step 2 3 4 5");
 	ecommand[0] = 'e'; // EDIT_LINE_ID
+	edit_mode_gui();
+	return 1;
+      case 'h':
+	clear_edit_mode_gui();
+	sprintf(eprompt[0], "Hoser steps: ");
+	ecommand[0] = 'h'; // EDIT_HOSE_ID
+	ecommand[1] = 0;
 	edit_mode_gui();
 	return 1;
       }
@@ -4827,6 +4835,15 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	    Print1Part(curpiece, stdout);
 	clear_edit_mode_gui();
 	break;
+      case 'h':
+	// Hoser.  Get number of steps.  Similar to inline but for 4 lines.
+	sscanf(&(ecommand[1]),"%d", &i);
+	// Inline the current piece
+	clear_edit_mode_gui();
+	UnLightCurPiece();
+	Hose1Part(curpiece, i); // Inline1Part(curpiece);
+	HiLightNewPiece(curpiece);
+	return 1;
       case 2:
       case 3:
       case 4:
