@@ -24,7 +24,7 @@ OFFSCREEN_LIBS= -framework AGL
 #GL_LIBS=-L/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries
 #GLUT_LIBS=-L/System/Library/Frameworks/GLUT.framework/Versions/A/Libraries
 #GL_LIBS=-framework OpenGL -framework GLUT -lglut -lobjc
-GL_LIBS=-framework OpenGL -framework GLUT -lobjc $(OFFSCREEN_LIBS) 
+GL_LIBS=-framework OpenGL -framework GLUT -lobjc -lstdc++ $(OFFSCREEN_LIBS) 
 
 CFLAGS=-g -I./osx -DUNIX -DMACOS_X -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 -DNEED_MIN_MAX $(PNG_FLAGS) $(TR_FLAGS) $(OFFSCREEN_FLAGS) $(GUI_FLAGS)
 
