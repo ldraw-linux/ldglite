@@ -40,7 +40,7 @@ void V3Scale(float r[4], float a[4], double t)
    r[2] = t * a[2];
 }
 
-//************************************************************************
+//************************************************************************
 // Calculate the 3rd degree polynomial based on an array of 4 points and 
 // a variable (u) which is generally between 0 And 1.  By stepping u in 
 // equal increments from 0 to 1 we get a nice approximation of the curve.   
@@ -66,6 +66,17 @@ void Bernstein(float r[4], float u, float m[4][4])
   V3Sum(r, c);
   V3Sum(r, d);
 }
+
+/************************************************************************
+0 Example:
+0 Start with a 750.dat (or 752.dat) End piece,
+0 Next comes a 755.dat End Section,
+0 Then a string of approximately 25 754.dat Link Sections,
+0 Place a 756.dat Center Section,
+0 Then another string of 754.dats facing the opposite way,
+0 Then a 755.dat End Section,
+0 Finish with a 750.dat (or 752.dat) End piece.
+*/
 
 //************************************************************************
 // The user inserts 2 colored end parts (754.dat) at the correct locations.
@@ -132,7 +143,7 @@ void hoser(float m[4][4], int color, int steps, int drawline,
   ITV = 0;
   NTV = 0;
   PrevNTV = 0;
-  for (i =0; i < steps+1; i++)
+  for (i =0; i < steps; i++)
   {
     Bernstein(p, ((float)i / steps), m);
     Bernstein(nextp, ((float)(i+1) / steps), m);
@@ -245,7 +256,7 @@ void hoser(float m[4][4], int color, int steps, int drawline,
       Yaxisrotation=(-pi+(atan((nextp[0]-p[0])/(nextp[2]-p[2]))));}
 
     // Format the new hose segment.
-    sprintf(helper,"1 %d " ,color);
+    sprintf(helper,"1 %d " ,16); // color
     strcat(maintext, helper);
     sprintf(helper,"%g %g %g " ,p[0] ,p[1], p[2]);
     strcat(maintext, helper);
@@ -259,7 +270,7 @@ void hoser(float m[4][4], int color, int steps, int drawline,
 	    (sin(Xaxisrotation)*cos(Yaxisrotation)),
 	    (cos(Xaxisrotation)*cos(Yaxisrotation)));
     strcat(maintext, helper);
-    if ((i==0) || (i==steps)) 
+    if ((i==0) || (i==(steps-1))) 
       sprintf(helper,"%s\n" ,firstparttext);
     else 
       sprintf(helper,"%s\n" ,parttext);

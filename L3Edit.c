@@ -1448,9 +1448,22 @@ int Inline1Part(int partnum)
 extern void hoser(float m[4][4], int color, int steps, int drawline,
 		  char *parttext, char *firstparttext);
 
+#define PI 3.1415927
+
 /*****************************************************************************/
 int Hose1Part(int partnum, int steps)
 {
+    float m[4][4] = {
+      {1.0,0.0,0.0,0.0},
+      {0.0,1.0,0.0,0.0},
+      {0.0,0.0,1.0,0.0},
+      {0.0,0.0,0.0,1.0}
+    };
+    float          m1[4][4];
+    float          v[4] = {0, -50, 0, 1}; // Velocity in y of intermediate control points.
+    float          v1[4] = {0, -5, 0, 1}; // Offset in y of intermediate control points.
+    float          r[4];
+
     int            i = 0;
     int            n, Color, CurColor;
     struct L3LineS *LinePtr;
@@ -1459,12 +1472,17 @@ int Hose1Part(int partnum, int steps)
     struct L3LineS *FirstPtr;
     struct L3LineS *LastPtr;
     struct L3PartS *PartPtr;
-    float          r[4];
-    float          m[4][4];
-    float          m1[4][4];
     char           Comment[256];
     char *parttext = NULL;
     char *firstparttext = NULL;
+    double         angle;
+
+    angle = PI;
+    m[1][1] = (float)cos(angle);
+    m[1][2] = (float)(-1.0*sin(angle));
+    m[2][1] = (float)sin(angle);
+    m[2][2] = (float)cos(angle);
+    // m[1][3] = 8.0;
 
     if (SelectedLinePtr)
 	LinePtr = SelectedLinePtr;
@@ -1476,19 +1494,63 @@ int Hose1Part(int partnum, int steps)
 	i++;
     }
 
-    if (!LinePtr)
+    FirstPtr = LinePtr;
+    if (!FirstPtr)
 	return -1; //partnum not found
-    
-    if (LinePtr->LineType != 1)
+    if (FirstPtr->LineType != 1)
       return i;
+
+    LastPtr = LinePtr->NextLine; 
+    if (!LastPtr)
+      return i;
+    if (LastPtr->LineType != 1)
+      return i;
+
+    // Backup SelectedLinePtr
+    PrevPtr = SelectedLinePtr;
+
+    // Add a 755.dat plug part at far end of the hose.
+    NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+    memcpy(NextPtr, LastPtr, sizeof(struct L3LineS));
+    PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
+    memcpy(PartPtr, LastPtr->PartPtr, sizeof(struct L3PartS));
+    NextPtr->PartPtr = PartPtr;
+    // Link it in
+    NextPtr->NextLine = FirstPtr->NextLine; 
+    FirstPtr->NextLine = NextPtr;
+    // Switch to part 755.dat
+    SelectedLinePtr = NextPtr;
+    Swap1Part(i, "755.dat");
+    //rotate it 180 degrees around X.
+    Move1Part(i, m, 1);
+    //Rotate1Part(i, m);
+
+    // Add a 755.dat plug part at near end of the hose.
+    NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+    memcpy(NextPtr, FirstPtr, sizeof(struct L3LineS));
+    PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
+    memcpy(PartPtr, FirstPtr->PartPtr, sizeof(struct L3PartS));
+    NextPtr->PartPtr = PartPtr;
+    // Link it in
+    NextPtr->NextLine = FirstPtr->NextLine; 
+    FirstPtr->NextLine = NextPtr;
+    // Switch to part 755.dat
+    SelectedLinePtr = NextPtr;
+    Swap1Part(i, "755.dat");
+    //rotate it 180 degrees around X.
+    Move1Part(i, m, 1);
+    //Rotate1Part(i, m);
+
+    // Restore SelectedLinePtr
+    SelectedLinePtr = PrevPtr;
 
     FirstPtr = LinePtr->NextLine; 
     if (!FirstPtr)
       return i;
     if (FirstPtr->LineType != 1)
       return i;
-
-    NextPtr = FirstPtr->NextLine; 
+    
+    NextPtr = FirstPtr->NextLine;
     if (!NextPtr)
       return i;
     if (NextPtr->LineType != 1)
@@ -1502,29 +1564,38 @@ int Hose1Part(int partnum, int steps)
 
     // Get the color and the names of the hose parts.
     CurColor = LinePtr->Color;
-    if (LinePtr->PartPtr)
-      parttext = LinePtr->PartPtr->DatName;
-    if (FirstPtr->PartPtr)
-      firstparttext = FirstPtr->PartPtr->DatName;
+    firstparttext = strdup("756.dat");
+    FixDatName(firstparttext);
+    parttext = strdup("754.dat");
+    FixDatName(parttext);
 
     // Get the 4 control points from the part locations.
-    m[0][0] = LinePtr->v[0][3];
-    m[0][1] = LinePtr->v[1][3];
-    m[0][2] = LinePtr->v[2][3];
+    memcpy(m1, LinePtr->v, sizeof(LinePtr->v));
+    M4V4Mul(r,m1,v1);
+    m[0][0] = r[0];
+    m[0][1] = r[1];
+    m[0][2] = r[2];
     m[0][3] = 0;
-    m[1][0] = FirstPtr->v[0][3];
-    m[1][1] = FirstPtr->v[1][3];
-    m[1][2] = FirstPtr->v[2][3];
+    memcpy(m1, LinePtr->v, sizeof(LinePtr->v));
+    M4V4Mul(r,m1,v);
+    m[1][0] = r[0];
+    m[1][1] = r[1];
+    m[1][2] = r[2];
     m[1][3] = 0;
-    m[2][0] = NextPtr->v[0][3];
-    m[2][1] = NextPtr->v[1][3];
-    m[2][2] = NextPtr->v[2][3];
+    memcpy(m1, LastPtr->v, sizeof(LastPtr->v));
+    M4V4Mul(r,m1,v);
+    m[2][0] = r[0];
+    m[2][1] = r[1];
+    m[2][2] = r[2];
     m[2][3] = 0;
-    m[3][0] = LastPtr->v[0][3];
-    m[3][1] = LastPtr->v[1][3];
-    m[3][2] = LastPtr->v[2][3];
+    memcpy(m1, LastPtr->v, sizeof(LastPtr->v));
+    M4V4Mul(r,m1,v1);
+    m[3][0] = r[0];
+    m[3][1] = r[1];
+    m[3][2] = r[2];
     m[3][3] = 0;
-    
+
+#if 0
     // Convert LinePtr into comments.
     strcpy(Comment, "Hosed: ");
     n = strlen(Comment);
@@ -1547,9 +1618,10 @@ int Hose1Part(int partnum, int steps)
 	Comment1LinePtr(NextPtr, " ");
       LinePtr->NextLine = NextPtr; 
     }
+#endif
 
     // Insert the hosed part between the last two comment lines.
-    hoser(m, CurColor, steps, 1, parttext,firstparttext);
+    hoser(m, CurColor, steps, 0, parttext,firstparttext);
 
     return 0;
 }
