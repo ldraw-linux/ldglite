@@ -4741,6 +4741,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 /***************************************************************/
 void fnkeys(int key, int x, int y)
 {
+  GLdouble pan_x, pan_y, pan_z;
   float angle;
 
   glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
@@ -4858,6 +4859,16 @@ void fnkeys(int key, int x, int y)
       fXRot -= 360.0;
     break;
 #endif
+  case GLUT_KEY_F1:
+    panlock ^= 1;
+    if (panlock)  // Start panning.
+    {
+      mouse(GLUT_LEFT_BUTTON, GLUT_DOWN, x, y);
+      panning = 1;
+    }
+    else
+      mouse(GLUT_LEFT_BUTTON, GLUT_UP, x, y);
+    break;
 #if 0
   case GLUT_KEY_F1:
     rotate_about(1.0, 0.0, 0.0, 5.0 );
@@ -5503,15 +5514,6 @@ mouse(int button, int state, int x, int y)
 
     if (!panlock)
       panning = 0;
-
-    if (glutModifiers & GLUT_ACTIVE_ALT)
-    {
-      panlock ^= 1;
-      panning = 1;
-    }
-    else 
-      panlock = 0;
-
     return;
   }
   else if (panlock)
