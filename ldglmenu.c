@@ -34,6 +34,7 @@
 int  filemenunum;
 int  dirmenunum;
 int  mainmenunum;
+int  fovmenunum;
 int  DateiCount    = 0;
 int  FolderCount    = 0;
 char DateiListe[MAX_DIR_ENTRIES][NAMELENGTH];
@@ -42,6 +43,7 @@ int  minfilenum    = 0;
 char dirpattern[256] = "*";
 char filepattern[256] = "*.ldr";
 char dirfilepath[256];
+char fovstr[32];
 
 void filemenu(int);
 
@@ -52,6 +54,58 @@ extern char progname[256];
 extern int EPS_OUTPUT_FIGURED_OUT;
 
 extern void colormenu(int c);
+
+extern double projection_fov;
+extern int ldraw_projection_type;  // 1 = perspective, 0 = orthographic.
+
+/***************************************************************/
+void fovmenu(int c)
+{
+  switch (c)
+  {
+  case 1:
+    projection_fov += 1;
+    break;
+  case 2:
+    projection_fov -= 1;
+    break;
+  case 3:
+    projection_fov += 10;
+    break;
+  case 4:
+    projection_fov -= 10;
+    break;
+  case 5:
+    projection_fov = 30;
+    break;
+  case 6:
+    projection_fov = 45;
+    break;
+  case 7:
+    projection_fov = 60;
+    break;
+  case 8:
+    projection_fov = 90;
+    break;
+  case 9:
+    projection_fov = 67.38;
+    break;
+  }
+  
+  if (projection_fov < 0.0)
+    projection_fov = 1.0;
+
+  glutSetMenu(fovmenunum); // Reset the current menu to the main menu.
+  sprintf(fovstr, "FOV = %0.2f    ", projection_fov);
+  glutChangeToMenuEntry(1, fovstr, 0);
+  glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
+
+  // Gotta reshape().  Send fake mode setting to accomplish it.
+  if (ldraw_projection_type)  // 1 = perspective, 0 = ortho
+    menuKeyEvent('J', 0, 0);
+  else
+    menuKeyEvent('j', 0, 0);
+}
 
 /***************************************************************/
 void menu(int item)
@@ -241,6 +295,20 @@ void initializeMenus(void)
 #endif
 #endif
   {
+  fovmenunum = glutCreateMenu(fovmenu);
+  sprintf(fovstr, "FOV = %0.2f    ", projection_fov);
+  glutAddMenuEntry(fovstr, 0);
+  glutAddMenuEntry("                   ", 0);
+  glutAddMenuEntry("+1                 ", 1);
+  glutAddMenuEntry("-1                 ", 2);
+  glutAddMenuEntry("+10                ", 3);
+  glutAddMenuEntry("-10                ", 4);
+  glutAddMenuEntry("30                 ", 5);
+  glutAddMenuEntry("45                 ", 6);
+  glutAddMenuEntry("60                 ", 7);
+  glutAddMenuEntry("90                 ", 8);
+  glutAddMenuEntry("L3P default (67.38)", 9);
+
   view = glutCreateMenu(menu);
   glutAddMenuEntry("Ldraw Oblique   ", '0');
   glutAddMenuEntry("Back            ", '1');
@@ -255,6 +323,7 @@ void initializeMenus(void)
   glutAddMenuEntry("                ", '\0');
   glutAddMenuEntry("OrthoGraphic    ", 'j');
   glutAddMenuEntry("Perspective     ", 'J');
+  glutAddSubMenu(  "FOV Angle       ", fovmenunum);
 
   opts = glutCreateMenu(menu);
   glutAddMenuEntry("Shading         ", 'h');
