@@ -587,11 +587,13 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
 		// Pallette Entries
 		*zcp = zcolor_table[c].primary;
 		*zcs = zcolor_table[c].dither;
-	} else if ((c >= 256)&&(c<512)) {
+	} 
+#ifdef USE_OPENGL
+	else if ((c >= 256)&&(c<512)) {
 		// Dithered colors
 		*zcp = zcolor_table[(c & 0xf0)>>4].primary;
 		*zcs = zcolor_table[c & 0xf].primary;
-#ifdef USE_OPENGL
+
 		// use colors borrowed from ldview
 		if ( c == 334) // Gold
 		{
@@ -614,36 +616,79 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
 		  zcp->b = (unsigned char) (((int)zcp->b + (int)zcs->b) / 2);
 		  //zcs = zcp;
 		}
-#endif
-	} else if ((c >= 0x4000000)&&(c<=0x7ffffff)) {
+	}
+	else if ((c >= 0x2000000)&&(c<=0x3ffffff)) {
+                // L3P extended RGB colors
+	        zcp->r = (c & 0x00ff0000) >> 16;
+		zcp->g = (c & 0x0000ff00) >> 8;
+		zcp->b = (c & 0x000000ff) >> 0;
+                zcs = zcp;
+		if (c & 0x1000000) {
+		  zcs->a = 0x0;
+		} else {
+		  zcs->a = 0xff;
+		}
+	}
+	else if ((c >= 0x4000000)&&(c<=0x7ffffff)) {
 		// Numbers of 0x4000000 to 0x7ffffff are hard coded color values. 
-			// Numbers of 0x4000000 to 0x7ffffff are hard coded color values. 
-			zcp->r = 16*((c & 0x00000f00) >> 8);
-			zcp->g = 16*((c & 0x000000f0) >> 4);
-			zcp->b = 16*((c & 0x0000000f) >> 0);
-			if (c & 0x1000000) {
-				zcp->a = 0x0;
-			} else {
-				zcp->a = 0xff;
-			}
-			zcs->r = 16*((c & 0x00f00000) >> 20);
-			zcs->g = 16*((c & 0x000f0000) >> 16);
-			zcs->b = 16*((c & 0x0000f000) >> 12);
-			if (c & 0x2000000) {
-				zcs->a = 0x0;
-			} else {
-				zcs->a = 0xff;
-			}
-	} else {
-		// anything else - solid grey
-			zcp->r = 0x7f;
-			zcp->g = 0x7f;
-			zcp->b = 0x7f;
-		    zcp->a = 0xff;
-			zcs->r = 0x7f;
-			zcs->g = 0x7f;
-			zcs->b = 0x7f;
-		    zcs->a = 0xff;
+	        zcp->r = 16*((c & 0x00000f00) >> 8);
+		zcp->g = 16*((c & 0x000000f0) >> 4);
+		zcp->b = 16*((c & 0x0000000f) >> 0);
+		if (c & 0x1000000) {
+		  zcp->a = 0x0;
+		} else {
+		  zcp->a = 0xff;
+		}
+		zcs->r = 16*((c & 0x00f00000) >> 20);
+		zcs->g = 16*((c & 0x000f0000) >> 16);
+		zcs->b = 16*((c & 0x0000f000) >> 12);
+		// No dithering, just average the numbers  
+		zcp->r = (unsigned char) (((int)zcp->r + (int)zcs->r) / 2);
+		zcp->g = (unsigned char) (((int)zcp->g + (int)zcs->g) / 2);
+		zcp->b = (unsigned char) (((int)zcp->b + (int)zcs->b) / 2);
+                zcs = zcp;
+		if (c & 0x2000000) {
+		  zcs->a = 0x0;
+		} else {
+		  zcs->a = 0xff;
+		}
+	} 
+#else
+	else if ((c >= 256)&&(c<512)) {
+		// Dithered colors
+		*zcp = zcolor_table[(c & 0xf0)>>4].primary;
+		*zcs = zcolor_table[c & 0xf].primary;
+	}
+	else if ((c >= 0x4000000)&&(c<=0x7ffffff)) {
+		// Numbers of 0x4000000 to 0x7ffffff are hard coded color values. 
+	        zcp->r = 16*((c & 0x00000f00) >> 8);
+		zcp->g = 16*((c & 0x000000f0) >> 4);
+		zcp->b = 16*((c & 0x0000000f) >> 0);
+		if (c & 0x1000000) {
+		  zcp->a = 0x0;
+		} else {
+		  zcp->a = 0xff;
+		}
+		zcs->r = 16*((c & 0x00f00000) >> 20);
+		zcs->g = 16*((c & 0x000f0000) >> 16);
+		zcs->b = 16*((c & 0x0000f000) >> 12);
+		if (c & 0x2000000) {
+		  zcs->a = 0x0;
+		} else {
+		  zcs->a = 0xff;
+		}
+	} 
+#endif
+	else {
+	        // anything else - solid grey
+	        zcp->r = 0x7f;
+		zcp->g = 0x7f;
+		zcp->b = 0x7f;
+		zcp->a = 0xff;
+		zcs->r = 0x7f;
+		zcs->g = 0x7f;
+		zcs->b = 0x7f;
+		zcs->a = 0xff;
 	}
 }
 
