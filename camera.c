@@ -39,6 +39,26 @@ GLfloat		camZ = 0.0;
 f00Quat		camOrient;
 
 /***************************************************************/
+void
+getCamera(float m[4][4], float v[3])
+{
+  GLfloat rotMatrix[ 16 ];
+  int i, j, k;
+
+  // Apply the current orientation....
+  f00Quat_getMatrix( &camOrient, rotMatrix );
+  for (j = 0, k = 0; j < 4; j++)
+  {
+    for (i = 0; i < 4; i++)
+      m[i][j] =  rotMatrix[k++];
+  }
+
+  v[0] = -camX;
+  v[1] = -camY;
+  v[2] = -camZ;
+}
+
+/***************************************************************/
 // This is called when we wish to apply the viewpoint transformations.
 void
 applyCamera()
