@@ -1,4 +1,26 @@
 ----------------------------------------------------------------------
+I should probably make an LSYNTH plugin.
+
+----------------------------------------------------------------------
+Fix the LD parser to handle Mac line endings on whatever platform I 
+might run it on.  In ldlite.l it seems to do something for [\n] but
+treats the chars [ \t\r] as whitespace.  I suppose a cheap hack would
+be to trean [\r] the same as [\n] even though that would mean extra
+parsing for DOS/Windows files which use \r\n.
+
+Change this:
+
+[ \t\r]		;
+[\n]		{yylval.c = "EOL"; return tEOL;}
+
+to this:
+
+[ \t]		;
+[\r\n]		{yylval.c = "EOL"; return tEOL;}
+
+Then run lex/yacc, compile, and see what happens.
+
+----------------------------------------------------------------------
 Should mklist be available as a plugin?
 
 ----------------------------------------------------------------------
