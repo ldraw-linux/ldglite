@@ -169,12 +169,15 @@ Command line options (see also the original ldlite docs for more):
 -wN sets linewidth to N.
 -q quality lines (antialiased)
 -J picks the perspective projection.
--zN sets the near clipping plane.
--ZN sets the far clipping plane.
--caN sets the camera field of view angle in degrees.  (like l3p)
--ccX,Y,Z sets the camera location.  (like l3p)
--coX,Y,Z sets the model origin for the camera to look at.
--cuX,Y,Z sets the camera up vector.
+-zN sets the near clipping plane.  (default = 10.  100 if GL_DEPTH_BITS < 24)
+-ZN sets the far clipping plane.  (default = 4000)
+-caN sets the camera FOV angle in degrees.  (like l3p, except default = 45)
+-ccX,Y,Z sets the camera location.  (like l3p, except default = 0,0,1000)
+-coX,Y,Z sets the model origin for the camera to look at.  (default = 0,0,0)
+-cuX,Y,Z sets the camera up vector.  (default = 0,0,1)
+-lcX,Y,Z sets the light location.  (like l3p, except default = -1000,1000,1000)
+-lcX,Y,Z,R,G,B sets the light location and color.
+-lCR,G,B sets the ambient lighting color.
 -uX,Y saves a huge output image from window sized tiles.  (see notes below)
 -& windows mode.  Detach from the console window.  Windows version only.
 -- if no DAT filename is given on the command line ldglite will read
