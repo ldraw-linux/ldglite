@@ -1,0 +1,58 @@
+CC=cc
+
+# Comment these out to disable PNG output if no PNG lib is available.
+#
+#PNG_FLAGS=-DUSE_PNG 
+#PNG_LIBS= -lpng -lz 
+
+# Comment these out to disable tile rendering option.
+#
+TR_FLAGS=-DTILE_RENDER_OPTION
+TR_SRC=tr.c
+
+# Comment these out to disable the test GUI made with MUI.
+#
+#GUI_FLAGS=-DTEST_MUI_GUI
+#GUI_SRC=ldglgui.c
+#GUI_LIBS=-lmui
+
+GL_LIBS=-L/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries
+
+# Sadly, I cannot find the glut libs, although the headers do exist.
+GLUT_LIBS=-L/System/Library/Frameworks/GLUT.framework/Versions/A/Libraries -lglut
+
+CFLAGS=-g -I. -DUNIX -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS) $(TR_FLAGS) $(GUI_FLAGS)
+
+#CFLAGS=-g -Imac -DMAC -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS) $(TR_FLAGS) $(GUI_FLAGS)
+
+## This is lame.  I don't know how to do both .c and .cpp for the OBJS line
+## so I pretend L3*.cpp is L3*.c and make rules for them later.
+#
+SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c y.tab.c lex.yy.c qbuf.c main.c L3Edit.c L3Math.c L3Input.c L3View.c $(TR_SRC) $(GUI_SRC)
+OBJS = $(SRCS:.c=.o)
+
+all	: ldglite
+
+ldglite:   $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o ldglite $(GL_LIBS) $(PNG_LIBS) $(GUI_LIBS) -lGLU -lGL -lm
+	rm -rf l3glite
+	ln -s ldglite l3glite
+	rm -rf l3gledit
+	ln -s ldglite l3gledit
+
+l3glite:   ldglite
+
+ldglitepng:   ldglite
+
+l3glitepng:   ldglite
+
+## This is lame.  I don't know how to do both .c and .cpp for the OBJS line.
+#
+L3Math.o: L3Math.cpp
+	$(CC) -c $(CFLAGS) L3Math.cpp
+L3Input.o: L3Input.cpp
+	$(CC) -c $(CFLAGS) L3Input.cpp
+L3View.o: L3View.cpp
+	$(CC) -c $(CFLAGS) L3View.cpp
+
+
