@@ -242,10 +242,20 @@ int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
 {
     if (!LinePtr)
     {
-      if (s)
-	sprintf(s,"Line %5d:  EOF\n", i);
-      if (f)
-	fprintf(f,"Line %d:  EOF\n", i);
+      if (i < 0)
+      {
+	if (s)
+	  sprintf(s,"\n");
+	if (f)
+	  fprintf(f,"\n");
+      }
+      else
+      {
+	if (s)
+	  sprintf(s,"Line %5d:  EOF\n", i);
+	if (f)
+	  fprintf(f,"Line %d:  EOF\n", i);
+      }
       return 0; //partnum not found
     }
     
