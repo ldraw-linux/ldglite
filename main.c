@@ -222,6 +222,7 @@ static char eresponse[100] = "";
 float moveXamount = 10.0;
 float moveYamount = 8.0;
 float moveZamount = 10.0;
+float turnCenter[3] = {0.0, 0.0, 0.0};
 // staticbuffer is where our non-moving background goes
 // screenbuffer is where the final composite goes
 int staticbuffer = GL_BACK;
@@ -3407,6 +3408,16 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	ecommand[1] = 0;
 	edit_mode_gui();
 	return 1;
+      case 'c':
+	// Center set axis
+	clear_edit_mode_gui();
+	edit_mode_gui();
+	return 1;
+      case 'o':
+	drawAxis ^= 1;
+	clear_edit_mode_gui();
+	glutPostRedisplay();
+	return 1;
       }
       return 1;
     }
@@ -4824,6 +4835,21 @@ motion(int x, int y)
   GLdouble p_x, p_y;
   //int glutModifiers;  // Glut doesn't like this here!
 
+  if (1)
+  {
+    //NOTE: something about ledit mode screws up the projection?
+    // matrix (or perhaps the modeling matrix) so that gluUnProject()
+    // returns 80 for instead of 0 for pan_y at x=0.
+    // This is always > 10 so it always warps the pointer below,
+    // which makes it impossible to spin.  reshape() fixes it, but
+    // the real cause should be tracked down and fixed.
+    int savedirty;
+    // Reset the projection matrix.
+    savedirty = dirtyWindow; 
+    reshape(Width, Height);
+    dirtyWindow = savedirty; 
+  }
+
   if (mouse_state == GLUT_DOWN && mouse_button == GLUT_LEFT_BUTTON) {
     glGetDoublev(GL_MODELVIEW_MATRIX, model);
     glGetDoublev(GL_PROJECTION_MATRIX, proj);
@@ -4950,6 +4976,7 @@ motion(int x, int y)
       // mouse gets to the edge of the screen.
       if ((p_x > 10) || (p_x < -10) || (p_y > 10) || (p_y < -10))
       {
+	//printf("WARP(%0.2f, %0.2f)\n", p_x, p_y);
 	glutWarpPointer(Width/2, Height/2);
 	pan_start_x = 0;
 	pan_start_y = 0;
