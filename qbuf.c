@@ -51,7 +51,7 @@ QBUF_ID *qbufCreate(long buf_num, long buf_size, long policy)
   qbuf_id_tmp->buffer_size = buf_size;
   qbuf_id_tmp->policy = policy;
 
-  qbuf_id_tmp->index_p = malloc((buf_num+1)*4);
+  qbuf_id_tmp->index_p = malloc((buf_num+1)*sizeof(long));
   if (qbuf_id_tmp->index_p == NULL) {
     PRINT_FATAL("Error: qbuf index malloc failed");
   }
