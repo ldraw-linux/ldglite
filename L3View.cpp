@@ -452,14 +452,21 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			// Negative determinant means its a mirrored stud.
 			if (det < 0)
 			{
-			  float mirror[4][4] = {
-			    {1.0,0.0,0.0,0.0},
-			    {0.0,1.0,0.0,0.0},
-			    {0.0,0.0,-1.0,0.0},
-			    {0.0,0.0,0.0,1.0}
-			  };
-			  M4M4Mul(mm,m1,mirror);
-			  memcpy(m1,mm,sizeof(m1));
+			  // For now, we only support Paul Easters logo.dat texture.
+			  // For display speed, we really should precalculate an IsLogo flag
+			  // and use that here rather than IsStud.
+			  if  (LinePtr->PartPtr && LinePtr->PartPtr->DatName &&
+			       !stricmp(LinePtr->PartPtr->DatName, "logo.dat"))
+			  {
+			    float mirror[4][4] = {
+			      {1.0,0.0,0.0,0.0},
+			      {0.0,1.0,0.0,0.0},
+			      {0.0,0.0,-1.0,0.0},
+			      {0.0,0.0,0.0,1.0}
+			    };
+			    M4M4Mul(mm,m1,mirror);
+			    memcpy(m1,mm,sizeof(m1));
+			  }
 			}
 			  
 			// implement nesting level counter.
