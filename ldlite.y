@@ -152,7 +152,7 @@ Number		: tZERO
 
 StepLine	: tZERO tSTEP Words tEOL
 		{
-		  if (ldraw_commandline_opts.output == 1) {
+		  if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		    fprintf(output_file,"%d %s %s\n",$1, $2, $3);
 		  } else {
 			zStep(stepcount,1);
@@ -166,7 +166,7 @@ StepLine	: tZERO tSTEP Words tEOL
 		}
 		| tZERO tSTEP Words tEOF
 		{
-		  if (ldraw_commandline_opts.output == 1) {
+		  if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		    fprintf(output_file,"%d %s %s\n",$1, $2, $3);
 		  } else {
 			zStep(stepcount,1);
@@ -183,7 +183,7 @@ StepLine	: tZERO tSTEP Words tEOL
 
 PauseLine	: tZERO tPAUSE Words tEOL
 		{
-		  if (ldraw_commandline_opts.output == 1) {
+		  if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		    fprintf(output_file,"%d %s %s\n",$1, $2, $3);
 	      } else {
 			zPause();
@@ -196,7 +196,7 @@ PauseLine	: tZERO tPAUSE Words tEOL
 		}
 		| tZERO tPAUSE Words tEOF
 		{
-		  if (ldraw_commandline_opts.output == 1) {
+		  if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		    fprintf(output_file,"%d %s %s\n",$1, $2, $3);
 	      } else {
 			zPause();
@@ -212,7 +212,7 @@ PauseLine	: tZERO tPAUSE Words tEOL
 
 WriteLine	: tZERO tWRITE Words tEOL
 		{
-		  if (ldraw_commandline_opts.output == 1) {
+		  if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		    fprintf(output_file,"%d %s %s\n",$1, $2, $3);
 	      } else {
 			zWrite($3);
@@ -225,7 +225,7 @@ WriteLine	: tZERO tWRITE Words tEOL
 		}
 		| tZERO tWRITE Words tEOF
 		{
-		  if (ldraw_commandline_opts.output == 1) {
+		  if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		    fprintf(output_file,"%d %s %s\n",$1, $2, $3);
 	      } else {
 			zWrite($3);
@@ -241,7 +241,7 @@ WriteLine	: tZERO tWRITE Words tEOL
 
 ClearLine	: tZERO tCLEAR Words tEOL
 		{
-		  if (ldraw_commandline_opts.output == 1) {
+		  if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		    fprintf(output_file,"%d %s %s\n",$1, $2, $3);
 	      } else {
 			zClear();
@@ -254,7 +254,7 @@ ClearLine	: tZERO tCLEAR Words tEOL
 		}
 		| tZERO tCLEAR Words tEOF
 		{
-		  if (ldraw_commandline_opts.output == 1) {
+		  if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		    fprintf(output_file,"%d %s %s\n",$1, $2, $3);
 	      } else {
 			zClear();
@@ -270,7 +270,7 @@ ClearLine	: tZERO tCLEAR Words tEOL
 
 ColorLine	: tZERO tCOLOR Number tIDENT Number Number Number Number Number Number Number Number Number tEOL
 		{
-		  if (ldraw_commandline_opts.output == 1) {
+		  if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		    fprintf(output_file,"%d not supported: %s %g %s %g %g %g %g %g %g %g %g %g\n",
 			  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
 			/* alias the new color name to grey */
@@ -281,7 +281,7 @@ ColorLine	: tZERO tCOLOR Number tIDENT Number Number Number Number Number Number
 		}
 		| tZERO tCOLOR Number tIDENT Number Number Number Number Number Number Number Number Number tEOF
 		{
-		  if (ldraw_commandline_opts.output == 1) {
+		  if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		    fprintf(output_file,"%d not supported: %s %g %s %g %g %g %g %g %g %g %g %g\n",
 			  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
 			/* alias the new color name to grey */
@@ -398,7 +398,7 @@ MPDFileLine	: tZERO tFILE tIDENT tEOL
 
 SaveLine	: tZERO tSAVE Words tEOL
 		{
-		  if (ldraw_commandline_opts.output == 1) {
+		  if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		    fprintf(output_file,"%d %s %s\n",$1, $2, $3);
 	      } else {
 			zSave(stepcount);
@@ -412,7 +412,7 @@ SaveLine	: tZERO tSAVE Words tEOL
 		}
 		| tZERO tSAVE Words tEOF
 		{
-		  if (ldraw_commandline_opts.output == 1) {
+		  if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		    fprintf(output_file,"%d %s %s\n",$1, $2, $3);
 	      } else {
 			zSave(stepcount);
@@ -723,7 +723,7 @@ CommentLine	: tZERO Words tEOL
 		printf("# %s\n",$2);
 		fflush(stdout);
 #endif
-		if (ldraw_commandline_opts.output == 1) {
+		if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		  fprintf(output_file,"%d %s\n",$1, $2);
 	    } else {
 		  platform_comment($2, include_stack_ptr);
@@ -740,7 +740,7 @@ CommentLine	: tZERO Words tEOL
 		printf("# %s\n",$2);
 		fflush(stdout);
 #endif
-		if (ldraw_commandline_opts.output == 1) {
+		if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		  fprintf(output_file,"%d %s\n",$1, $2);
 	    } else {
  		  platform_comment($2, include_stack_ptr);
@@ -851,12 +851,26 @@ PartName	: tIDENT
 ObjectLine	: tONE Color Position TransMatrix PartName tEOL
 		{
 		if (ldraw_commandline_opts.output == 1) {
-  		  transform_vec_inplace($3);
-  		  transform_mat_inplace($4);
-		  fprintf(output_file,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g %s\n",
-		  $1, $2, ($3)->x, ($3)->y, ($3)->z,
-		  ($4)->a, ($4)->b, ($4)->c, ($4)->d, ($4)->e, ($4)->f, 
-		  ($4)->g, ($4)->h, ($4)->i, $5);
+			if (include_stack_ptr >= ldraw_commandline_opts.output_depth ) {
+  				transform_vec_inplace($3);
+  				transform_mat_inplace($4);
+				fprintf(output_file,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g %s\n",
+					$1, $2, ($3)->x, ($3)->y, ($3)->z,
+					($4)->a, ($4)->b, ($4)->c, ($4)->d, ($4)->e, ($4)->f, 
+					($4)->g, ($4)->h, ($4)->i, $5);
+			} else {
+				if (start_include_file($5) == 0) {
+					fprintf(output_file,"0 inlining %s\n",$5);
+	  				/* update transform matricies */
+					push_transform($3, $4);
+					znamelist_push();
+					current_color[include_stack_ptr] = $2;
+				} else {
+#ifndef NO_COMMENTS
+				printf("# Cannot find %s, ignoring.\n",$5);
+#endif
+				}
+			}
 	    } else {
 	      if (start_include_file($5) == 0) {
 	  	  /* update transform matricies */
@@ -878,25 +892,28 @@ ObjectLine	: tONE Color Position TransMatrix PartName tEOL
 		| tONE Color Position TransMatrix PartName tEOF
 		{
 		if (ldraw_commandline_opts.output == 1) {
-  		  transform_vec_inplace($3);
-  		  transform_mat_inplace($4);
-		  fprintf(output_file,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g %s\n",
-		  $1, $2, ($3)->x, ($3)->y, ($3)->z,
-		  ($4)->a, ($4)->b, ($4)->c, ($4)->d, ($4)->e, ($4)->f, 
-		  ($4)->g, ($4)->h, ($4)->i, $5);
-	    } else {
-	        if (start_include_file($5) == 0) {
-	  	  /* update transform matricies */
-		  push_transform($3, $4);
-		  znamelist_push();
-		  current_color[include_stack_ptr] = $2;
-		  defer_stop_include_file();
-		  } else {
+			if (include_stack_ptr >= ldraw_commandline_opts.output_depth ) {
+  				transform_vec_inplace($3);
+  				transform_mat_inplace($4);
+				fprintf(output_file,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g %s\n",
+					$1, $2, ($3)->x, ($3)->y, ($3)->z,
+					($4)->a, ($4)->b, ($4)->c, ($4)->d, ($4)->e, ($4)->f, 
+					($4)->g, ($4)->h, ($4)->i, $5);
+			} else {
+				if (start_include_file($5) == 0) {
+					fprintf(output_file,"0 inlining %s\n",$5);
+	  				/* update transform matricies */
+					push_transform($3, $4);
+					znamelist_push();
+					current_color[include_stack_ptr] = $2;
+					defer_stop_include_file();
+				} else {
 #ifndef NO_COMMENTS
-		  printf("# Cannot find %s, ignoring.\n",$5);
+					printf("# Cannot find %s, ignoring.\n",$5);
 #endif
-			if (stop_include_file() == (-1)) { YYACCEPT; };
-		  }
+					if (stop_include_file() == (-1)) { YYACCEPT; };
+				}
+			}
 		}
 #ifdef USE_QBUF_MALLOC
 		qbufReleasePtr(word_pool, (char *)$5);
@@ -911,7 +928,7 @@ LineLine	: tTWO Color Position Position tEOL
 		{
 		transform_vec_inplace($3);
 		transform_vec_inplace($4);
-		if (ldraw_commandline_opts.output == 1) {
+		if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		  fprintf(output_file,"%d %d %g %g %g %g %g %g\n",
 		  $1, $2, ($3)->x, ($3)->y, ($3)->z,
 		  ($4)->x, ($4)->y, ($4)->z);
@@ -930,7 +947,7 @@ LineLine	: tTWO Color Position Position tEOL
 		{
 		transform_vec_inplace($3);
 		transform_vec_inplace($4);
-		if (ldraw_commandline_opts.output == 1) {
+		if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		  fprintf(output_file,"%d %d %g %g %g %g %g %g\n",
 		  $1, $2, ($3)->x, ($3)->y, ($3)->z,
 		  ($4)->x, ($4)->y, ($4)->z);
@@ -954,7 +971,7 @@ TriLine	: tTHREE Color Position Position Position tEOL
 		transform_vec_inplace($3);
 		transform_vec_inplace($4);
 		transform_vec_inplace($5);
-		if (ldraw_commandline_opts.output == 1) {
+		if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		  fprintf(output_file,"%d %d %g %g %g %g %g %g %g %g %g\n",
 		  $1, $2, ($3)->x, ($3)->y, ($3)->z,
 		  ($4)->x, ($4)->y, ($4)->z, ($5)->x, ($5)->y, ($5)->z);
@@ -976,7 +993,7 @@ TriLine	: tTHREE Color Position Position Position tEOL
 		transform_vec_inplace($3);
 		transform_vec_inplace($4);
 		transform_vec_inplace($5);
-		if (ldraw_commandline_opts.output == 1) {
+		if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		  fprintf(output_file,"%d %d %g %g %g %g %g %g %g %g %g\n",
 		  $1, $2, ($3)->x, ($3)->y, ($3)->z,
 		  ($4)->x, ($4)->y, ($4)->z, ($5)->x, ($5)->y, ($5)->z);
@@ -1002,7 +1019,7 @@ QuadLine	: tFOUR Color Position Position Position Position tEOL
 		transform_vec_inplace($4);
 		transform_vec_inplace($5);
 		transform_vec_inplace($6);
-		if (ldraw_commandline_opts.output == 1) {
+		if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		  fprintf(output_file,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
 		  $1, $2, ($3)->x, ($3)->y, ($3)->z,
 		  ($4)->x, ($4)->y, ($4)->z, ($5)->x, ($5)->y, ($5)->z,
@@ -1028,7 +1045,7 @@ QuadLine	: tFOUR Color Position Position Position Position tEOL
 		transform_vec_inplace($4);
 		transform_vec_inplace($5);
 		transform_vec_inplace($6);
-		if (ldraw_commandline_opts.output == 1) {
+		if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		  fprintf(output_file,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
 		  $1, $2, ($3)->x, ($3)->y, ($3)->z,
 		  ($4)->x, ($4)->y, ($4)->z, ($5)->x, ($5)->y, ($5)->z,
@@ -1057,7 +1074,7 @@ FiveLine	: tFIVE Color Position Position Position Position tEOL
 		transform_vec_inplace($4);
 		transform_vec_inplace($5);
 		transform_vec_inplace($6);
-		if (ldraw_commandline_opts.output == 1) {
+		if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		  fprintf(output_file,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
 		  $1, $2, ($3)->x, ($3)->y, ($3)->z,
 		  ($4)->x, ($4)->y, ($4)->z, ($5)->x, ($5)->y, ($5)->z,
@@ -1083,7 +1100,7 @@ FiveLine	: tFIVE Color Position Position Position Position tEOL
 		transform_vec_inplace($4);
 		transform_vec_inplace($5);
 		transform_vec_inplace($6);
-		if (ldraw_commandline_opts.output == 1) {
+		if ((ldraw_commandline_opts.output == 1)&&(include_stack_ptr <= ldraw_commandline_opts.output_depth )) {
 		  fprintf(output_file,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
 		  $1, $2, ($3)->x, ($3)->y, ($3)->z,
 		  ($4)->x, ($4)->y, ($4)->z, ($5)->x, ($5)->y, ($5)->z,
