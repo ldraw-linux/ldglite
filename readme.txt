@@ -216,6 +216,15 @@ INSERT key toggles LEDIT emulation mode.
 An excellent description of the LEDIT Hot Keys can be found at:
 http://www.library.thinkquest.com/20551/keys.html
 
+The LEDIT emulation currently contains an extension to the linetype menu
+to allow adding primitive linetypes 2-5.  The parser for this ignores
+commas and parenthesis so you can enter the points for a type 2 line
+like this if you wish:
+
+Enter Coords for Type 2 Primitive: (0.0, 0.0, 0.0) (10.0, 10.0, 10.0)
+
+The color defaults to 16 for filled primitives and 24 for line primitives.
+
 
 				Notes
 
