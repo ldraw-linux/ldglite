@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------
+The MUI menu is a real CPU hog on slow systems like the 486.  Does it
+have an Idle function.  If not, where can I put it to sleep?
 
+----------------------------------------------------------------------
 Add a fn to highlight (in dark red) the first char of each LEDIT menu
 line and every char that follows a space char.  This would be a nice
 hint about the menu keyboard accelerators.  If it's easier, I could
