@@ -167,6 +167,10 @@ Command line options (see also the original ldlite docs for more):
 -ledit or -LEDIT do the same but with draw-to-current and stud-as-line on.
 -wN sets linewidth to N.
 -q quality lines (antialiased)
+-J picks the perspective projection.
+-zN sets the near clipping plane.
+-ZN sets the far clipping plane.
+-caN sets the camera field of view angle in degrees.  (like l3p)
 -uX,Y saves a huge output image from window sized tiles.  (see notes below)
 -& windows mode.  Detach from the console window.  Windows version only.
 -- if no DAT filename is given on the command line ldglite will read
@@ -215,7 +219,7 @@ INSERT key toggles LEDIT emulation mode.
 (use CTRL-INSERT if you want to render the moving part solid)
 
 An excellent description of the LEDIT Hot Keys can be found at:
-http://www.library.thinkquest.com/20551/keys.html
+  http://library.thinkquest.org/20551/keys.html
 
 			   LEDIT extensions
 
