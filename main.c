@@ -1110,7 +1110,9 @@ void printPOVMatrix(FILE *f)
   if (ldraw_projection_type)
   {
     // POV uses x for Field Of View, GluPerspective() uses y.
-    angle = projection_fov * Width / Height;
+    // However, I now convert projection_fov to vertical right before 
+    // calling GluPerspective(), so it should be good as is.
+    angle = projection_fov; //angle = projection_fov * Width / Height;
     projectionstr = perspectivestr;
   }
   else
@@ -2301,6 +2303,10 @@ void linequalitysetup()
     glHint( GL_LINE_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
     glEnable( GL_BLEND );
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // NOTE: I need to saturate the DST alpha somehow.  
+    // This should do it, but turns all edges black
+    // because when Ad is already 1, min(As,1-Ad) is 0 and not As.  Nuts!
+    //glBlendFunc(GL_SRC_ALPHA_SATURATE, GL_ONE_MINUS_SRC_ALPHA);
     // Also smooth edges of printed polygons.
     glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
     //glEnable( GL_POLYGON_SMOOTH ); 
@@ -2637,7 +2643,9 @@ void reshape(int width, int height)
     // frustrum = clipping space(left, right, bottom, top, near, far)
     //glFrustum(-3.0, 3.0, -3.0, 3.0, 64, 256);
  
-    fov = projection_fov;
+    //fov = projection_fov;
+    //Convert from horizontal FOV to vertical for gluPerspective()
+    fov =  2.0*atan(tan(PI_180*projection_fov/2.0)/((double)Width/(double)Height))/PI_180;
     znear = projection_znear;
     zfar = projection_zfar;
 
@@ -3297,7 +3305,9 @@ void TiledDisplay(void)
    trImageSize(tr, TILE_IMAGE_WIDTH, TILE_IMAGE_HEIGHT);
    trRowOrder(tr, TR_TOP_TO_BOTTOM);
 
-   fov = projection_fov;
+   //fov = projection_fov;
+   //Convert from horizontal FOV to vertical for gluPerspective()
+   fov =  2.0*atan(tan(PI_180*projection_fov/2.0)/((double)width/(double)height))/PI_180;
    znear = projection_znear;
    zfar = projection_zfar;
 
