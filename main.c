@@ -93,6 +93,16 @@ double twirl_increment = 10.0;
 
 static int list_made = 0;
 
+// Drawing modes
+#define NORMAL_MODE 	0x0000
+#define STUDLESS_MODE 	0x0001
+#define WIREFRAME_MODE 	0x0002
+#define SHADED_MODE 	0x0004
+#define BBOX_MODE 	0x0008
+#define INVISIBLE_MODE 	0x0010
+
+#define USE_DOUBLE_BUFFER
+
 int curstep = 0;
 int cropping = 1;
 int panning = 0;
@@ -102,7 +112,7 @@ GLdouble pan_end_x = 0.0;
 GLdouble pan_end_y = 0.0;
 int pan_start_zWire;
 int pan_start_F;
-int pan_visible = 2; // Start with bounding box spin mode.
+int pan_visible = BBOX_MODE | WIREFRAME_MODE; // Bounding Box spin mode.
 
 //#define USE_QUATERNION 1
 #ifdef USE_QUATERNION
@@ -1189,6 +1199,11 @@ void display(void)
   int client_rect_bottom;
   int res;
 
+  if (panning)
+    glDrawBuffer(GL_BACK);  // Enable double buffer for spin mode.
+  else
+    glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
+
   if (zShading)
     glEnable(GL_LIGHTING);
   else
@@ -1457,7 +1472,8 @@ GLUT_BITMAP_HELVETICA_18
   //    glutSwapBuffers();
 
 #ifdef USE_DOUBLE_BUFFER
-  glutSwapBuffers();
+  if (panning)
+    glutSwapBuffers();
 #endif
 
   // If we just want the output files then quit when idle.
@@ -1686,27 +1702,28 @@ void keyboard(unsigned char key, int x, int y)
       reshape(Width, Height);
       break;
     case 'f':
-      if (ldraw_commandline_opts.F != 1)
-	ldraw_commandline_opts.F = 1;
-      else if (zWire == 1)
-	ldraw_commandline_opts.F = 2;
-      else
-	ldraw_commandline_opts.F = 0;
+      ldraw_commandline_opts.F ^= STUDLESS_MODE;
       reshape(Width, Height);
       break;
     case 'n':
       zWire = 0;
       zShading = 0;
+      ldraw_commandline_opts.F &= !(WIREFRAME_MODE);
+      ldraw_commandline_opts.F &= !(SHADED_MODE);
       reshape(Width, Height);
       break;
     case 'h':
       zWire = 0;
       zShading = 1;
+      ldraw_commandline_opts.F &= !(WIREFRAME_MODE);
+      ldraw_commandline_opts.F |= SHADED_MODE;
       reshape(Width, Height);
       break;
     case 'w':
       zWire = 1;
       zShading = 0;
+      ldraw_commandline_opts.F |= WIREFRAME_MODE;
+      ldraw_commandline_opts.F &= !(SHADED_MODE);
       reshape(Width, Height);
       break;
     case 'P':
@@ -1721,9 +1738,18 @@ void keyboard(unsigned char key, int x, int y)
       ldraw_commandline_opts.M = c;
       return;
     case 'v':
-      if (pan_visible < 1) 
-        pan_visible = 3;
-      pan_visible--;
+      if (pan_visible == (BBOX_MODE | WIREFRAME_MODE) )
+	pan_visible = (WIREFRAME_MODE | STUDLESS_MODE);
+      else if (pan_visible == (WIREFRAME_MODE | STUDLESS_MODE) )
+	pan_visible = INVISIBLE_MODE;
+      else if (pan_visible == (INVISIBLE_MODE) )
+	pan_visible = (BBOX_MODE | SHADED_MODE);
+      else if (pan_visible == (BBOX_MODE | SHADED_MODE) )
+	pan_visible = (STUDLESS_MODE | SHADED_MODE);
+      else if (pan_visible == (STUDLESS_MODE | SHADED_MODE) )
+	pan_visible = (BBOX_MODE | WIREFRAME_MODE);
+      else 
+	pan_visible = (BBOX_MODE | WIREFRAME_MODE);
       return;
     case 27:
 	exit(0);
@@ -1966,7 +1992,6 @@ mouse(int button, int state, int x, int y)
 
     if (ldraw_commandline_opts.debug_level == 1)
       printf("pdn(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
-
     panning = 0;
     return;
   }
@@ -2035,6 +2060,7 @@ mouse(int button, int state, int x, int y)
       printf("rotating about(%0.2f, %0.2f) by angle %0.2f\n", pan_y, -pan_x, angle);
     rotate_about(pan_y, -pan_x, 0.0, angle );
 #endif
+
     panning = 0;
   }
 
@@ -2071,13 +2097,37 @@ motion(int x, int y)
       pan_start_zWire = zWire;
 
       pan_start_F = ldraw_commandline_opts.F;
-      zWire = 1;
       ldraw_commandline_opts.F = pan_visible; 
+      zWire = (ldraw_commandline_opts.F & WIREFRAME_MODE);
     }
     panning = 1;
 
-    // Lets rotate the wireframe.
-    if (pan_visible)
+    if (pan_visible & INVISIBLE_MODE) // Draw the rubberband line
+    {
+      //printf("MOTION(%0.2f, %0.2f, %0.2f)\n", pan_x, -pan_y, pan_z);
+      glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
+      glEnable( GL_COLOR_LOGIC_OP ); 
+      //glEnable( GL_LOGIC_OP_MODE ); 
+      glLogicOp(GL_XOR);
+      glColor3f(1.0, 1.0, 1.0); // white
+      glBegin(GL_LINES);
+      glVertex3f(pan_start_x, pan_start_y, pan_z);
+      glVertex3f(pan_end_x, pan_end_y, pan_z);
+      glEnd();
+      glBegin(GL_LINES);
+      glVertex3f(pan_start_x, pan_start_y, pan_z);
+      glVertex3f(pan_x, pan_y, pan_z);
+      glEnd();
+      glLogicOp(GL_COPY);
+      glEnable( GL_DEPTH_TEST ); 
+      glDisable( GL_COLOR_LOGIC_OP ); 
+      //glDisable( GL_LOGIC_OP_MODE ); 
+      glFlush();
+
+      pan_end_x = pan_x;
+      pan_end_y = pan_y;
+    }
+    else    // Lets rotate the wireframe.
     {
       p_x = pan_x; //Save next pan_start coords.
       p_y = pan_y;
@@ -2113,31 +2163,6 @@ motion(int x, int y)
       pan_start_y = p_y;
 
       glutPostRedisplay();
-    }
-    else
-    {
-      //printf("MOTION(%0.2f, %0.2f, %0.2f)\n", pan_x, -pan_y, pan_z);
-      glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
-      glEnable( GL_COLOR_LOGIC_OP ); 
-      //glEnable( GL_LOGIC_OP_MODE ); 
-      glLogicOp(GL_XOR);
-      glColor3f(1.0, 1.0, 1.0); // white
-      glBegin(GL_LINES);
-      glVertex3f(pan_start_x, pan_start_y, pan_z);
-      glVertex3f(pan_end_x, pan_end_y, pan_z);
-      glEnd();
-      glBegin(GL_LINES);
-      glVertex3f(pan_start_x, pan_start_y, pan_z);
-      glVertex3f(pan_x, pan_y, pan_z);
-      glEnd();
-      glLogicOp(GL_COPY);
-      glEnable( GL_DEPTH_TEST ); 
-      glDisable( GL_COLOR_LOGIC_OP ); 
-      //glDisable( GL_LOGIC_OP_MODE ); 
-      glFlush();
-
-      pan_end_x = pan_x;
-      pan_end_y = pan_y;
     }
   }
 
@@ -2535,7 +2560,7 @@ void ParseParams(int *argc, char **argv)
 	break;
       case 'E':
       case 'e':
-	sscanf(pszParam,"%c%d",&type,&z_line_offset);
+	sscanf(pszParam,"%c%f",&type,&z_line_offset);
 	if (z_line_offset > 1.0)
 	  z_line_offset = 1.0;
 	break;
@@ -2548,16 +2573,20 @@ void ParseParams(int *argc, char **argv)
 	  switch (c) {
 	  case 'H':
 	    zShading = 1; // mnemonic = sHading? =Hi quality?
+	    ldraw_commandline_opts.F |= SHADED_MODE;
 	    break;
 	  case 'S':
-	    ldraw_commandline_opts.F = 1;
+	    ldraw_commandline_opts.F |= STUDLESS_MODE;
 	    break;
 	  case 'W':
-	    ldraw_commandline_opts.F = 2;
+	    ldraw_commandline_opts.F |= WIREFRAME_MODE;
 	    zWire = 1;
 	    break;
 	  case 'N':
 	    zShading = 0; // mnemonic = normal (no shading)
+	    zWire = 0;
+	    ldraw_commandline_opts.F &= !(SHADED_MODE);
+	    ldraw_commandline_opts.F &= !(WIREFRAME_MODE);
 	    break;
 	  }
 	}
@@ -2782,6 +2811,7 @@ main(int argc, char **argv)
   //glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL);
 #ifdef USE_DOUBLE_BUFFER
   glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
+  glDrawBuffer(GL_FRONT_AND_BACK);  // Effectively disable double buffer.
 #else
   glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH);
 #endif
