@@ -132,6 +132,10 @@ char *dirname( const char *filepath )
 
   if ( (ptr = strrchr(filepath, '\\')) || (ptr = strrchr(filepath, '/')) )
 
+#elif defined(UNIX)
+
+  if ( (ptr = strrchr(filepath, '/')) )
+
 #else
 #error ambiguous platform in dirname() definition
 #endif
@@ -150,6 +154,10 @@ char *dirname( const char *filepath )
 #elif defined(WINDOWS)
 
     tmpstr = strdup(".\\");
+
+#elif defined(UNIX)
+
+    tmpstr = strdup("./");
 
 #else
 #error unspecified platform in dirname() definition
@@ -175,17 +183,21 @@ char *basename( const char *filepath )
   }
 
   
-  #if defined(MAC)
+#if defined(MAC)
 
   if ( (ptr = strrchr(filepath, ':')) ) 
 
-  #elif defined(WINDOWS)
+#elif defined(WINDOWS)
 
   if ( (ptr = strrchr(filepath, '\\')) || (ptr = strrchr(filepath, '/')) )
 
-  #else
-  #error unspecified platform in basename() definition
-  #endif
+#elif defined(UNIX)
+
+  if ( (ptr = strrchr(filepath, '/')) )
+
+#else
+#error unspecified platform in basename() definition
+#endif
   {
     // If there isn't anything after the last separator, the result is a 0-length string
     tmpstr = malloc(strlen(ptr+1)+1);
