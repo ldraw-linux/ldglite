@@ -230,7 +230,9 @@ Command line options (see also the original ldlite docs for more):
 -vX,Y displays in an X wide by Y high window.
 -x displays the x,y,z axis.
 -ms Saves an image for each STEP and quits.
--mS Does the same, but without opening a window.
+-mS Does the same, but without opening a window (on most systems).
+    You can also include an optional output filename with either of these.
+    eg. -mSpicture.png
 -iN picks output image type. 1 = PNG, 2 = Transparent PNG, 3 = BMP8, 4 = BMP24 
     5 = PPM.  Use -N to turn off output image cropping.
 -eN.NN fixes polyline offset driver errors.  Try -e0.95 if lines look bad.
