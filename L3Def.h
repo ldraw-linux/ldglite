@@ -122,6 +122,9 @@ struct L3PartS
    unsigned int         Investigated:1;
    unsigned int         Internal:1;       /* For transforms, not in Parts[]  */
    unsigned int         IsStud:1;         /* The part is a stud              */
+#ifdef USE_OPENGL
+   unsigned int         IsMPD:1;          /* This is an MPD internal file    */
+#endif
 };
 struct L3PartInternalS
 {
