@@ -1344,10 +1344,7 @@ int cat(void)
 /* get the current working directory (the following routines are from pwd.c) */
 int pwd(void)
 {
-#ifndef UNIX
-  getcwd(directory, MAXNAMLEN);
-#else
-#ifdef AGL
+#if 1 /* ifndef UNIX or ifndef AGL */
   getcwd(directory, MAXNAMLEN);
 #else
   for(off = 0;;) {
@@ -1399,8 +1396,8 @@ int pwd(void)
     }
   }
 #endif
-#endif
-      return(0);
+
+  return(0);
 }
 
 /***************************************************************/
@@ -1501,7 +1498,8 @@ void ls(void)
 /***************************************************************/
 int cd(char *s)
 {
-  printf("cd %s\n", s);
+    printf("cd %s\n", s);
+    muiClearTBString(t1);  // Clear out the text box 
     if(chdir(s) < 0) {
 	fprintf(stderr,"cannot open %s\n",s);
 	return -1;
@@ -1636,9 +1634,10 @@ void handletextbox(muiObject *obj, enum muiReturnValue value)
     char *s, *slash;
 
     if (value != MUI_TEXTBOX_RETURN) return;
-    s = muiGetTBString(obj);
+    // Use strdup() because cd(s) frees the string returned by muiGetTBString.
+    s = strdup(muiGetTBString(obj));  
     if (0 == cd(s)) {
-	muiClearTBString(obj);
+        if (s) free(s);
 	return;
     }
     /* hack up the path, if any */
@@ -1656,6 +1655,7 @@ void handletextbox(muiObject *obj, enum muiReturnValue value)
     }
      /* now filename == slash+1 */
     writeoutputfile(directory, slash+1);
+    free(s);
     return; //exit(0);
 }
 
