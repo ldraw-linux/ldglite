@@ -676,7 +676,7 @@ int Add1Part(int partnum)
 	if (nParts == 0)
 	    nParts = 1;                         /* First time a model is loaded    */
 	if (!strlen(datfilename) || (!strcmp(datfilename, " ")))
-	    strcpy(datfilename, "model.dat");
+	    strcpy(datfilename, "model.ldr");
 	PartPtr->DatName = Strdup(datfilename);
 	if (!PartPtr->DatName)
 	    return 0;

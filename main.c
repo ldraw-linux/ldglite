@@ -294,7 +294,7 @@ int  minfilenum    = 0;
 char progname[256];
 char dirfilepath[256];
 char dirpattern[256] = "*";
-char filepattern[256] = "*.dat";
+char filepattern[256] = "*.ldr";
 
 int drawAxis = 0;
 int qualityLines = 0;
@@ -5388,11 +5388,11 @@ void menu(int item)
     if (strcmp(filepattern, "*"))
     {
       strcpy(filepattern, "*");
-      glutChangeToMenuEntry(3, "Filter - *.dat     ", 1);
+      glutChangeToMenuEntry(3, "Filter - *.ldr     ", 1);
     }
     else
     {
-      strcpy(filepattern, "*.dat");
+      strcpy(filepattern, "*.ldr");
       glutChangeToMenuEntry(3, "Filter - All Files ", 1);
     }
     filemenu(15); // refresh the file list with files in new dir.
