@@ -83,6 +83,7 @@ double twirl_increment = 10.0;
 static int list_made = 0;
 
 int curstep = 0;
+int clipping = 1;
 int panning = 0;
 GLdouble pan_start_x = 0.0;
 GLdouble pan_start_y = 0.0;
@@ -151,6 +152,23 @@ void write_bmp(char *filename)
   char *p, c;
   FILE *fp;
 
+  UINT width = Width;
+  UINT height = Height;
+  GLint xoff = 0;
+  GLint yoff = 0;
+
+#if 1
+  if (clipping)
+  {
+    //xoff = max(0, z.extent_x1);
+    //yoff = max(0, z.extent_y1);
+    width = min((z.extent_x2 - xoff), (Width - xoff));
+    height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
+    width = ((width + 31)/32) * 32; // round to a multiple of 32.
+    printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
+  }
+#endif
+  
   printf("Write BMP %s\n", filename);
   if ((fp = fopen(filename,"wb+"))==NULL) {
     printf("Could not open %s\n", filename);
@@ -160,8 +178,8 @@ void write_bmp(char *filename)
   
   bmh = (LPBITMAPINFOHEADER) z.dib;
   bmh->biSize = 40;
-  bmh->biWidth = Width;
-  bmh->biHeight = Height;
+  bmh->biWidth = width;
+  bmh->biHeight = height;
   bmh->biPlanes = 1;
   //bmh->biBitCount = 16;
   bmh->biBitCount = 24;
@@ -223,18 +241,18 @@ void write_bmp(char *filename)
 
   // no pallete since we use RGB
 
-  for (i = 0; i < Height; i++)
+  for (i = 0; i < height; i++)
   {
-    glReadPixels(0, i, Width, 1, GL_RGB, GL_UNSIGNED_BYTE, buf);
+    glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, buf);
     p = buf;
-    for (j = 0; j < Width; j++)
+    for (j = 0; j < width; j++) // RBG -> BRG
     {
       c = p[0];
       p[0] = p[2];
       p[2] = c;
       p+=3;
     }
-    fwrite(buf, Width*3, 1, fp);
+    fwrite(buf, width*3, 1, fp);
   }
   fclose(fp);
 }
@@ -268,6 +286,23 @@ void write_png(char *filename)
   png_text text_ptr[1];
   FILE *fp;
 
+  UINT width = Width;
+  UINT height = Height;
+  GLint xoff = 0;
+  GLint yoff = 0;
+
+#if 1
+  if (clipping)
+  {
+    xoff = max(0, z.extent_x1);
+    yoff = max(0, z.extent_y1);
+    width = min((z.extent_x2 - xoff), (Width - xoff));
+    height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
+    width = ((width + 31)/32) * 32; // round to a multiple of 32.
+    printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
+  }
+#endif
+  
   if ((p = strrchr(filename, '.')) != NULL)
     *p = 0;
   strcat(filename, use_uppercase ? ".PNG" : ".png");
@@ -306,7 +341,7 @@ void write_png(char *filename)
   
   png_init_io(png_ptr, fp);
 
-  png_set_IHDR(png_ptr, info_ptr, Width, Height, 8, 
+  png_set_IHDR(png_ptr, info_ptr, width, height, 8, 
 	       PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
 	       PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
@@ -317,9 +352,9 @@ void write_png(char *filename)
   
   // Write image rows
   //png_write_image(png_ptr, row_pointers);
-  for (i = Height-1; i >= 0; i--)
+  for (i = height-1; i >= 0; i--)
   {
-    glReadPixels(0, i, Width, 1, GL_RGB, GL_UNSIGNED_BYTE, buf);
+    glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, buf);
     png_write_row(png_ptr, buf);
   }
 
@@ -336,7 +371,7 @@ void write_png(char *filename)
 #endif
 
 #ifdef WINDOWS
-#define USE_BMP8 1
+//#define USE_BMP8 1
 #endif
 
 #ifdef USE_BMP8
@@ -525,17 +560,30 @@ void write_bmp8(char *filename)
 {
   UINT width = Width;
   UINT height = Height;
-  
-  BYTE* data = (BYTE*)malloc(width*height*3);
-
+  GLint xoff = 0;
+  GLint yoff = 0;
+  BYTE* data;
   RGBQUAD RGBpal[256];
   BYTE tmpPal[3][256];
-  BYTE *colormappedBuffer = (BYTE*) malloc (width*height);
+  BYTE *colormappedBuffer;
   UINT col;
   
+  if (clipping)
+  {
+    xoff = max(0, z.extent_x1);
+    yoff = max(0, z.extent_y1);
+    width = min((z.extent_x2 - xoff), (Width - xoff));
+    height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
+    width = ((width + 31)/32) * 32; // round to a multiple of 32.
+    printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
+  }
+  
+  colormappedBuffer = (BYTE*) malloc (width*height);
+  data = (BYTE*)malloc(width*height*3);
+
   printf("Write BMP8 %s\n", filename);
   
-  glReadPixels(0, 0, Width, Height, GL_RGB, GL_UNSIGNED_BYTE, data);
+  glReadPixels(xoff, yoff, (GLint)width, (GLint)height, GL_RGB, GL_UNSIGNED_BYTE, data);
 
   dl1quant(data, colormappedBuffer, width, height, 256, TRUE, tmpPal); 
 
@@ -545,7 +593,7 @@ void write_bmp8(char *filename)
     RGBpal[col].rgbGreen=tmpPal[1][col];
     RGBpal[col].rgbBlue=tmpPal[0][col];
   }
-  
+
   SaveBMP8(filename, colormappedBuffer, width, height, 256, &RGBpal[0]);
   
   free (colormappedBuffer);
@@ -607,6 +655,19 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
 	strcat(filename,filenum);
       }
       strcat(filename, use_uppercase ? ".BMP" : ".bmp");
+
+//*************************************************************************
+//NOTE: Write a fn to calc zp->extents_* by checking zbuf a line at a time.
+//        Find min and max x and y coords with modified zbuffer vals.
+//        (What is the default zbufer val? 0? infinity?)
+//        Use zp->extents in write_xxx() to limit the img to the model.
+//      LDLITE calcs zp->extents as it draws the polys and lines but I dont
+//        think that will work here since OpenGL does the screen transform.
+//*************************************************************************
+
+  printf("EXTENTS: (%d, %d) -> (%d, %d)\n", zp->extent_x1, zp->extent_y1, 
+         zp->extent_x2, zp->extent_y2);
+
 #ifdef USE_PNG
       if (ldraw_image_type == 1)
 	write_png(filename);
@@ -1077,7 +1138,7 @@ void display(void)
 #ifdef IGNORE_DIRTY
   // I cannot really do this until I can also redraw the whole image 
   // (up to the current step) on demand when window gets dirty.
-  if (ldraw_commandline_opts.M != 'C')
+  if (ldraw_commandline_opts.M == 'P')
   {
     // Non-continuous output stop after each step.
     if (curstep == 0) // (Or dirty)
@@ -1300,8 +1361,17 @@ GLUT_BITMAP_HELVETICA_18
   glutSwapBuffers();
 #endif
 
-  if (ldraw_commandline_opts.M != 'C')
+  // If we just want the output files then quit when idle.
+  if ((ldraw_commandline_opts.output == 1) ||
+       (ldraw_commandline_opts.M == 'S')) 
   {
+    //quit the program
+    exit(0);
+  }
+
+  if (ldraw_commandline_opts.M == 'P')
+  {
+    printf("stepcount = %d of %d\n", curstep, stepcount);
     // Non-continuous output stop after each step.
     if (stepcount == curstep)
       curstep = 0; // Reset to first step
@@ -1659,6 +1729,8 @@ motion(int x, int y)
 
   //glutPostRedisplay();
 }
+
+void filemenu(int);
 
 /***************************************************************/
 void menu(int item)

@@ -33,6 +33,7 @@
 #endif
 
 extern int curstep;
+extern int clipping;
 
 GLdouble model_mat[4*4];
 GLdouble proj_mat[4*4];
@@ -721,7 +722,7 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
   ZCOLOR zc, zs;
   
 #ifdef USE_OPENGL
-  if (ldraw_commandline_opts.M != 'C')
+  if (ldraw_commandline_opts.M == 'P')
   {
     // Non-continuous output stop after each step.
 #ifdef IGNORE_DIRTY
@@ -769,6 +770,30 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
 	  c, zc.r, zc.g, zc.b, zs.r, zs.g, zs.b);
 #endif
 
+  if (clipping)
+  {
+    // Gotta convert to screen coords first for opengl.
+    GLdouble s1x, s1y, s1z;
+    GLdouble s2x, s2y, s2z;
+
+    gluProject((GLdouble)vp1->x, (GLdouble)-vp1->y, (GLdouble)-vp1->z,
+	     model_mat, proj_mat, view_mat,
+	     &s1x, &s1y, &s1z);
+
+    gluProject((GLdouble)vp2->x, (GLdouble)-vp2->y, (GLdouble)-vp2->z,
+	     model_mat, proj_mat, view_mat,
+	     &s2x, &s2y, &s2z);
+
+    z.extent_x1 = min(s1x,z.extent_x1);
+    z.extent_x1 = min(s2x,z.extent_x1);
+    z.extent_x2 = max(s1x,z.extent_x2);
+    z.extent_x2 = max(s2x,z.extent_x2);
+    z.extent_y1 = min(s1y,z.extent_y1);
+    z.extent_y1 = min(s2y,z.extent_y1);
+    z.extent_y2 = max(s1y,z.extent_y2);
+    z.extent_y2 = max(s2y,z.extent_y2);
+  }
+
 #if 0
   if ((zc.r+zc.b+zc.g) < 50) zc.r = zc.g = zc.b = 128;
   else zc.r = zc.g = zc.b = 65;
@@ -801,7 +826,7 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
   };
 
 #ifdef USE_OPENGL
-  if (ldraw_commandline_opts.M != 'C')
+  if (ldraw_commandline_opts.M == 'P')
   {
     // Non-continuous output stop after each step.
 #ifdef IGNORE_DIRTY
@@ -906,7 +931,7 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
   };
   
 #ifdef USE_OPENGL
-  if (ldraw_commandline_opts.M != 'C')
+  if (ldraw_commandline_opts.M == 'P')
   {
     // Non-continuous output stop after each step.
 #ifdef IGNORE_DIRTY
@@ -1088,7 +1113,7 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
   GLdouble s4x, s4y, s4z;
 
 #ifdef USE_OPENGL
-  if (ldraw_commandline_opts.M != 'C')
+  if (ldraw_commandline_opts.M == 'P')
   {
     // Non-continuous output stop after each step.
 #ifdef IGNORE_DIRTY
@@ -1137,6 +1162,18 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
 	  s1x,s1y,s2x,s2y,s3x,s3y,s4x,s4y);
 #endif
     return;
+  }
+
+  if (clipping)
+  {
+    z.extent_x1 = min(s1x,z.extent_x1);
+    z.extent_x1 = min(s2x,z.extent_x1);
+    z.extent_x2 = max(s1x,z.extent_x2);
+    z.extent_x2 = max(s2x,z.extent_x2);
+    z.extent_y1 = min(s1y,z.extent_y1);
+    z.extent_y1 = min(s2y,z.extent_y1);
+    z.extent_y2 = max(s1y,z.extent_y2);
+    z.extent_y2 = max(s2y,z.extent_y2);
   }
 
   //glDepthFunc(GL_ALWAYS);
