@@ -343,6 +343,60 @@ void printModelMat(char *name)
 	 model[8], model[9] , model[10], model[11],
 	 model[12], model[13] , model[14], model[15]);
 }
+
+/***************************************************************/
+void printLdrawMatrix()
+{
+  char matrix_string[256];
+  char filename[256];
+  char *s;
+
+  concat_path(datfilepath, datfilename, filename);
+  if (filename[0] == '.') // I hate the ./filename thing.
+    strcpy(filename, datfilename);
+
+  s = matrix_string;
+  if (lineWidth > 1.0)
+  {
+    sprintf(s,"-w%g ", lineWidth);
+    s = matrix_string + strlen(matrix_string);
+  }
+  if (qualityLines)
+  {
+    sprintf(s,"-q ");
+    s = matrix_string + strlen(matrix_string);
+  }
+  if (ldraw_projection_type)
+  {
+    sprintf(s,"-J ");
+    s = matrix_string + strlen(matrix_string);
+  }
+  if (ldraw_commandline_opts.S != 1.0)
+  {
+    sprintf(s,"-s%g ", ldraw_commandline_opts.S);
+    s = matrix_string + strlen(matrix_string);
+  }
+  if ((ldraw_commandline_opts.O.x != 0.0) ||
+      (ldraw_commandline_opts.O.y != 0.0))
+  {
+    sprintf(s,"-o%g,%g ", ldraw_commandline_opts.O.x, 
+	    ldraw_commandline_opts.O.y);
+    s = matrix_string + strlen(matrix_string);
+  }
+  sprintf(s,"-a%g,%g,%g,%g,%g,%g,%g,%g,%g",
+	  ldraw_commandline_opts.A.a,
+	  ldraw_commandline_opts.A.b,
+	  ldraw_commandline_opts.A.c,
+	  ldraw_commandline_opts.A.d,
+	  ldraw_commandline_opts.A.e,
+	  ldraw_commandline_opts.A.f,
+	  ldraw_commandline_opts.A.g,
+	  ldraw_commandline_opts.A.h,
+	  ldraw_commandline_opts.A.i);
+
+  printf("%s %s %s\n",progname, matrix_string, filename);
+}
+
 /***************************************************************/
 
 //#define USE_GLFONT 1
@@ -4326,6 +4380,9 @@ void fnkeys(int key, int x, int y)
     break;
 #endif
 #endif
+  case GLUT_KEY_F12:
+    printLdrawMatrix();
+    return;
   default:
     return;
   }
