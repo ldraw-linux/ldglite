@@ -27,7 +27,6 @@
 int zcolor_unalias(int index, char *name);
 int zcolor_alias(int index, char *name);
 
-
 ZCOLOR_DEF_TABLE_ENTRY zcolor_table_default[ZCOLOR_TABLE_DEFAULT_SIZE] = {
 	{"Black",             8,{0x22,0x22,0x22,0xff},{0x22,0x22,0x22,0xff}}, // 0
 	{"Blue",              9,{0x00,0x33,0xb2,0xff},{0x00,0x33,0xb2,0xff}}, // 1
@@ -126,6 +125,11 @@ ZMATRIX_NAMELIST_ENTRY *zmatrix_namelist_stack[MAX_ZCOLOR_DEPTH];
 int znamelist_stack_index=0;
 
 #ifdef USE_OPENGL
+
+// Allow all 512 LDRAW colors to be redefined.
+#undef ZCOLOR_TABLE_SIZE
+#define ZCOLOR_TABLE_SIZE 512
+
 /***************************************************************/
 int alias_peeron_colors(void)
 {
@@ -245,6 +249,37 @@ void zcolor_init()
 				// Store name in namelist
 				zcolor_alias(i, zcolor_table_default[i].name);
 			}
+#ifdef USE_OPENGL
+		} else if (i>255) {
+		  // insert the LDRAW dithered colors in the bigger table.
+		  ZCOLOR *zcp = &(zcolor_table[i].primary);
+		  ZCOLOR *zcs = &(zcolor_table[i].dither);
+
+		  zcolor_table[i].inverse_index = 0;
+		  *zcp = zcolor_table[(i & 0xf0)>>4].primary;
+		  *zcs = zcolor_table[i & 0xf].primary;
+
+		  // No dithering for opengl, just average the numbers  
+		  zcp->r = (unsigned char) (((int)zcp->r + (int)zcs->r) / 2);
+		  zcp->g = (unsigned char) (((int)zcp->g + (int)zcs->g) / 2);
+		  zcp->b = (unsigned char) (((int)zcp->b + (int)zcs->b) / 2);
+		  zcs = zcp;
+
+		  // use colors borrowed from ldview
+		  if ( i == 334) // Gold
+		  {
+		    zcp->r = zcs->r = 240; 
+		    zcp->g = zcs->g = 176;
+		    zcp->b = zcs->b = 51;
+		  }
+		  else if (( i == 383) // Chrome silver
+			   || (i == 494)) // Electrical Contacts
+		  {
+		    zcp->r = zcs->r = 180; //204; // I prefer my plastic chrome a bit darker with 
+		    zcp->g = zcs->g = 180; //204; // bright but fuzzy  specular highlights.
+		    zcp->b = zcs->b = 180; //204;
+		  }
+#endif
 		} else {
 			zcolor_table[i] = defcolor;
 		}
@@ -589,36 +624,11 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
 		*zcs = zcolor_table[c].dither;
 	} 
 #ifdef USE_OPENGL
-	else if ((c >= 256)&&(c<512)) {
-		// Dithered colors
-		*zcp = zcolor_table[(c & 0xf0)>>4].primary;
-		*zcs = zcolor_table[c & 0xf].primary;
-
-		// use colors borrowed from ldview
-		if ( c == 334) // Gold
-		{
-		  zcp->r = 240; 
-		  zcp->g = 176;
-		  zcp->b = 51;
-		}
-		else if (( c == 383) // Chrome silver
-			 || (c == 494)) // Electrical Contacts
-		{
-		  zcp->r = 180; //204; // I prefer my plastic chrome a bit darker with 
-		  zcp->g = 180; //204; // bright but fuzzy  specular highlights.
-		  zcp->b = 180; //204;
-		}
-		else
-		{
-		  // No dithering, just average the numbers  
-		  zcp->r = (unsigned char) (((int)zcp->r + (int)zcs->r) / 2);
-		  zcp->g = (unsigned char) (((int)zcp->g + (int)zcs->g) / 2);
-		  zcp->b = (unsigned char) (((int)zcp->b + (int)zcs->b) / 2);
-		  //zcs = zcp;
-		}
-	}
+	//else if ((c >= 256)&&(c<512)) {
+		// Dithered colors are now included in bigger ZCOLOR_TABLE_SIZE
+	//}
 	else if ((c >= 0x2000000)&&(c<=0x3ffffff)) {
-                // L3P extended RGB colors
+                // L3P extended RGB colors (NOTE: add to ldlite CVS sources.)
 	        zcp->r = (c & 0x00ff0000) >> 16;
 		zcp->g = (c & 0x0000ff00) >> 8;
 		zcp->b = (c & 0x000000ff) >> 0;
@@ -631,17 +641,17 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
 	}
 	else if ((c >= 0x4000000)&&(c<=0x7ffffff)) {
 		// Numbers of 0x4000000 to 0x7ffffff are hard coded color values. 
-	        zcp->r = 16*((c & 0x00000f00) >> 8);
-		zcp->g = 16*((c & 0x000000f0) >> 4);
-		zcp->b = 16*((c & 0x0000000f) >> 0);
+	        zcp->r = 17*((c & 0x00000f00) >> 8);
+		zcp->g = 17*((c & 0x000000f0) >> 4);
+		zcp->b = 17*((c & 0x0000000f) >> 0);
 		if (c & 0x1000000) {
 		  zcp->a = 0x0;
 		} else {
 		  zcp->a = 0xff;
 		}
-		zcs->r = 16*((c & 0x00f00000) >> 20);
-		zcs->g = 16*((c & 0x000f0000) >> 16);
-		zcs->b = 16*((c & 0x0000f000) >> 12);
+		zcs->r = 17*((c & 0x00f00000) >> 20);
+		zcs->g = 17*((c & 0x000f0000) >> 16);
+		zcs->b = 17*((c & 0x0000f000) >> 12);
 		// No dithering, just average the numbers  
 		zcp->r = (unsigned char) (((int)zcp->r + (int)zcs->r) / 2);
 		zcp->g = (unsigned char) (((int)zcp->g + (int)zcs->g) / 2);
