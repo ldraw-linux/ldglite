@@ -242,27 +242,29 @@ void initializeMenus(void)
   glutAddMenuEntry("Front           ", '7');
   glutAddMenuEntry("UpsideDown      ", '8');
   glutAddMenuEntry("Natural         ", '9');
-
-  opts = glutCreateMenu(menu);
+  glutAddMenuEntry("                ", '\0');
   glutAddMenuEntry("OrthoGraphic    ", 'j');
   glutAddMenuEntry("Perspective     ", 'J');
-  glutAddMenuEntry("                ", '\0');
+
+  opts = glutCreateMenu(menu);
   glutAddMenuEntry("Shading         ", 'h');
   glutAddMenuEntry("Linemode        ", 'l');
   glutAddMenuEntry("Normal          ", 'n');
   glutAddMenuEntry("Studs           ", 'f');
   glutAddMenuEntry("Quality Lines   ", 'q');
-  glutAddMenuEntry("Visible spin    ", 'V');
+  glutAddMenuEntry("Spin Mode       ", 'V');
+  glutAddMenuEntry("                ", '\0');
   glutAddMenuEntry("Step-Continuous ", 's');
   glutAddMenuEntry("Polling         ", 'g');
 #ifdef USE_L3_PARSER
   glutAddMenuEntry("Parser          ", 'r');
 #endif
+  glutAddMenuEntry("Editing         ", 4);
   glutAddMenuEntry("                ", '\0');
-  glutAddMenuEntry("Zoom out        ", 2);
-  glutAddMenuEntry("Zoom in         ", 3);
-  glutAddMenuEntry("Scale dn        ", '-');
-  glutAddMenuEntry("Scale up        ", '+');
+  glutAddMenuEntry("Enlarge         ", 3);
+  glutAddMenuEntry("Reduce          ", 2);
+  glutAddMenuEntry("Zoom in         ", '+');
+  glutAddMenuEntry("Zoom out        ", '-');
 
   colors = glutCreateMenu(colormenu);
   glutAddMenuEntry("Black              ", 0);
