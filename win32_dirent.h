@@ -30,7 +30,7 @@ opendir(char *pSpec)
 static void
 closedir(DIR * pDir)
 {
-  FindClose(pDir);
+  //FindClose(pDir->hFind);
   free(pDir);
 }
 
@@ -40,7 +40,10 @@ readdir(DIR *pDir)
   if (pDir->hFind) {
     strcpy(pDir->de.d_name, pDir->wfd.cFileName);
     if (!FindNextFile(pDir->hFind, &pDir->wfd))
+    {
+      FindClose(pDir->hFind);
       pDir->hFind = NULL;
+    }
     return &pDir->de;
   }
   return NULL;
