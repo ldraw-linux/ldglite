@@ -1340,6 +1340,7 @@ DIR	*file;
 int	off;
 
 int selectedfile = -1;
+int selectedprev = -1;
 
 /***************************************************************/
 void errormsg(char *s)
@@ -1556,7 +1557,8 @@ int cd(char *s)
     ls();
     muiSetTLStrings(tl, filelist);
     muiChangeLabel(l4, directory);
-    selectedfile = 0;
+    selectedfile = -1;
+    selectedprev = -1;
     muiSetVSValue(vs, 1.0);
     return 0;
 }
@@ -1588,9 +1590,17 @@ void	controltltop(muiObject *obj, enum muiReturnValue value)
 {
     float sliderval;
 
-    if ((value != MUI_SLIDER_RETURN) && (value != MUI_SLIDER_THUMB)) return;
+    printf("vs fn %d\n", value);
+
+    if ((value != MUI_SLIDER_RETURN) && (value != MUI_SLIDER_THUMB)
+	)
+      return;
+
     sliderval = muiGetVSVal(obj);
+
     muiSetTLTop(tl, sliderval);
+
+    printf("sliderval =  %0.4f\n", sliderval);
 }
 
 /***************************************************************/
@@ -1598,6 +1608,7 @@ void	handlefileselection(muiObject *obj, enum muiReturnValue value)
 {
     char *fname;
     int len;
+    int doubleclick = 0;
 
     printf("tl fn %d\n", value);
 
@@ -1605,10 +1616,17 @@ void	handlefileselection(muiObject *obj, enum muiReturnValue value)
     fname = filelist[selectedfile];
     if (fname == NULL)
       return;
-    if (value == MUI_TEXTLIST_RETURN_CONFIRM) {
+    if (selectedfile == selectedprev)
+      doubleclick = 1;
+    selectedprev = selectedfile;
+    if ((value == MUI_TEXTLIST_RETURN_CONFIRM) || doubleclick)
+    {
+        if (doubleclick)
+	  printf("DblClick! ");
 	printf("Selected file %s\n", fname);
 	len = strlen(fname);
-	if (fname[len-1] == '/') {
+	if ((fname[len-1] == '/') || (fname[len-1] == '\\'))
+	{
 	    fname[len-1] = 0;
 	    cd(fname);
 	    return;
@@ -1620,7 +1638,7 @@ void	handlefileselection(muiObject *obj, enum muiReturnValue value)
     else if (value != MUI_TEXTLIST_RETURN) return;
 
     muiSetTBString(t1, fname);
-    muiSetVSValue(vs, 1.0);
+    //muiSetVSValue(vs, 1.0);
 }
 
 /***************************************************************/
@@ -1639,7 +1657,8 @@ void handleaccept(muiObject *obj, enum muiReturnValue value)
     if (fname == NULL)
       return;
     len = strlen(fname);
-    if (fname[len-1] == '/') {
+    if ((fname[len-1] == '/') || (fname[len-1] == '\\'))
+    {
 	fname[len-1] = 0;
 	cd(fname);
 	return;
@@ -1776,6 +1795,9 @@ void makefileui(char *s)
 
   muiClearTBString(t1);  // Clear out the text box
 
+  selectedfile = -1;
+  selectedprev = -1;
+
   strcpy(directory, ".");
   cd(directory);
   strcpy(originaldir, directory);
@@ -1821,10 +1843,17 @@ void unMUI_fnkeys(int key, int x, int y)
   switch(key) {
   case GLUT_KEY_PAGE_UP:
   case GLUT_KEY_UP:
-    muiSetVSValue(vs, sliderval + 1.0);
+    //muiSetVSValue(vs, sliderval + 0.01);
+    muiSetVSValue(vs, sliderval + 0.02);
+    sliderval = muiGetVSVal(vs);
+    muiSetTLTop(tl, sliderval);
+    break;
   case GLUT_KEY_PAGE_DOWN:
   case GLUT_KEY_DOWN:
-    muiSetVSValue(vs, sliderval - 1.0);
+    muiSetVSValue(vs, sliderval - 0.01);
+    sliderval = muiGetVSVal(vs);
+    muiSetTLTop(tl, sliderval);
+    break;
   case GLUT_KEY_RIGHT:
   case GLUT_KEY_LEFT:
     break;
