@@ -1,4 +1,8 @@
 ----------------------------------------------------------------------
+Reread Karim's Artemis project pages and see how ldglite fits into
+that particular vision now that it supports plugins and all.
+
+----------------------------------------------------------------------
 Add a wrapper around the keyboard() fn and convert the key to an int
 so I can use high numbers for things that come from the menus and not
 via the GLUT keyboard callback.
