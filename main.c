@@ -188,6 +188,7 @@ extern int Print3Parts(int partnum, char *s1, char *s2, char *s3);
 extern int Comment1Part(int partnum, char *Comment);
 extern int Switch1Part(int partnum);
 extern int Get1PartBox(int partnum, int sc[4]);
+extern int Make1Primitive(int partnum, char *str);
 
 int use_quads = 0;
 int curstep = 0;
@@ -3722,7 +3723,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       case '3':
       case '4':
       case '5':
-	sprintf(eprompt[0], "Enter Type %c Primitive : ", key);
+	sprintf(eprompt[0], "Enter Coords for Type %c Primitive: ", key);
 	eprompt[1][0] = 0;
 	ecommand[0] = key - '0';
 	ecommand[1] = 0;
@@ -4029,12 +4030,14 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       case 3:
       case 4:
       case 5:
-	strcpy(partname, &(ecommand[1]));
-	// Need a new fn to build a make a new primitive:
-	// Make1Primitive(curpiece, partname);
-	// Should I make them enter linetype and color or just points?
-	// Color could default to 24 for linetypes 2,5 and 16 for 3,4.
-	printf("Type %d line = %s\n", (int)c, partname);
+	EraseCurPiece();
+	if ((c == 3) || (c == 4))
+	  color = 16; // default color for filled primitives.
+	else
+	  color = 24; // default edge color for line primitives.
+	sprintf(partname, "%d %d %s", (int)c, color, &(ecommand[1]));
+	Make1Primitive(curpiece, partname);
+	HiLightCurPiece(curpiece);
 	edit_mode_gui();
 	break;
       default:
