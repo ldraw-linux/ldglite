@@ -183,7 +183,7 @@ void muiMoveAll(int uilist, int x, int y)
 /***************************************************************/
 void mui_cleanup(void)
 {
-  printf("MUI OK callback\n");
+  //printf("MUI OK callback\n");
   // Gotta clean up mui and go back to whatever.
   // Must free up mui menu stuff.  
   glEnable( GL_DEPTH_TEST );
@@ -253,7 +253,7 @@ void bcallback(muiObject *obj, enum muiReturnValue r)
     makemainui();
   }
 
-  printf("Button callback %d, %d\n", i, r);
+  //printf("Button callback %d, %d\n", i, r);
 }
 
 #if 0
@@ -308,7 +308,7 @@ static void nonmuicallback(int x, int y)
 
   extern int muiInObject(muiObject *obj, int x, int y);
 
-  printf("nonMUI callback %d, %d\n", x, y);
+  //printf("nonMUI callback %d, %d\n", x, y);
 
 #if 0
   //ActiveCons = muiGetListCons(ActiveUIList);
@@ -438,7 +438,7 @@ void readbutton(muiObject *obj, enum muiReturnValue r)
     viewchoice = i;
   }
 
-  printf("radio callback %d, %d\n", i, r);
+  //printf("radio callback %d, %d\n", i, r);
 }
 
 /***************************************************************/
@@ -488,7 +488,7 @@ void vbcallback(muiObject *obj, enum muiReturnValue r)
     makemainui();
   }
 
-  printf("View Button callback %d, %d\n", i, r);
+  //printf("View Button callback %d, %d\n", i, r);
 }
 
 /***************************************************************/
@@ -682,7 +682,7 @@ void bbcallback(muiObject *obj, enum muiReturnValue r)
     makemainui();
   }
 
-  printf("Background Button callback %d, %d\n", i, r);
+  //printf("Background Button callback %d, %d\n", i, r);
 }
 
 /***************************************************************/
@@ -898,7 +898,7 @@ void dreadbutton(muiObject *obj, enum muiReturnValue r)
     break;
   }
 
-  printf("radio callback %d, %d\n", i, r);
+  //printf("radio callback %d, %d\n", i, r);
 }
 
 /***************************************************************/
@@ -925,7 +925,7 @@ void dbcallback(muiObject *obj, enum muiReturnValue r)
     makemainui();
   }
 
-  printf("Drawing Button callback %d, %d\n", i, r);
+  //printf("Drawing Button callback %d, %d\n", i, r);
 }
 
 /***************************************************************/
@@ -1132,7 +1132,7 @@ void oreadbutton(muiObject *obj, enum muiReturnValue r)
     break;
   }
 
-  printf("options radio callback %d, %d\n", i, r);
+  //printf("options radio callback %d, %d\n", i, r);
 }
 
 /***************************************************************/
@@ -1163,7 +1163,7 @@ void obcallback(muiObject *obj, enum muiReturnValue r)
     makemainui();
   }
 
-  printf("Options Button callback %d, %d\n", i, r);
+  //printf("Options Button callback %d, %d\n", i, r);
 }
 
 /***************************************************************/
@@ -1548,7 +1548,7 @@ void ls(void)
 /***************************************************************/
 int cd(char *s)
 {
-    printf("cd %s\n", s);
+    //printf("cd %s\n", s);
     muiClearTBString(t1);  // Clear out the text box 
     if(chdir(s) < 0) {
 	fprintf(stderr,"cannot open %s\n",s);
@@ -1570,10 +1570,12 @@ void writeoutputfile(char *dir, char *file)
   extern void loadnewdatfile(char *datpath, char *datfile);
   extern void saveasdatfile(char *datpath, char *datfile);
 
+#if 0
   printf("D:%s\n", dir);
   if (file)
     printf("F:%s\n", file);
-  
+#endif
+
   if (dir && file)
   {
     //Got a dir and file.  Do something with it.
@@ -1591,7 +1593,7 @@ void	controltltop(muiObject *obj, enum muiReturnValue value)
 {
     float sliderval;
 
-    printf("vs fn %d\n", value);
+    //printf("vs fn %d\n", value);
 
     if ((value != MUI_SLIDER_RETURN) && (value != MUI_SLIDER_THUMB)
 	)
@@ -1601,7 +1603,7 @@ void	controltltop(muiObject *obj, enum muiReturnValue value)
 
     muiSetTLTop(tl, sliderval);
 
-    printf("sliderval =  %0.4f\n", sliderval);
+    //printf("sliderval =  %0.4f\n", sliderval);
 }
 
 /***************************************************************/
@@ -1611,7 +1613,7 @@ void	handlefileselection(muiObject *obj, enum muiReturnValue value)
     int len;
     int doubleclick = 0;
 
-    printf("tl fn %d\n", value);
+    //printf("tl fn %d\n", value);
 
     selectedfile = muiGetTLSelectedItem(obj);
     fname = filelist[selectedfile];
@@ -1622,9 +1624,11 @@ void	handlefileselection(muiObject *obj, enum muiReturnValue value)
     selectedprev = selectedfile;
     if ((value == MUI_TEXTLIST_RETURN_CONFIRM) || doubleclick)
     {
+#if 0
         if (doubleclick)
 	  printf("DblClick! ");
 	printf("Selected file %s\n", fname);
+#endif
 	len = strlen(fname);
 	if ((fname[len-1] == '/') || (fname[len-1] == '\\'))
 	{
@@ -1753,7 +1757,7 @@ void makefileui(char *s)
     muiSetCallback(b1, handleoriginal);
 
     b2 = muiNewButton(ow+dw-30, ow+dw-4, oh+dh-24, oh+dh-2);
-    muiLoadButton(b2, "Up"); // For the Mac...  muiLoadButton(b2, "..");
+    muiLoadButton(b2, "..");
     muiSetCallback(b2, handleupdir);
 
     tl = muiNewTextList(ow+4, oh+30, ow+dw-25, 8);
@@ -1839,7 +1843,7 @@ void unMUI_fnkeys(int key, int x, int y)
 
   sliderval = muiGetVSVal(vs);
 
-  printf("sliderval = %g\n", sliderval);
+  //printf("sliderval = %g\n", sliderval);
 
   switch(key) {
   case GLUT_KEY_PAGE_UP:
@@ -1889,7 +1893,7 @@ void unMUI_viewport()
     if (dx || dy)
     {
       //NOTE: somehow this gives me a grey background on the whole window.
-      printf("muiMoveAll(%d, %d)\n", dx, dy);
+      //printf("muiMoveAll(%d, %d)\n", dx, dy);
       //muiBackgroundClear();
       muiMoveAll(MAIN_UILIST, dx, dy);
       muiMoveAll(FILE_UILIST, dx, dy);
@@ -1921,7 +1925,7 @@ void unMUI_viewport()
 
   glEnable(GL_SCISSOR_TEST);
   glScissor(ow, oh, dw, dh); // x,y,width,height
-  printf("glScissor(%d, %d, %d, %d)\n",ow, oh, dw, dh); // x,y,width,height
+  //printf("glScissor(%d, %d, %d, %d)\n",ow, oh, dw, dh); // x,y,width,height
 }
 
 /***************************************************************/
@@ -1945,7 +1949,7 @@ void unMUI_Reshape(int width, int height)
 }
 
 /***************************************************************/
-void mui_test()
+void mui_menu(int menunum)
 {
   // Gotta consider using creating and destroying a subwindow for window mode.
   // For game mode I could copy the screen to the back buffer, then
@@ -1973,6 +1977,16 @@ void mui_test()
   glDrawBuffer(GL_BACK); // set pixel destination
   glDisable( GL_DEPTH_TEST ); // Speed up copying
   glDisable(GL_LIGHTING);     // Speed up copying
+        glDisable(GL_ALPHA_TEST);
+        glDisable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_DITHER);
+        glDisable(GL_FOG);
+        glDisable(GL_LIGHTING);
+        glDisable(GL_LOGIC_OP);
+        glDisable(GL_STENCIL_TEST);
+        glDisable(GL_TEXTURE_1D);
+        glDisable(GL_TEXTURE_2D);
   glMatrixMode( GL_PROJECTION );
   glLoadIdentity();
   gluOrtho2D(0, Width, 0, Height);
@@ -2006,6 +2020,17 @@ void mui_test()
   makemainui();
   muiInit();
 
+  if (menunum == 1)
+  {
+    muiHideAll(muiGetUIList(b1), 0);
+    makefileui("Open:");
+  }
+  else if (menunum == 2)
+  {
+    muiHideAll(muiGetUIList(b2), 0);
+    makefileui("Save:");
+  }
+
   // ---------------------------------------------------------------------
   // After muiInit() we can insert shim fns to intercept events before MUI.
   // ---------------------------------------------------------------------
@@ -2023,5 +2048,12 @@ void mui_test()
 
   glutPostRedisplay(); // Otherwise MUI waits for mouse movement to display.
 }
+
+/***************************************************************/
+void mui_test(void)
+{
+  mui_menu(0);
+}
+
 #endif
 

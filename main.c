@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.0.7      ";
+char ldgliteVersion[] = "Version 1.0.8      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -2559,7 +2559,7 @@ void rendersetup(void)
 
   glColor3f(1.0, 1.0, 1.0); // White.
 
-  // Turn off dithering for more than 8bpp.  The default is enabled!
+  // Turn off dithering for more than 16bpp.  The default is enabled!
   if ((rBits + gBits + bBits) > 16) // ((rBits + gBits + bBits) >= 15)
     glDisable(GL_DITHER);
   else
@@ -5056,22 +5056,8 @@ move1matrix(float m[4][4], float dx, float dy, float dz)
 }
 
 /***************************************************************/
-int edit_mode_fnkeys(int key, int x, int y)
+void enterEditMode()
 {
-  int i;
-  float m[4][4] = {
-    {1.0,0.0,0.0,0.0},
-    {0.0,1.0,0.0,0.0},
-    {0.0,0.0,1.0,0.0},
-    {0.0,0.0,0.0,1.0}
-  };
-
-  //printf("key = %d = '%c' (%08x)\n",key,key, glutModifiers);
-  if (!editing) // See if we need to enter edit mode
-  {
-    if (key != GLUT_KEY_INSERT)
-      return 0; // Not already editing and not entering editing mode.
-
     if ((glutModifiers & GLUT_ACTIVE_CTRL) != 0)
       SOLID_EDIT_MODE = 1;
     else 
@@ -5118,6 +5104,53 @@ int edit_mode_fnkeys(int key, int x, int y)
 	  Print1Part(curpiece, stdout);
       edit_mode_gui();
     }
+}
+
+/***************************************************************/
+void leaveEditMode()
+{
+  if (SOLID_EDIT_MODE)
+  {
+    glDepthMask(GL_TRUE); // Just to be make sure 
+    if (movingpiece == curpiece)
+    {
+      UnSelect1Part(curpiece);
+      movingpiece = -1;
+    }
+  }
+  // if (parsername == L3_PARSER)
+  editing ^= 1;
+  // if (ldraw_commandline_opts.debug_level == 1)
+  printf("Editing mode =  %d\n", editing);
+  
+  XORcurPiece(); // Erase the previous piece
+  
+  // Restore previous continuous mode.
+  ldraw_commandline_opts.F &= ~(TYPE_F_STUDLINE_MODE);
+  ldraw_commandline_opts.M = editingprevmode;
+  dirtyWindow = 1;
+  glutPostRedisplay();
+}
+
+/***************************************************************/
+int edit_mode_fnkeys(int key, int x, int y)
+{
+  int i;
+  float m[4][4] = {
+    {1.0,0.0,0.0,0.0},
+    {0.0,1.0,0.0,0.0},
+    {0.0,0.0,1.0,0.0},
+    {0.0,0.0,0.0,1.0}
+  };
+
+  //printf("key = %d = '%c' (%08x)\n",key,key, glutModifiers);
+  if (!editing) // See if we need to enter edit mode
+  {
+    if (key != GLUT_KEY_INSERT)
+      return 0; // Not already editing and not entering editing mode.
+
+    enterEditMode();
+
     return 1;
   }
 
@@ -5208,27 +5241,7 @@ int edit_mode_fnkeys(int key, int x, int y)
   
   switch(key) {
   case GLUT_KEY_INSERT:
-    if (SOLID_EDIT_MODE)
-    {
-      glDepthMask(GL_TRUE); // Just to be make sure 
-      if (movingpiece == curpiece)
-      {
-	UnSelect1Part(curpiece);
-	movingpiece = -1;
-      }
-    }
-    // if (parsername == L3_PARSER)
-    editing ^= 1;
-    // if (ldraw_commandline_opts.debug_level == 1)
-    printf("Editing mode =  %d\n", editing);
-    
-    XORcurPiece(); // Erase the previous piece
-    
-    // Restore previous continuous mode.
-    ldraw_commandline_opts.F &= ~(TYPE_F_STUDLINE_MODE);
-    ldraw_commandline_opts.M = editingprevmode;
-    dirtyWindow = 1;
-    glutPostRedisplay();
+    leaveEditMode();
     break;
   case GLUT_KEY_PAGE_UP:
     HiLightCurPiece(curpiece-1);
@@ -6611,26 +6624,26 @@ void keyboard(unsigned char key, int x, int y)
   if (((glutModifiers & GLUT_ACTIVE_ALT) != 0) && (tolower(key) == 'e'))
   {
     if ((glutModifiers & GLUT_ACTIVE_CTRL) != 0)
-      key = 6;
+      key = 16;
     else if (key == 'e')
-      key = 4;
+      key = 14;
     else 
-      key = 5;
+      key = 15;
   }
   switch(key) {
-  case 4:
+  case 14:
     dirtyWindow = 1;
     glutSetCursor(GLUT_CURSOR_WAIT);
     outputEPS(512000, 1, "render.eps"); // Sorted EPS
     glutSetCursor(GLUT_CURSOR_INHERIT);
     return;
-  case 5:
+  case 15:
     dirtyWindow = 1;
     glutSetCursor(GLUT_CURSOR_WAIT);
     outputEPS(512000, 0, "render.eps"); // UnSorted EPS
     glutSetCursor(GLUT_CURSOR_INHERIT);
     return;
-  case 6:
+  case 16:
     dirtyWindow = 1;
     glutSetCursor(GLUT_CURSOR_WAIT);
     outputEPS(512000, 0, NULL); // Debug the selection buffer.
@@ -6647,6 +6660,16 @@ void keyboard(unsigned char key, int x, int y)
 	reshape(Width, Height);
 	break;
 #endif
+    case 4: // toggle edit mode
+        if (editing)
+	  leaveEditMode();
+	else
+	{
+	  glutModifiers |= GLUT_ACTIVE_CTRL; //SOLID_EDIT_MODE = 1;
+	  glutModifiers &= ~GLUT_ACTIVE_ALT; // leave studs and drawtocur alone.
+	  enterEditMode();
+	}
+	break;
     case 2: // Zoom out
         ldraw_commandline_opts.S *= 0.9;
 	dirtyWindow = 1; //reshape(Width, Height);

@@ -59,7 +59,17 @@ void menu(int item)
 #ifdef TEST_MUI_GUI
   if  (item == 1)
   {
-    mui_test();
+    mui_menu(0);
+    return;
+  }
+  else if  (item == 4)
+  {
+    mui_menu(1);
+    return;
+  }
+  else if  (item == 5)
+  {
+    mui_menu(2);
     return;
   }
 #endif
@@ -324,7 +334,9 @@ void initializeMenus(void)
   glutAddSubMenu(  "Folder             ", dirmenunum);
   glutAddMenuEntry("Filter - All Files ", 1);
 #else
-  glutAddMenuEntry("Configuration      ", 1);
+  glutAddMenuEntry("Open               ", 4);
+  glutAddMenuEntry("Save               ", 5);
+  glutAddMenuEntry("Tools              ", 1);
 #endif
   glutAddMenuEntry("                   ", '\0');
   glutAddSubMenu(  "View               ", view);
@@ -334,9 +346,9 @@ void initializeMenus(void)
   glutAddMenuEntry("Bitmap             ", 'B');
   if (EPS_OUTPUT_FIGURED_OUT)
   {
-  glutAddMenuEntry("EPS file (sorted)  ", 4);
-  glutAddMenuEntry("EPS file (UNsorted)", 5);
-  glutAddMenuEntry("EPS debug          ", 6);
+    glutAddMenuEntry("EPS file (sorted)  ", 14); // C-N
+    glutAddMenuEntry("EPS file (UNsorted)", 15); // C-O
+    glutAddMenuEntry("EPS debug          ", 16); // C-P
   }
   glutAddMenuEntry("                   ", '\0');
   glutAddSubMenu(  "Help               ", helpmenunum);
