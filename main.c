@@ -23,25 +23,28 @@
 #include <math.h>
 #include <sys/stat.h> // for polling datfile for updates.
 
-#include <GL/glut.h>
+#include "glwinkit.h" //#include <GL/glut.h>
 
 #include "platform.h"
 #include "ldliteVR.h"
-#ifndef WINDOWS
-// This stuff gets pulled in by glut.h for windows.
-#include "wstubs.h"
-#else
-// glut 3.7 no longer includes windows.h
-#if (GLUT_XLIB_IMPLEMENTATION >= 13)
-#include <windows.h>
-#endif
-#endif
 
-#include "dirscan.h"
+#  ifndef WINDOWS
+     // This stuff gets pulled in by glut.h for windows.
+#    include "wstubs.h"
+#  else
+     // glut 3.7 no longer includes windows.h
+#    if (GLUT_XLIB_IMPLEMENTATION >= 13)
+#      include <windows.h>
+#    endif
+#  endif
 
+// Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
-#define USE_GLUT_MENUS 1
+#  define USE_GLUT_MENUS 1
 #endif
+extern char dirfilepath[256]; // Used by bogus glut popup menu file browser
+extern int  mainmenunum;
+extern void initializeMenus(void);
 
 #ifdef USE_L3_PARSER
 extern void          LoadModelPre(void);
@@ -72,6 +75,7 @@ int EPS_OUTPUT_FIGURED_OUT = 0;
 char *picfilename = NULL;
 char datfilename[256];
 char title[256];
+char progname[256];
 
 char buf[16*1024]; // sizeof buf copied from render_file() in ldliteView.cpp
 int use_uppercase = 0;
@@ -302,19 +306,6 @@ int z_extent_y2;
 #ifdef USE_QUATERNION
 float qspin[4] = {0.0, 0.0, 1.0, 0.0};
 #endif
-
-int  filemenunum;
-int  dirmenunum;
-int  mainmenunum;
-int  DateiCount    = 0;
-int  FolderCount    = 0;
-char DateiListe[MAX_DIR_ENTRIES][NAMELENGTH];
-char FolderList[MAX_DIR_ENTRIES][NAMELENGTH];
-int  minfilenum    = 0;
-char progname[256];
-char dirfilepath[256];
-char dirpattern[256] = "*";
-char filepattern[256] = "*.ldr";
 
 int drawAxis = 0;
 int qualityLines = 0;
@@ -1737,7 +1728,13 @@ void setBackgroundColor(int c)
 }
 
 /***************************************************************/
-/*  GLUT event handlers
+void colormenu(int c)
+{
+  setBackgroundColor(c);
+  dirtyWindow = 1;  // Do not increment step counter
+  glutPostRedisplay();
+}
+
 /***************************************************************/
 void init(void)
 {
@@ -1849,6 +1846,15 @@ void init(void)
     // if (result) render internal geometry
     // else don't render
 #endif
+}
+
+/***************************************************************/
+/*  GLUT event handlers
+/***************************************************************/
+int exposeEvent(void)
+{
+  // Check if we had a window expose event lately.
+  return glutLayerGet(GLUT_NORMAL_DAMAGED);
 }
 
 /***************************************************************/
@@ -3317,7 +3323,7 @@ void display(void)
   {
     renderbuffer = screenbuffer;
     glDrawBuffer(screenbuffer); 
-    if (res = glutLayerGet(GLUT_NORMAL_DAMAGED)) // Expose event?
+    if (res = exposeEvent()) // Expose event?
     {
       printf("EXPOSED window during editing\n");
       dirtyWindow = 1;
@@ -3388,7 +3394,7 @@ void display(void)
 
 #ifdef USE_DOUBLE_BUFFER
   // If this is just an expose event (and !panning), then restore from backup.
-  if ((!panning) && glutLayerGet(GLUT_NORMAL_DAMAGED) && (dirtyWindow == 0))
+  if ((!panning) && exposeEvent() && (dirtyWindow == 0))
   {
     CopyColorBuffer(renderbuffer, screenbuffer);
     return;
@@ -3404,7 +3410,7 @@ void display(void)
 
   glDrawBuffer(renderbuffer);
 
-  if (res = glutLayerGet(GLUT_NORMAL_DAMAGED))
+  if (res = exposeEvent())
     dirtyWindow = 1;
 
   //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -3473,53 +3479,6 @@ void display(void)
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
 
-#if 0
-  glColor3f(1.0, 1.0, 1.0); // White.
-  glutWireCube(20.0);
-#endif
-
-#if 0
-  glMatrixMode( GL_PROJECTION );
-  glLoadIdentity();
-  gluOrtho2D( 0., 100., 0., 100. ); /* "percent units" */
-  glMatrixMode( GL_MODELVIEW );
-  glLoadIdentity();
-  glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
-  glColor3f( 0.3, 0.3, 0.3 );		/* grey  	*/
-  DoRasterString( 5., 60., "My Volume = 345.6" );
-#endif
-
-#if 0
-  // Try out some text strings so I can add a console someday.
-  glColor3f(0.0, 0.5, 1.0); // Greenish blue
-  DoRasterString( -50.0, -100.0, "LdGLite" );
-  DoRasterString( 0.0, 0.0, "ldglite" );
-  /*
-GLUT_BITMAP_9_BY_15 
-GLUT_BITMAP_8_BY_13 
-GLUT_BITMAP_TIMES_ROMAN_10 
-GLUT_BITMAP_TIMES_ROMAN_24 
-GLUT_BITMAP_HELVETICA_10 
-GLUT_BITMAP_HELVETICA_12 
-GLUT_BITMAP_HELVETICA_18
-  */
-  glColor3f(0.0, 0.0, 0.0); // black
-  glPushMatrix();
-  glTranslatef(-Width/2, -100, 0);
-  glScalef(0.1f, 0.1f, 0.1f);
-  draw_string(GLUT_STROKE_ROMAN, "Hello!");
-  glTranslatef(-Width/2, -60, 0);
-  draw_string(GLUT_STROKE_MONO_ROMAN, "Hello!");
-  glPopMatrix();
-  gluOrtho2D(0, Width, 0, Height);
-  glRasterPos2f(0, 0);
-  draw_string_bitmap(GLUT_BITMAP_HELVETICA_12, "HELLO!");
-  //rx+=glutBitmapWidth(GLUT_BITMAP_9_BY_15,'H'); 
-  //rx+=glutBitmapLength(GLUT_BITMAP_HELVETICA_12, "HELLO!");
-  //int glutStrokeWidth(void *font, int character);
-  //int glutStrokeLength(void *font, const unsigned char *string);
-#endif
-
   // Non-continuous output stop after each step.
   if (ldraw_commandline_opts.M == 'P')
   {
@@ -3585,7 +3544,7 @@ GLUT_BITMAP_HELVETICA_18
   // Delaying CopyColorBuffer() until glutidle did NOT work either.
   // So, how can I tell if the display was successful? 
   // Draw to back buffer and then copy to front?
-  if (res = glutLayerGet(GLUT_NORMAL_DAMAGED))
+  if (res = exposeEvent())
   {
     printf("DAMAGED during redisplay\n");
     dirtyWindow = 1;
@@ -6054,7 +6013,7 @@ motion(int x, int y)
 	  {
 #if 0	    
 	    if (pan_x != 0)
-	      truckCamera( pan_x, true, false, false ); // left, right
+	      truckCamera( pan_x, 1, 0, 0 ); // left, right
 #else
 	    if (pan_x != 0)
 	    {
@@ -6065,7 +6024,7 @@ motion(int x, int y)
 	    if (pan_y != 0)
 	    {
 	      if (ldraw_projection_type == 1)
-		truckCamera( pan_y, false, false, true ); // forward, backward
+		truckCamera( pan_y, 0, 0, 1 ); // forward, backward
 	      else
 	      {
 		// Trucking camera is not visible in orthographic mode.  Scale instead.
@@ -6077,9 +6036,9 @@ motion(int x, int y)
 	  else
 	  {
 	    if (pan_x != 0)
-	      truckCamera( pan_x, true, false, false ); // left, right 
+	      truckCamera( pan_x, 1, 0, 0 ); // left, right 
 	    if (pan_y != 0)
-	      truckCamera( -pan_y, false, true, false ); // up, down
+	      truckCamera( -pan_y, 0, 1, 0 ); // up, down
 	  }
 	    
 	}
@@ -6118,174 +6077,6 @@ passive_motion(int x, int y)
 {
   if (panlock)
     motion(x,y);
-}
-
-void filemenu(int);
-
-/***************************************************************/
-void menu(int item)
-{
-  if  (item == 1)
-  {
-    glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
-    if (strcmp(filepattern, "*"))
-    {
-      strcpy(filepattern, "*");
-      glutChangeToMenuEntry(3, "Filter - *.ldr     ", 1);
-    }
-    else
-    {
-      strcpy(filepattern, "*.ldr");
-      glutChangeToMenuEntry(3, "Filter - All Files ", 1);
-    }
-    filemenu(15); // refresh the file list with files in new dir.
-  }
-  else
-    keyboard((unsigned char)item, 0, 0);
-}
-
-/***************************************************************/
-void colormenu(int c)
-{
-  setBackgroundColor(c);
-  dirtyWindow = 1;  // Do not increment step counter
-  glutPostRedisplay();
-}
-
-/***************************************************************/
-void dirmenu(int item)
-{
-  int         i, j, len1;
-  const int   len3 = WORDLENGTH;
-  char        myDir[WORDLENGTH+1];
-  char filename[256];
-
-  extern char modelspath[];
-
-  if (item == 15) // Real Refresh
-    minfilenum = 0;
-  if (item == 0) // Nothing (seperator line)
-    return;
-  if (item == 13) // PgUp
-  {
-    minfilenum -= MAX_DIR_ENTRIES;
-    if (minfilenum < 0)
-      minfilenum = 0;
-    item = 15;
-  }
-  if (item == 14) // PgDn
-  {
-    minfilenum += MAX_DIR_ENTRIES;
-    item = 15;
-  }
-  if (item == 15) // Refresh
-  {
-    strcpy(myDir, dirfilepath);
-    FolderCount = ScanFolder(myDir, dirpattern, minfilenum, FolderList);
-    if ((FolderCount == 0) && (minfilenum > 0))
-    { // Dont PgDn past the last file in the directory.
-      if (ldraw_commandline_opts.debug_level == 1)
-	printf("Rescanning from file %d", minfilenum);
-      minfilenum -= MAX_DIR_ENTRIES; 
-      if (minfilenum < 0)
-	minfilenum = 0;
-      if (ldraw_commandline_opts.debug_level == 1)
-	printf("to %d\n", minfilenum);
-      FolderCount = ScanFolder(myDir, dirpattern, minfilenum, FolderList);
-    }
-    if (ldraw_commandline_opts.debug_level == 1)
-      printf ("Found %d folders starting at %d in %s\n", FolderCount,minfilenum, myDir);
-
-    glutSetMenu(dirmenunum);
-    for(j = 1; j <= MAX_DIR_ENTRIES; j++) 
-      glutChangeToMenuEntry(j, basename(FolderList[j-1]), j);
-    glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
-  }
-  else 
-  {
-    if (ldraw_commandline_opts.debug_level == 1)
-      printf("selected dir %d = %s\n", item, FolderList[item-1]);
-    if (item <= FolderCount)
-    {
-      strcpy(dirfilepath, FolderList[item-1]);
-      strcpy(myDir, basename(dirfilepath));
-      if (stricmp(myDir, ".") == 0)
-	strcpy(dirfilepath, dirname(FolderList[item-1]));
-      if (stricmp(myDir, "..") == 0)
-      {
-	// Fetch the absolute path to get to ".\.."
-	if (stricmp(dirname(FolderList[item-1]), ".") == 0)
-	{
-	  getcwd(myDir, WORDLENGTH);
-	  strcpy(dirfilepath, dirname(myDir));
-	}
-	else
-	  strcpy(dirfilepath, dirname(dirname(FolderList[item-1])));
-	if (ldraw_commandline_opts.debug_level == 1)
-	  printf("Now using dir = %s\n", dirfilepath);
-      }
-      dirmenu(15); // refresh the folder list with folders in new dir.
-      filemenu(15); // refresh the file list with files in new dir.
-    }
-  }
-}
-
-/***************************************************************/
-void filemenu(int item)
-{
-  int         i, j, len1;
-  const int   len3 = WORDLENGTH;
-  char        myDir[WORDLENGTH+1];
-  char filename[256];
-
-  extern char modelspath[];
-
-  if (item == 15) // Real Refresh
-    minfilenum = 0;
-  if (item == 0) // Nothing (seperator line)
-    return;
-  if (item == 13) // PgUp
-  {
-    minfilenum -= MAX_DIR_ENTRIES;
-    if (minfilenum < 0)
-      minfilenum = 0;
-    item = 15;
-  }
-  if (item == 14) // PgDn
-  {
-    minfilenum += MAX_DIR_ENTRIES;
-    item = 15;
-  }
-  if (item == 15) // Refresh
-  {
-    strcpy(myDir, dirfilepath);
-    DateiCount = ScanDirectory(myDir, filepattern, minfilenum, DateiListe);
-    if ((DateiCount == 0) && (minfilenum > 0))
-    { // Dont PgDn past the last file in the directory.
-      if (ldraw_commandline_opts.debug_level == 1)
-	printf("Rescanning from file %d", minfilenum);
-      minfilenum -= MAX_DIR_ENTRIES; 
-      if (minfilenum < 0)
-	minfilenum = 0;
-      if (ldraw_commandline_opts.debug_level == 1)
-	printf("to %d\n", minfilenum);
-      DateiCount = ScanDirectory(myDir, filepattern, minfilenum, DateiListe);
-    }
-    if (ldraw_commandline_opts.debug_level == 1)
-      printf ("Found %d files starting at %d in %s\n", DateiCount,minfilenum, myDir);
-
-    glutSetMenu(filemenunum);
-    for(j = 1; j <= MAX_DIR_ENTRIES; j++) 
-      glutChangeToMenuEntry(j, basename(DateiListe[j-1]), j);
-    glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
-  }
-  else 
-  {
-    if (ldraw_commandline_opts.debug_level == 1)
-      printf("selected file %d = %s\n", item, DateiListe[item-1]);
-    if (item <= DateiCount)
-      loadnewdatfile(dirname(DateiListe[item-1]),basename(DateiListe[item-1]));
-  }
 }
 
 /************************************************************************/
@@ -6337,7 +6128,7 @@ void myGlutIdle( void )
 
 #if 0
     // Can we tell here if the display went well?  It looks like we CANNOT.
-    if (glutLayerGet(GLUT_NORMAL_DAMAGED))
+    if (exposeEvent())
       printf("DAMAGED in idle\n");
 #endif
 
@@ -7181,6 +6972,7 @@ void getDisplayProperties()
 }
 
 #ifdef WINDOWS
+#    include <shellapi.h> // Just in case
 /***************************************************************/
 HWND GetHwndFocus()
 { 
@@ -7380,7 +7172,6 @@ main(int argc, char **argv)
   FILE *fp;
   int  fd;
   int  fd_new_stdout;
-  int opts, view, colors, helpmenunum;
   int exitcode;
   char *str, *verstr, *extstr, *vendstr, *rendstr;
   unsigned int displaymode;
@@ -7559,129 +7350,7 @@ main(int argc, char **argv)
   glutMotionFunc(motion);
   glutIdleFunc(myGlutIdle);
 
-#ifdef USE_GLUT_MENUS
-
-#ifndef AGL
-#if (GLUT_XLIB_IMPLEMENTATION >= 13)
-// Rats, no menus in game mode.  Perhaps GLUI or PUI look good again.
-  if (ldraw_commandline_opts.V_x >= -1)
-#endif
-#endif
-  {
-  view = glutCreateMenu(menu);
-  glutAddMenuEntry("Ldraw Oblique   ", '0');
-  glutAddMenuEntry("Back            ", '1');
-  glutAddMenuEntry("Left            ", '2');
-  glutAddMenuEntry("Right           ", '3');
-  glutAddMenuEntry("Above           ", '4');
-  glutAddMenuEntry("Beneath         ", '5');
-  glutAddMenuEntry("Oblique         ", '6');
-  glutAddMenuEntry("Front           ", '7');
-  glutAddMenuEntry("UpsideDown      ", '8');
-  glutAddMenuEntry("Natural         ", '9');
-
-  opts = glutCreateMenu(menu);
-  glutAddMenuEntry("OrthoGraphic    ", 'j');
-  glutAddMenuEntry("Perspective     ", 'J');
-  glutAddMenuEntry("                ", '\0');
-  glutAddMenuEntry("Shading         ", 'h');
-  glutAddMenuEntry("Linemode        ", 'l');
-  glutAddMenuEntry("Normal          ", 'n');
-  glutAddMenuEntry("Studs           ", 'f');
-  glutAddMenuEntry("Quality Lines   ", 'q');
-  glutAddMenuEntry("Visible spin    ", 'v');
-  glutAddMenuEntry("Step-Continuous ", 's');
-  glutAddMenuEntry("Polling         ", 'g');
-#ifdef USE_L3_PARSER
-  glutAddMenuEntry("Parser          ", 'r');
-#endif
-  glutAddMenuEntry("                ", '\0');
-  glutAddMenuEntry("Zoom out        ", 2);
-  glutAddMenuEntry("Zoom in         ", 3);
-  glutAddMenuEntry("Scale dn        ", '-');
-  glutAddMenuEntry("Scale up        ", '+');
-
-  colors = glutCreateMenu(colormenu);
-  glutAddMenuEntry("Black              ", 0);
-  glutAddMenuEntry("Blue               ", 1);
-  glutAddMenuEntry("Green              ", 2);
-  glutAddMenuEntry("Dk Cyan            ", 3);
-  glutAddMenuEntry("Red                ", 4);
-  glutAddMenuEntry("Purple             ", 5);
-  glutAddMenuEntry("Brown              ", 6);
-  glutAddMenuEntry("Lt Gray            ", 7);
-  glutAddMenuEntry("Dk Gray            ", 8);
-  glutAddMenuEntry("Lt Blue            ", 9);
-  glutAddMenuEntry("Lt Green           ", 10);
-  glutAddMenuEntry("Lt Cyan            ", 11);
-  glutAddMenuEntry("Lt Red             ", 12);
-  glutAddMenuEntry("Pink               ", 13);
-  glutAddMenuEntry("Yellow             ", 14);
-  glutAddMenuEntry("White              ", 15);
-
-  dirmenunum = glutCreateMenu(dirmenu);
-  glutAddMenuEntry("                   ", 1);
-  glutAddMenuEntry("                   ", 2);
-  glutAddMenuEntry("                   ", 3);
-  glutAddMenuEntry("                   ", 4);
-  glutAddMenuEntry("                   ", 5);
-  glutAddMenuEntry("                   ", 6);
-  glutAddMenuEntry("                   ", 7);
-  glutAddMenuEntry("                   ", 8);
-  glutAddMenuEntry("                   ", 9);
-  glutAddMenuEntry("                   ", 10);
-  glutAddMenuEntry("                   ", 0);
-  glutAddMenuEntry("Page Up            ", 13);
-  glutAddMenuEntry("Page Dn            ", 14);
-
-  filemenunum = glutCreateMenu(filemenu);
-  glutAddMenuEntry("                   ", 1);
-  glutAddMenuEntry("                   ", 2);
-  glutAddMenuEntry("                   ", 3);
-  glutAddMenuEntry("                   ", 4);
-  glutAddMenuEntry("                   ", 5);
-  glutAddMenuEntry("                   ", 6);
-  glutAddMenuEntry("                   ", 7);
-  glutAddMenuEntry("                   ", 8);
-  glutAddMenuEntry("                   ", 9);
-  glutAddMenuEntry("                   ", 10);
-  glutAddMenuEntry("                   ", 0);
-  glutAddMenuEntry("Page Up            ", 13);
-  glutAddMenuEntry("Page Dn            ", 14);
-
-  helpmenunum = glutCreateMenu(menu);
-  glutAddMenuEntry(progname             , '\0');
-  glutAddMenuEntry("Version 0.9.6      ", '\0');
-
-  mainmenunum = glutCreateMenu(menu);
-  glutAddSubMenu(  "File               ", filemenunum);
-  glutAddSubMenu(  "Folder             ", dirmenunum);
-  glutAddMenuEntry("Filter - All Files ", 1);
-  glutAddMenuEntry("                   ", '\0');
-  glutAddSubMenu(  "View               ", view);
-  glutAddSubMenu(  "Options            ", opts);
-  glutAddSubMenu(  "BackGround Color   ", colors);
-  glutAddMenuEntry("                   ", '\0');
-  glutAddMenuEntry("Bitmap             ", 'B');
-  if (EPS_OUTPUT_FIGURED_OUT)
-  {
-  glutAddMenuEntry("EPS file (sorted)  ", 4);
-  glutAddMenuEntry("EPS file (UNsorted)", 5);
-  glutAddMenuEntry("EPS debug          ", 6);
-  }
-  glutAddMenuEntry("                   ", '\0');
-  glutAddSubMenu(  "Help               ", helpmenunum);
-  glutAddMenuEntry("Quit               ", '\033');
-  glutAttachMenu(GLUT_RIGHT_BUTTON);
-
-  view = glutCreateMenu(menu);
-  glutAddMenuEntry("Ldraw Oblique   ", '0');
-
-  // Read in the current directories dat filenames.
-  dirmenu(15);
-  filemenu(15);
-  }
-#endif /* TEST_MUI_GUI */
+  initializeMenus();
 
 #ifdef USE_GLFONT
   if (fontname)

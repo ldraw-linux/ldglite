@@ -4,7 +4,7 @@
 #include "StdAfx.h"
 
 #ifdef USE_OPENGL
-#include <GL/glut.h>
+#include "glwinkit.h"
 
 #include "platform.h"
 #include "ldliteVR.h"

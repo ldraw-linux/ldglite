@@ -17,7 +17,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <GL/glut.h>
+#include "glwinkit.h"
 
 /* OpenGL's GL_3D_COLOR feedback vertex format. */
 typedef struct _Feedback3Dcolor {

@@ -24,7 +24,7 @@
 
 #ifdef USE_OPENGL
 //**********************************************************************
-#include <GL/glut.h>
+#include "glwinkit.h"
 #include "platform.h"
 
 extern int MESA_3_COLOR_FIX;
