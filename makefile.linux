@@ -2,17 +2,17 @@ CC=gcc
 
 CFLAGS=-g -DUNIX -DUSE_OPENGL
 
-ldglite:   ldliteVR_main.o stub.o y.tab.o lex.yy.o qbuf.o main.o platform.o
-	$(CC) $(CFLAGS) ldliteVR_main.o stub.o y.tab.o lex.yy.o qbuf.o main.o platform.o -o ldglite -L/usr/X11R6/lib -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
+ldglite:   ldliteVR_main.o stub.o y.tab.o lex.yy.o qbuf.o main.o platform.o dirscan.o
+	$(CC) $(CFLAGS) ldliteVR_main.o stub.o y.tab.o lex.yy.o qbuf.o main.o platform.o dirscan.o -o ldglite -L/usr/X11R6/lib -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
 
-ldglitepng:   ldliteVR_main.o stub.o y.tab.o lex.yy.o qbuf.o pngMain.o platform.o
-	$(CC) $(CFLAGS) ldliteVR_main.o stub.o y.tab.o lex.yy.o qbuf.o pngMain.o platform.o -o ldglite -L/usr/X11R6/lib -lpng -lz -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
+ldglitepng:   ldliteVR_main.o stub.o y.tab.o lex.yy.o qbuf.o pngMain.o platform.o dirscan.o
+	$(CC) $(CFLAGS) ldliteVR_main.o stub.o y.tab.o lex.yy.o qbuf.o pngMain.o platform.o dirscan.o -o ldglite -L/usr/X11R6/lib -lpng -lz -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
 
-l3glite:   ldliteVR_main.o platform.o L3Stub.o y.tab.o lex.yy.o qbuf.o L3Main.o L3Math.o L3Input.o L3View.o
-	$(CC) $(CFLAGS) ldliteVR_main.o platform.o L3Stub.o y.tab.o lex.yy.o qbuf.o L3Main.o L3Math.o L3Input.o L3View.o -o l3glite -L/usr/X11R6/lib -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
+l3glite:   ldliteVR_main.o platform.o dirscan.o L3Stub.o y.tab.o lex.yy.o qbuf.o L3Main.o L3Math.o L3Input.o L3View.o
+	$(CC) $(CFLAGS) ldliteVR_main.o platform.o dirscan.o L3Stub.o y.tab.o lex.yy.o qbuf.o L3Main.o L3Math.o L3Input.o L3View.o -o l3glite -L/usr/X11R6/lib -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
 
-l3glitepng:   ldliteVR_main.o platform.o L3Stub.o y.tab.o lex.yy.o qbuf.o L3pngMain.o L3Math.o L3Input.o L3View.o
-	$(CC) $(CFLAGS) ldliteVR_main.o platform.o L3Stub.o y.tab.o lex.yy.o qbuf.o L3pngMain.o L3Math.o L3Input.o L3View.o -o l3glite -L/usr/X11R6/lib -lpng -lz -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
+l3glitepng:   ldliteVR_main.o platform.o dirscan.o L3Stub.o y.tab.o lex.yy.o qbuf.o L3pngMain.o L3Math.o L3Input.o L3View.o
+	$(CC) $(CFLAGS) ldliteVR_main.o platform.o dirscan.o L3Stub.o y.tab.o lex.yy.o qbuf.o L3pngMain.o L3Math.o L3Input.o L3View.o -o l3glite -L/usr/X11R6/lib -lpng -lz -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
 
 ldliteVR_main.o: ldliteVR_main.c
 	$(CC) -c $(CFLAGS) ldliteVR_main.c
@@ -22,6 +22,9 @@ stub.o: stub.c
 
 platform.o: platform.c
 	$(CC) -c $(CFLAGS) platform.c
+
+dirscan.o: dirscan.c
+	$(CC) -c $(CFLAGS) dirscan.c
 
 y.tab.o: y.tab.c
 	$(CC) -c $(CFLAGS) y.tab.c

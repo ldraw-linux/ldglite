@@ -1255,6 +1255,9 @@ void display(void)
   DoRasterString( 5., 60., "My Volume = 345.6" );
 #endif
 
+
+#if 0
+  // Try out some text strings so I can add a console someday.
   glColor3f(0.0, 0.5, 1.0); // Greenish blue
   DoRasterString( -50.0, -100.0, "LdGLite" );
   DoRasterString( 0.0, 0.0, "ldglite" );
@@ -1282,7 +1285,7 @@ GLUT_BITMAP_HELVETICA_18
   //rx+=glutBitmapLength(GLUT_BITMAP_HELVETICA_12, "HELLO!");
   //int glutStrokeWidth(void *font, int character);
   //int glutStrokeLength(void *font, const unsigned char *string);
-
+#endif
 
   
 
@@ -1662,6 +1665,7 @@ void menu(int item)
 {
   if  (item == 1)
   {
+    printf("Updating MainMenu %d\n",mainmenunum);
     glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
     if (strcmp(filepattern, "*"))
     {
@@ -1749,9 +1753,11 @@ void dirmenu(int item)
     if (ldraw_commandline_opts.debug_level == 1)
       printf ("Found %d folders starting at %d in %s\n", FolderCount,minfilenum, myDir);
 
+    printf("Updating DirMenu %d\n",dirmenunum);
     glutSetMenu(dirmenunum);
     for(j = 1; j <= MAX_DIR_ENTRIES; j++) 
       glutChangeToMenuEntry(j, basename(FolderList[j-1]), j);
+    printf("Setting MainMenu %d\n",mainmenunum);
     glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
   }
   else 
@@ -1764,10 +1770,19 @@ void dirmenu(int item)
       strcpy(myDir, basename(dirfilepath));
       if (stricmp(myDir, ".") == 0)
 	strcpy(dirfilepath, dirname(FolderList[item-1]));
-#if 1
       if (stricmp(myDir, "..") == 0)
-	strcpy(dirfilepath, dirname(dirname(FolderList[item-1])));
-#endif	
+      {
+	// Fetch the absolute path to get to ".\.."
+	if (stricmp(dirname(FolderList[item-1]), ".") == 0)
+	{
+	  getcwd(myDir, WORDLENGTH);
+	  strcpy(dirfilepath, dirname(myDir));
+	}
+	else
+	  strcpy(dirfilepath, dirname(dirname(FolderList[item-1])));
+	if (ldraw_commandline_opts.debug_level == 1)
+	  printf("Now using dir = %s\n", dirfilepath);
+      }
       dirmenu(15); // refresh the folder list with folders in new dir.
       filemenu(15); // refresh the file list with files in new dir.
     }
@@ -1819,9 +1834,11 @@ void filemenu(int item)
     if (ldraw_commandline_opts.debug_level == 1)
       printf ("Found %d files starting at %d in %s\n", DateiCount,minfilenum, myDir);
 
+    printf("Updating FileMenu %d\n",filemenunum);
     glutSetMenu(filemenunum);
     for(j = 1; j <= MAX_DIR_ENTRIES; j++) 
       glutChangeToMenuEntry(j, basename(DateiListe[j-1]), j);
+    printf("Setting MainMenu %d\n",mainmenunum);
     glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
   }
   else 
@@ -1830,20 +1847,6 @@ void filemenu(int item)
       printf("selected file %d = %s\n", item, DateiListe[item-1]);
     if (item <= DateiCount)
     {
-      if (isDir(DateiListe[item-1]))
-      {
-	strcpy(dirfilepath, DateiListe[item-1]);
-	strcpy(myDir, basename(dirfilepath));
-	if (stricmp(myDir, ".") == 0)
-	  strcpy(dirfilepath, dirname(DateiListe[item-1]));
-#if 1
-	if (stricmp(myDir, "..") == 0)
-	  strcpy(dirfilepath, dirname(dirname(DateiListe[item-1])));
-#endif	
-        dirmenu(15);
-	filemenu(15); // refresh the file list with files in new dir.
-	return;
-      }
       strcpy(datfilename, basename(DateiListe[item-1]));
       strcpy(datfilepath, dirname(DateiListe[item-1]));
       strcpy(dirfilepath, dirname(DateiListe[item-1]));
