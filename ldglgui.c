@@ -62,6 +62,8 @@ extern int  filemenunum;
 extern int  dirmenunum;
 extern int  mainmenunum;
 
+extern int ldraw_projection_type;  // 1 = perspective, 0 = orthographic.
+
 extern char Back[];
 extern char Left[];
 extern char Right[];
@@ -75,6 +77,8 @@ extern char Natural[];
 extern char *m_viewMatrix;
 
 extern int mui_singlebuffered;
+
+extern void keyboard(unsigned char key, int x, int y);
 
 muiObject *b1, *b2, *b3, *b4, *b5, *b6, *b7, *b8;
 muiObject *b9, *b10, *b11, *b12, *b13, *b14, *b15, *b16;
@@ -189,56 +193,43 @@ void bcallback(muiObject *obj, enum muiReturnValue r)
 
   muiHide(obj, 0);
 
-  if (obj == b1)
+  i = muiGetID(obj);
+
+  switch (i)
   {
-    i = 1;
+  case 1:
     muiHideAll(muiGetUIList(obj), 0);
     makefileui("Open:");
-  }
-  else if (obj == b2)
-  {
-    i = 2;
+    break;
+  case 2:
     muiHideAll(muiGetUIList(obj), 0);
     makefileui("Save:");
-  }
-  else if (obj == b3)
-  {
-    i = 3;
+    break;
+  case 3:
     muiHideAll(muiGetUIList(obj), 0);
     makeviewui();
-  }
-  else if (obj == b4)
-  {
-    i = 4;
+    break;
+  case 4:
     muiHideAll(muiGetUIList(obj), 0);
     makedrawui();
-  }
-  else if (obj == b5)
-  {
-    i = 5;
+    break;
+  case 5:
     muiHideAll(muiGetUIList(obj), 0);
     makeoptsui();
-  }
-  else if (obj == b6)
-  {
-    i = 6;
+    break;
+  case 6:
     muiHideAll(muiGetUIList(obj), 0);
     makebackui();
-  }
-  else if (obj == b7)
-  {
-    i = 7;
+    break;
+  case 7:
     muiSetActiveUIList(MAIN_UILIST);
     muiHideAll(muiGetUIList(obj), 1);
-  }
-  else if (obj == b8)
-  {
-    i = 8;
+    break;
+  case 8:
     muiSetActiveUIList(MAIN_UILIST);
     mui_cleanup();
-  }
-  else
-  {
+    break;
+  default:
     muiHideAll(muiGetUIList(obj), 0);
     makemainui();
   }
@@ -370,11 +361,17 @@ void makemainui(void)
     muiLoadButton(b8, "Quit");
     muiSetCallback(b8, bcallback);
 
-#if 0
-    l1 = muiNewBoldLabel(ow+60+dw/2-35, oh+dh/2+18, "LdGLite");
-#else
+    muiSetID(b1, 1);
+    muiSetID(b2, 2);
+    muiSetID(b3, 3);
+    muiSetID(b4, 4);
+    muiSetID(b5, 5);
+    muiSetID(b6, 6);
+    muiSetID(b7, 7);
+    muiSetID(b8, 8);
+
+    //l1 = muiNewBoldLabel(ow+60+dw/2-35, oh+dh/2+18, "LdGLite");
     l1 = muiNewLabel(ow+60+dw/2-35, oh+dh/2+18, "LdGLite");
-#endif
     l2 = muiNewLabel(ow+60+dw/2-55, oh+dh/2-18, "Version 0.9.6");
 
     muiSetNonMUIcallback(nonmuicallback);
@@ -393,6 +390,7 @@ void makemainui(void)
 }
 
 int viewchoice = 0;
+int projchoice = 0;
 
 /***************************************************************/
 /***************************************************************/
@@ -402,7 +400,17 @@ void readbutton(muiObject *obj, enum muiReturnValue r)
 
   i = muiGetID(obj);
 
-  viewchoice = i-1;
+  switch (i)
+  {
+  case 'J':
+    projchoice = 'J';
+    break;
+  case 'j':
+    projchoice = 'j';
+    break;
+  default:
+    viewchoice = i;
+  }
 
   printf("radio callback %d, %d\n", i, r);
 }
@@ -411,8 +419,6 @@ void readbutton(muiObject *obj, enum muiReturnValue r)
 void vbcallback(muiObject *obj, enum muiReturnValue r)
 {
   int i = 0;
-
-  extern void keyboard(unsigned char key, int x, int y);
 
   i = muiGetID(obj);
 
@@ -423,7 +429,10 @@ void vbcallback(muiObject *obj, enum muiReturnValue r)
   case 3:
     muiSetActiveUIList(MAIN_UILIST);
     mui_cleanup();
-    keyboard('0' + viewchoice, 0, 0);    
+    if (viewchoice)
+      keyboard(viewchoice, 0, 0);    
+    if (projchoice)
+      keyboard(projchoice, 0, 0);    
     break;
   default:
     muiHideAll(muiGetUIList(obj), 0);
@@ -436,8 +445,10 @@ void vbcallback(muiObject *obj, enum muiReturnValue r)
 /***************************************************************/
 void makeviewui(void)
 {
-  static muiObject *rb1, *rb2, *rb3, *rb4, *rb5, *rb6, *rb7, *rb8, *rb9, *rb10;
+  static muiObject *rb1, *rb2, *rb3, *rb4, *rb5, *rb6, *rb7, *rb8;
+  static muiObject *rb9, *rb10, *rb11, *rb12, *rb13, *rb14, *rb15, *rb16;
   static muiObject *b3, *b4;
+  static muiObject *l1, *l2, *l3, *l4;
   int xmin, ymin, xmax, ymax;
 
   static int MUIstarted = 0;
@@ -460,6 +471,17 @@ void makeviewui(void)
     rb8 = muiNewTinyRadioButton(ow+2, oh+dh-160);
     rb9 = muiNewTinyRadioButton(ow+2, oh+dh-180);
     rb10 = muiNewTinyRadioButton(ow+2, oh+dh-200);
+    //rb11 = muiNewTinyRadioButton(ow+dw/2, oh+dh-20);
+    l3 = muiNewBoldLabel(ow+2+dw/2, oh+dh-18, "Projection Type:");
+    rb12 = muiNewTinyRadioButton(ow+dw/2, oh+dh-40);
+    rb13 = muiNewTinyRadioButton(ow+dw/2, oh+dh-60);
+    //rb14 = muiNewTinyRadioButton(ow+dw/2, oh+dh-80);
+    //rb15 = muiNewTinyRadioButton(ow+dw/2, oh+dh-100);
+    //rb16 = muiNewTinyRadioButton(ow+dw/2, oh+dh-120);
+    //rb17 = muiNewTinyRadioButton(ow+dw/2, oh+dh-140);
+    //rb18 = muiNewTinyRadioButton(ow+dw/2, oh+dh-160);
+    //rb19 = muiNewTinyRadioButton(ow+dw/2, oh+dh-180);
+    //rb20 = muiNewTinyRadioButton(ow+dw/2, oh+dh-200);
     muiLoadButton(rb1, "Ldraw Oblique");
     muiLoadButton(rb2, "Back");
     muiLoadButton(rb3, "Left");
@@ -470,6 +492,12 @@ void makeviewui(void)
     muiLoadButton(rb8, "Front");
     muiLoadButton(rb9, "UpsideDown");
     muiLoadButton(rb10, "Natural");
+    //muiLoadButton(rb11, "");
+    muiLoadButton(rb12, "Perspective");
+    muiLoadButton(rb13, "Orthographic");
+    //muiLoadButton(rb14, "");
+    //muiLoadButton(rb15, "");
+    //muiLoadButton(rb16, "");
     muiLinkButtons(rb1, rb2);
     muiLinkButtons(rb2, rb3);
     muiLinkButtons(rb3, rb4);
@@ -479,6 +507,12 @@ void makeviewui(void)
     muiLinkButtons(rb7, rb8);
     muiLinkButtons(rb8, rb9);
     muiLinkButtons(rb9, rb10);
+    //muiLinkButtons(rb10, rb11);
+    //muiLinkButtons(rb11, rb12);
+    muiLinkButtons(rb12, rb13);
+    //muiLinkButtons(rb13, rb14);
+    //muiLinkButtons(rb14, rb15);
+    //muiLinkButtons(rb15, rb16);
     muiSetCallback(rb1, readbutton);
     muiSetCallback(rb2, readbutton);
     muiSetCallback(rb3, readbutton);
@@ -489,16 +523,28 @@ void makeviewui(void)
     muiSetCallback(rb8, readbutton);
     muiSetCallback(rb9, readbutton);
     muiSetCallback(rb10, readbutton);
-    muiSetID(rb1, 1);
-    muiSetID(rb2, 2);
-    muiSetID(rb3, 3);
-    muiSetID(rb4, 4);
-    muiSetID(rb5, 5);
-    muiSetID(rb6, 6);
-    muiSetID(rb7, 7);
-    muiSetID(rb8, 8);
-    muiSetID(rb9, 9);
-    muiSetID(rb10, 10);
+    //muiSetCallback(rb11, readbutton);
+    muiSetCallback(rb12, readbutton);
+    muiSetCallback(rb13, readbutton);
+    //muiSetCallback(rb14, readbutton);
+    //muiSetCallback(rb15, readbutton);
+    //muiSetCallback(rb16, readbutton);
+    muiSetID(rb1, '0');
+    muiSetID(rb2, '1');
+    muiSetID(rb3, '2');
+    muiSetID(rb4, '3');
+    muiSetID(rb5, '4');
+    muiSetID(rb6, '5');
+    muiSetID(rb7, '6');
+    muiSetID(rb8, '7');
+    muiSetID(rb9, '8');
+    muiSetID(rb10, '9');
+    //muiSetID(rb11, 11);
+    muiSetID(rb12, 'J');
+    muiSetID(rb13, 'j');
+    //muiSetID(rb14, 14);
+    //muiSetID(rb15, 15);
+    //muiSetID(rb16, 16);
     muiClearRadio(rb1);
 
     b3 = muiNewButton(ow+dw-60, ow+dw-34, oh+2, oh+27);
@@ -540,6 +586,15 @@ void makeviewui(void)
   else
     muiSetActive(rb1, 1);
 
+  muiClearRadio(rb12);
+  if (ldraw_projection_type == 1)
+    muiSetActive(rb12, 1); // 1 = perspective
+  else
+    muiSetActive(rb13, 1); // 0 = orthographic
+
+  viewchoice = 0;
+  projchoice = 0;
+
   MUIstarted = 1;
 
   muiAttachUIList(VIEW_UILIST);
@@ -561,7 +616,10 @@ void bbcallback(muiObject *obj, enum muiReturnValue r)
   case 3:
     muiSetActiveUIList(MAIN_UILIST);
     mui_cleanup();
-    colormenu(viewchoice);    
+    if (viewchoice > 11)
+      colormenu(viewchoice-4);    
+    else if (viewchoice)
+      colormenu(viewchoice-2);    
     break;
   default:
     muiHideAll(muiGetUIList(obj), 0);
@@ -574,9 +632,10 @@ void bbcallback(muiObject *obj, enum muiReturnValue r)
 /***************************************************************/
 void makebackui(void)
 {
-  static muiObject *rb1, *rb2, *rb3, *rb4, *rb5, *rb6, *rb7, *rb8;
-  static muiObject *rb9, *rb10, *rb11, *rb12, *rb13, *rb14, *rb15, *rb16;
+  static muiObject *rb1, *rb2, *rb3, *rb4, *rb5, *rb6, *rb7, *rb8, *rb9, *rb10;
+  static muiObject *rb11, *rb12, *rb13, *rb14, *rb15, *rb16, *rb17, *rb18, *rb19;
   static muiObject *b3, *b4;
+  static muiObject *l1, *l2, *l3, *l4;
   int xmin, ymin, xmax, ymax;
 
   static int MUIstarted = 0;
@@ -589,7 +648,8 @@ void makebackui(void)
     muiSetActiveUIList(BACK_UILIST);
 #endif
 
-    rb1 = muiNewTinyRadioButton(ow+2, oh+dh-20);
+    //rb1 = muiNewTinyRadioButton(ow+2, oh+dh-20);
+    l1 = muiNewBoldLabel(ow+4, oh+dh-18, "Background Color:");
     rb2 = muiNewTinyRadioButton(ow+2, oh+dh-40);
     rb3 = muiNewTinyRadioButton(ow+2, oh+dh-60);
     rb4 = muiNewTinyRadioButton(ow+2, oh+dh-80);
@@ -597,31 +657,38 @@ void makebackui(void)
     rb6 = muiNewTinyRadioButton(ow+2, oh+dh-120);
     rb7 = muiNewTinyRadioButton(ow+2, oh+dh-140);
     rb8 = muiNewTinyRadioButton(ow+2, oh+dh-160);
-    rb9 = muiNewTinyRadioButton(ow+dw/2, oh+dh-20);
-    rb10 = muiNewTinyRadioButton(ow+dw/2, oh+dh-40);
-    rb11 = muiNewTinyRadioButton(ow+dw/2, oh+dh-60);
-    rb12 = muiNewTinyRadioButton(ow+dw/2, oh+dh-80);
-    rb13 = muiNewTinyRadioButton(ow+dw/2, oh+dh-100);
-    rb14 = muiNewTinyRadioButton(ow+dw/2, oh+dh-120);
-    rb15 = muiNewTinyRadioButton(ow+dw/2, oh+dh-140);
-    rb16 = muiNewTinyRadioButton(ow+dw/2, oh+dh-160);
-    muiLoadButton(rb1, "Black");
-    muiLoadButton(rb2, "Blue");
-    muiLoadButton(rb3, "Green");
-    muiLoadButton(rb4, "Dk Cyan");
-    muiLoadButton(rb5, "Red");
-    muiLoadButton(rb6, "Purple");
-    muiLoadButton(rb7, "Brown");
-    muiLoadButton(rb8, "Lt Gray");
-    muiLoadButton(rb9, "Dk Gray");
-    muiLoadButton(rb10, "Lt Blue");
-    muiLoadButton(rb11, "Lt Green");
-    muiLoadButton(rb12, "Lt Cyan");
-    muiLoadButton(rb13, "Lt Red");
-    muiLoadButton(rb14, "Pink");
-    muiLoadButton(rb15, "Yellow");
-    muiLoadButton(rb16, "White");
-    muiLinkButtons(rb1, rb2);
+    rb9 = muiNewTinyRadioButton(ow+2, oh+dh-180);
+    //rb10 = muiNewTinyRadioButton(ow+2, oh+dh-200);
+    //rb11 = muiNewTinyRadioButton(ow+dw/2, oh+dh-20);
+    rb12 = muiNewTinyRadioButton(ow+dw/2, oh+dh-40);
+    rb13 = muiNewTinyRadioButton(ow+dw/2, oh+dh-60);
+    rb14 = muiNewTinyRadioButton(ow+dw/2, oh+dh-80);
+    rb15 = muiNewTinyRadioButton(ow+dw/2, oh+dh-100);
+    rb16 = muiNewTinyRadioButton(ow+dw/2, oh+dh-120);
+    rb17 = muiNewTinyRadioButton(ow+dw/2, oh+dh-140);
+    rb18 = muiNewTinyRadioButton(ow+dw/2, oh+dh-160);
+    rb19 = muiNewTinyRadioButton(ow+dw/2, oh+dh-180);
+    //muiLoadButton(rb1, "");
+    muiLoadButton(rb2, "Black");
+    muiLoadButton(rb3, "Blue");
+    muiLoadButton(rb4, "Green");
+    muiLoadButton(rb5, "Dk Cyan");
+    muiLoadButton(rb6, "Red");
+    muiLoadButton(rb7, "Purple");
+    muiLoadButton(rb8, "Brown");
+    muiLoadButton(rb9, "Lt Gray");
+    //muiLoadButton(rb10, "");
+    //muiLoadButton(rb11, "");
+    muiLoadButton(rb12, "Dk Gray");
+    muiLoadButton(rb13, "Lt Blue");
+    muiLoadButton(rb14, "Lt Green");
+    muiLoadButton(rb15, "Lt Cyan");
+    muiLoadButton(rb16, "Lt Red");
+    muiLoadButton(rb17, "Pink");
+    muiLoadButton(rb18, "Yellow");
+    muiLoadButton(rb19, "White");
+    //muiLoadButton(rb20, "");
+    //muiLinkButtons(rb1, rb2);
     muiLinkButtons(rb2, rb3);
     muiLinkButtons(rb3, rb4);
     muiLinkButtons(rb4, rb5);
@@ -629,14 +696,17 @@ void makebackui(void)
     muiLinkButtons(rb6, rb7);
     muiLinkButtons(rb7, rb8);
     muiLinkButtons(rb8, rb9);
-    muiLinkButtons(rb9, rb10);
-    muiLinkButtons(rb10, rb11);
-    muiLinkButtons(rb11, rb12);
+    //muiLinkButtons(rb9, rb10);
+    //muiLinkButtons(rb10, rb11);
+    muiLinkButtons(rb9, rb12); //muiLinkButtons(rb11, rb12);
     muiLinkButtons(rb12, rb13);
     muiLinkButtons(rb13, rb14);
     muiLinkButtons(rb14, rb15);
     muiLinkButtons(rb15, rb16);
-    muiSetCallback(rb1, readbutton);
+    muiLinkButtons(rb16, rb17);
+    muiLinkButtons(rb17, rb18);
+    muiLinkButtons(rb18, rb19);
+    //muiSetCallback(rb1, readbutton);
     muiSetCallback(rb2, readbutton);
     muiSetCallback(rb3, readbutton);
     muiSetCallback(rb4, readbutton);
@@ -645,14 +715,17 @@ void makebackui(void)
     muiSetCallback(rb7, readbutton);
     muiSetCallback(rb8, readbutton);
     muiSetCallback(rb9, readbutton);
-    muiSetCallback(rb10, readbutton);
-    muiSetCallback(rb11, readbutton);
+    //muiSetCallback(rb10, readbutton);
+    //muiSetCallback(rb11, readbutton);
     muiSetCallback(rb12, readbutton);
     muiSetCallback(rb13, readbutton);
     muiSetCallback(rb14, readbutton);
     muiSetCallback(rb15, readbutton);
     muiSetCallback(rb16, readbutton);
-    muiSetID(rb1, 1);
+    muiSetCallback(rb17, readbutton);
+    muiSetCallback(rb18, readbutton);
+    muiSetCallback(rb19, readbutton);
+    //muiSetID(rb1, 1);
     muiSetID(rb2, 2);
     muiSetID(rb3, 3);
     muiSetID(rb4, 4);
@@ -661,14 +734,17 @@ void makebackui(void)
     muiSetID(rb7, 7);
     muiSetID(rb8, 8);
     muiSetID(rb9, 9);
-    muiSetID(rb10, 10);
-    muiSetID(rb11, 11);
+    //muiSetID(rb10, 10);
+    //muiSetID(rb11, 11);
     muiSetID(rb12, 12);
     muiSetID(rb13, 13);
     muiSetID(rb14, 14);
     muiSetID(rb15, 15);
     muiSetID(rb16, 16);
-    muiClearRadio(rb1);
+    muiSetID(rb17, 17);
+    muiSetID(rb18, 18);
+    muiSetID(rb19, 19);
+    //muiClearRadio(rb1);
 
     b3 = muiNewButton(ow+dw-60, ow+dw-34, oh+2, oh+27);
     muiLoadButton(b3, "Ok");
@@ -686,12 +762,58 @@ void makebackui(void)
     muiHideAll(muiGetUIList(b3), 1);
   }
   // Clear the radio buttons and set the correct one active.
-  muiClearRadio(rb1);
+  muiClearRadio(rb2);
+  viewchoice = 0;
   // MOTE:  Cannot preset to current background because its not saved.
 
   MUIstarted = 1;
 
   muiAttachUIList(BACK_UILIST);
+}
+
+/***************************************************************/
+void dreadbutton(muiObject *obj, enum muiReturnValue r)
+{
+  int i, enabled;
+  
+  extern int qualityLines;
+
+  i = muiGetID(obj);
+  enabled = muiGetEnable(obj);
+
+  switch (i)
+  {
+  case 2:
+    if (enabled)
+      ldraw_commandline_opts.F |= TYPE_F_SHADED_MODE; // zShading = 1;
+    else
+      ldraw_commandline_opts.F &= ~(TYPE_F_SHADED_MODE); // zShading = 0;
+    break;
+  case 3:
+    if (enabled)
+      ldraw_commandline_opts.F &= ~(TYPE_F_NO_POLYGONS); // zWire = 0;
+    else
+      ldraw_commandline_opts.F |= TYPE_F_NO_POLYGONS; // zWire = 1;
+    break;
+  case 4:
+    if (enabled)
+      ldraw_commandline_opts.F &= ~(TYPE_F_NO_LINES); // Edgelines
+    else
+      ldraw_commandline_opts.F |= TYPE_F_NO_LINES; // no Edgelines
+    break;
+  case 5:
+    if (enabled)
+      qualityLines = 1;
+    else
+      qualityLines = 0;
+    break;
+  default:
+    //ldraw_commandline_opts.F ^= TYPE_F_STUDLESS_MODE;
+    //ldraw_commandline_opts.F |= TYPE_F_STUDLINE_MODE;
+    break;
+  }
+
+  printf("radio callback %d, %d\n", i, r);
 }
 
 /***************************************************************/
@@ -708,7 +830,13 @@ void dbcallback(muiObject *obj, enum muiReturnValue r)
   case 3:
     muiSetActiveUIList(MAIN_UILIST);
     mui_cleanup();
-    //colormenu(viewchoice);    
+    switch (viewchoice)
+    {
+    case 2:
+      break;
+    default:
+      break;
+    }
     break;
   default:
     muiHideAll(muiGetUIList(obj), 0);
@@ -738,22 +866,26 @@ void makedrawui(void)
 #endif
 
     //rb1 = muiNewTinyRadioButton(ow+2, oh+dh-20);
-    //l1 = muiNewLabel(ow+4, oh+dh-18, "./");
-    l1 = muiNewLabel(ow+2, oh+dh-20, "Drawing Style:");
+    l1 = muiNewBoldLabel(ow+4, oh+dh-18, "Drawing Style:");
     rb2 = muiNewTinyRadioButton(ow+2, oh+dh-40);
     rb3 = muiNewTinyRadioButton(ow+2, oh+dh-60);
     rb4 = muiNewTinyRadioButton(ow+2, oh+dh-80);
     rb5 = muiNewTinyRadioButton(ow+2, oh+dh-100);
     //rb6 = muiNewTinyRadioButton(ow+2, oh+dh-120);
     //rb7 = muiNewTinyRadioButton(ow+2, oh+dh-140);
-    l2 = muiNewLabel(ow+2, oh+dh-140, "Stud Mode:");
+    l2 = muiNewBoldLabel(ow+4, oh+dh-138, "Stud Type:");
     rb8 = muiNewTinyRadioButton(ow+2, oh+dh-160);
     rb9 = muiNewTinyRadioButton(ow+2, oh+dh-180);
     rb10 = muiNewTinyRadioButton(ow+2, oh+dh-200);
     //rb11 = muiNewTinyRadioButton(ow+dw/2, oh+dh-20);
-    l3 = muiNewLabel(ow+dw/2, oh+dh-20, "Projection Type:");
+    l3 = muiNewBoldLabel(ow+2+dw/2, oh+dh-18, "Spin Mode:");
     rb12 = muiNewTinyRadioButton(ow+dw/2, oh+dh-40);
     rb13 = muiNewTinyRadioButton(ow+dw/2, oh+dh-60);
+    rb14 = muiNewTinyRadioButton(ow+dw/2, oh+dh-80);
+    rb15 = muiNewTinyRadioButton(ow+dw/2, oh+dh-100);
+    rb16 = muiNewTinyRadioButton(ow+dw/2, oh+dh-120);
+    //rb12 = muiNewTinyRadioButton(ow+dw/2, oh+dh-40);
+    //rb13 = muiNewTinyRadioButton(ow+dw/2, oh+dh-60);
     //rb14 = muiNewTinyRadioButton(ow+dw/2, oh+dh-80);
     //rb15 = muiNewTinyRadioButton(ow+dw/2, oh+dh-100);
     //rb16 = muiNewTinyRadioButton(ow+dw/2, oh+dh-120);
@@ -768,15 +900,15 @@ void makedrawui(void)
     muiLoadButton(rb5, "AntiAliasing");
     //muiLoadButton(rb6, "");
     //muiLoadButton(rb7, "");
-    muiLoadButton(rb8, "Normal Studs");
-    muiLoadButton(rb9, "Line Studs");
-    muiLoadButton(rb10, "No Studs");
+    muiLoadButton(rb8, "Normal");
+    muiLoadButton(rb9, "Lines");
+    muiLoadButton(rb10, "None");
     //muiLoadButton(rb11, "");
-    muiLoadButton(rb12, "perspective");
-    muiLoadButton(rb13, "orthographic");
-    //muiLoadButton(rb14, "");
-    //muiLoadButton(rb15, "");
-    //muiLoadButton(rb16, "");
+    muiLoadButton(rb12, "Wire Boxes");
+    muiLoadButton(rb13, "Wireframe");
+    muiLoadButton(rb14, "Dragline");
+    muiLoadButton(rb15, "Solid Boxes");
+    muiLoadButton(rb16, "Studless");
     //muiLinkButtons(rb1, rb2);
     //muiLinkButtons(rb2, rb3);
     //muiLinkButtons(rb3, rb4);
@@ -789,25 +921,25 @@ void makedrawui(void)
     //muiLinkButtons(rb10, rb11);
     //muiLinkButtons(rb11, rb12);
     muiLinkButtons(rb12, rb13);
-    //muiLinkButtons(rb13, rb14);
-    //muiLinkButtons(rb14, rb15);
-    //muiLinkButtons(rb15, rb16);
-    //muiSetCallback(rb1, readbutton);
-    muiSetCallback(rb2, readbutton);
-    muiSetCallback(rb3, readbutton);
-    muiSetCallback(rb4, readbutton);
-    muiSetCallback(rb5, readbutton);
-    //muiSetCallback(rb6, readbutton);
-    //muiSetCallback(rb7, readbutton);
-    muiSetCallback(rb8, readbutton);
-    muiSetCallback(rb9, readbutton);
-    muiSetCallback(rb10, readbutton);
-    //muiSetCallback(rb11, readbutton);
-    muiSetCallback(rb12, readbutton);
-    muiSetCallback(rb13, readbutton);
-    //muiSetCallback(rb14, readbutton);
-    //muiSetCallback(rb15, readbutton);
-    //muiSetCallback(rb16, readbutton);
+    muiLinkButtons(rb13, rb14);
+    muiLinkButtons(rb14, rb15);
+    muiLinkButtons(rb15, rb16);
+    //muiSetCallback(rb1, dreadbutton);
+    muiSetCallback(rb2, dreadbutton);
+    muiSetCallback(rb3, dreadbutton);
+    muiSetCallback(rb4, dreadbutton);
+    muiSetCallback(rb5, dreadbutton);
+    //muiSetCallback(rb6, dreadbutton);
+    //muiSetCallback(rb7, dreadbutton);
+    muiSetCallback(rb8, dreadbutton);
+    muiSetCallback(rb9, dreadbutton);
+    muiSetCallback(rb10, dreadbutton);
+    //muiSetCallback(rb11, dreadbutton);
+    muiSetCallback(rb12, dreadbutton);
+    muiSetCallback(rb13, dreadbutton);
+    muiSetCallback(rb14, dreadbutton);
+    muiSetCallback(rb15, dreadbutton);
+    muiSetCallback(rb16, dreadbutton);
     //muiSetID(rb1, 1);
     muiSetID(rb2, 2);
     muiSetID(rb3, 3);
@@ -821,9 +953,9 @@ void makedrawui(void)
     //muiSetID(rb11, 11);
     muiSetID(rb12, 12);
     muiSetID(rb13, 13);
-    //muiSetID(rb14, 14);
-    //muiSetID(rb15, 15);
-    //muiSetID(rb16, 16);
+    muiSetID(rb14, 14);
+    muiSetID(rb15, 15);
+    muiSetID(rb16, 16);
     //muiClearRadio(rb1);
 
     b3 = muiNewButton(ow+dw-60, ow+dw-34, oh+2, oh+27);
@@ -844,6 +976,9 @@ void makedrawui(void)
   // Clear the radio buttons and set the correct one active.
   //muiClearRadio(rb1);
   // MOTE:  Cannot preset to current background because its not saved.
+
+  viewchoice = 0;
+  projchoice = 0;
 
   MUIstarted = 1;
 
@@ -880,6 +1015,7 @@ void makeoptsui(void)
   static muiObject *rb1, *rb2, *rb3, *rb4, *rb5, *rb6, *rb7, *rb8;
   static muiObject *rb9, *rb10, *rb11, *rb12, *rb13, *rb14, *rb15, *rb16;
   static muiObject *b3, *b4;
+  static muiObject *l1, *l2, *l3, *l4;
   int xmin, ymin, xmax, ymax;
 
   static int MUIstarted = 0;
@@ -892,86 +1028,92 @@ void makeoptsui(void)
     muiSetActiveUIList(OPTS_UILIST);
 #endif
 
-    rb1 = muiNewTinyRadioButton(ow+2, oh+dh-20);
+    //rb1 = muiNewTinyRadioButton(ow+2, oh+dh-20);
+    l1 = muiNewBoldLabel(ow+4, oh+dh-18, "Options:");
     rb2 = muiNewTinyRadioButton(ow+2, oh+dh-40);
     rb3 = muiNewTinyRadioButton(ow+2, oh+dh-60);
-    rb4 = muiNewTinyRadioButton(ow+2, oh+dh-80);
-    rb5 = muiNewTinyRadioButton(ow+2, oh+dh-100);
-    rb6 = muiNewTinyRadioButton(ow+2, oh+dh-120);
-    rb7 = muiNewTinyRadioButton(ow+2, oh+dh-140);
-    rb8 = muiNewTinyRadioButton(ow+2, oh+dh-160);
-    rb9 = muiNewTinyRadioButton(ow+dw/2, oh+dh-20);
-    rb10 = muiNewTinyRadioButton(ow+dw/2, oh+dh-40);
-    rb11 = muiNewTinyRadioButton(ow+dw/2, oh+dh-60);
-    rb12 = muiNewTinyRadioButton(ow+dw/2, oh+dh-80);
-    rb13 = muiNewTinyRadioButton(ow+dw/2, oh+dh-100);
-    rb14 = muiNewTinyRadioButton(ow+dw/2, oh+dh-120);
-    rb15 = muiNewTinyRadioButton(ow+dw/2, oh+dh-140);
-    rb16 = muiNewTinyRadioButton(ow+dw/2, oh+dh-160);
-    muiLoadButton(rb1, "WireBox spin");
-    muiLoadButton(rb2, "WireFrame spin");
-    muiLoadButton(rb3, "DragLine spin");
-    muiLoadButton(rb4, "BBox spin");
-    muiLoadButton(rb5, "Studless spin");
-    muiLoadButton(rb6, "");
-    muiLoadButton(rb7, "Step Mode");
-    muiLoadButton(rb8, "");
-    muiLoadButton(rb9, "Polling mode");
-    muiLoadButton(rb10, "");
-    muiLoadButton(rb11, "l3 parser");
-    muiLoadButton(rb12, "ldlite parser");
-    muiLoadButton(rb13, "");
-    muiLoadButton(rb14, "");
-    muiLoadButton(rb15, "");
-    muiLoadButton(rb16, "");
-    muiLinkButtons(rb1, rb2);
-    muiLinkButtons(rb2, rb3);
-    muiLinkButtons(rb3, rb4);
-    muiLinkButtons(rb4, rb5);
+    //rb4 = muiNewTinyRadioButton(ow+2, oh+dh-80);
+    //rb5 = muiNewTinyRadioButton(ow+2, oh+dh-100);
+    //rb6 = muiNewTinyRadioButton(ow+2, oh+dh-120);
+    //rb7 = muiNewTinyRadioButton(ow+2, oh+dh-140);
+    //rb8 = muiNewTinyRadioButton(ow+2, oh+dh-160);
+    l2 = muiNewBoldLabel(ow+4, oh+dh-158, "Parser:");
+    rb9 = muiNewTinyRadioButton(ow+2, oh+dh-180);
+    rb10 = muiNewTinyRadioButton(ow+2, oh+dh-200);
+    //rb11 = muiNewTinyRadioButton(ow+dw/2, oh+dh-20);
+    //rb12 = muiNewTinyRadioButton(ow+dw/2, oh+dh-40);
+    //rb13 = muiNewTinyRadioButton(ow+dw/2, oh+dh-60);
+    //rb14 = muiNewTinyRadioButton(ow+dw/2, oh+dh-80);
+    //rb15 = muiNewTinyRadioButton(ow+dw/2, oh+dh-100);
+    //rb16 = muiNewTinyRadioButton(ow+dw/2, oh+dh-120);
+    //rb17 = muiNewTinyRadioButton(ow+dw/2, oh+dh-140);
+    //rb18 = muiNewTinyRadioButton(ow+dw/2, oh+dh-160);
+    //rb19 = muiNewTinyRadioButton(ow+dw/2, oh+dh-180);
+    //rb20 = muiNewTinyRadioButton(ow+dw/2, oh+dh-200);
+    //muiLoadButton(rb1, "");
+    muiLoadButton(rb2, "Step Mode");
+    muiLoadButton(rb3, "Polling Mode");
+    //muiLoadButton(rb4, "");
+    //muiLoadButton(rb5, "");
+    //muiLoadButton(rb6, "");
+    //muiLoadButton(rb7, "");
+    //muiLoadButton(rb8, "");
+    muiLoadButton(rb9, "L3");
+    muiLoadButton(rb10, "Ldlite");
+    //muiLoadButton(rb11, "");
+    //muiLoadButton(rb12, "");
+    //muiLoadButton(rb13, "");
+    //muiLoadButton(rb14, "");
+    //muiLoadButton(rb15, "");
+    //muiLoadButton(rb16, "");
+    //muiLinkButtons(rb1, rb2);
+    //muiLinkButtons(rb2, rb3);
+    //muiLinkButtons(rb3, rb4);
+    //muiLinkButtons(rb4, rb5);
     //muiLinkButtons(rb5, rb6);
     //muiLinkButtons(rb6, rb7);
     //muiLinkButtons(rb7, rb8);
     //muiLinkButtons(rb8, rb9);
-    //muiLinkButtons(rb9, rb10);
-    muiLinkButtons(rb10, rb11);
-    muiLinkButtons(rb11, rb12);
+    muiLinkButtons(rb9, rb10);
+    //muiLinkButtons(rb10, rb11);
+    //muiLinkButtons(rb11, rb12);
     //muiLinkButtons(rb12, rb13);
     //muiLinkButtons(rb13, rb14);
     //muiLinkButtons(rb14, rb15);
     //muiLinkButtons(rb15, rb16);
-    muiSetCallback(rb1, readbutton);
+    //muiSetCallback(rb1, readbutton);
     muiSetCallback(rb2, readbutton);
     muiSetCallback(rb3, readbutton);
-    muiSetCallback(rb4, readbutton);
-    muiSetCallback(rb5, readbutton);
-    muiSetCallback(rb6, readbutton);
-    muiSetCallback(rb7, readbutton);
-    muiSetCallback(rb8, readbutton);
+    //muiSetCallback(rb4, readbutton);
+    //muiSetCallback(rb5, readbutton);
+    //muiSetCallback(rb6, readbutton);
+    //muiSetCallback(rb7, readbutton);
+    //muiSetCallback(rb8, readbutton);
     muiSetCallback(rb9, readbutton);
     muiSetCallback(rb10, readbutton);
-    muiSetCallback(rb11, readbutton);
-    muiSetCallback(rb12, readbutton);
-    muiSetCallback(rb13, readbutton);
-    muiSetCallback(rb14, readbutton);
-    muiSetCallback(rb15, readbutton);
-    muiSetCallback(rb16, readbutton);
-    muiSetID(rb1, 1);
+    //muiSetCallback(rb11, readbutton);
+    //muiSetCallback(rb12, readbutton);
+    //muiSetCallback(rb13, readbutton);
+    //muiSetCallback(rb14, readbutton);
+    //muiSetCallback(rb15, readbutton);
+    //muiSetCallback(rb16, readbutton);
+    //muiSetID(rb1, 1);
     muiSetID(rb2, 2);
     muiSetID(rb3, 3);
-    muiSetID(rb4, 4);
-    muiSetID(rb5, 5);
-    muiSetID(rb6, 6);
-    muiSetID(rb7, 7);
-    muiSetID(rb8, 8);
+    //muiSetID(rb4, 4);
+    //muiSetID(rb5, 5);
+    //muiSetID(rb6, 6);
+    //muiSetID(rb7, 7);
+    //muiSetID(rb8, 8);
     muiSetID(rb9, 9);
     muiSetID(rb10, 10);
-    muiSetID(rb11, 11);
-    muiSetID(rb12, 12);
-    muiSetID(rb13, 13);
-    muiSetID(rb14, 14);
-    muiSetID(rb15, 15);
-    muiSetID(rb16, 16);
-    muiClearRadio(rb1);
+    //muiSetID(rb11, 11);
+    //muiSetID(rb12, 12);
+    //muiSetID(rb13, 13);
+    //muiSetID(rb14, 14);
+    //muiSetID(rb15, 15);
+    //muiSetID(rb16, 16);
+    //muiClearRadio(rb1);
 
     b3 = muiNewButton(ow+dw-60, ow+dw-34, oh+2, oh+27);
     muiLoadButton(b3, "Ok");
@@ -989,7 +1131,7 @@ void makeoptsui(void)
     muiHideAll(muiGetUIList(b3), 1);
   }
   // Clear the radio buttons and set the correct one active.
-  muiClearRadio(rb1);
+  //muiClearRadio(rb1);
   // MOTE:  Cannot preset to current background because its not saved.
 
   MUIstarted = 1;
