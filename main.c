@@ -603,10 +603,8 @@ float fontwidth = 1.0;
 
 #ifdef AGL
 /***************************************************************/
-// GLUT stubs required by AllegroGl version 0.20
-#include "internal.h"
-
 // Slim down the program by removing unused allegro drivers.
+#include "allegro.h"
 BEGIN_DIGI_DRIVER_LIST
 END_DIGI_DRIVER_LIST
 
@@ -615,79 +613,6 @@ END_MIDI_DRIVER_LIST
 
 BEGIN_JOYSTICK_DRIVER_LIST
 END_JOYSTICK_DRIVER_LIST
-
-/***************************************************************/
-GLUTAPI void *glutBitmapHelvetica12 = 0;
-
-extern FONT *font;
-
-/***************************************************************/
-GLUTAPI int GLUTAPIENTRY glutGetModifiers(void)
-{
-  int mods = 0;
-
-  if (key[KEY_LCONTROL])
-    mods |= GLUT_ACTIVE_CTRL;
-  if (key[KEY_RCONTROL])
-    mods |= GLUT_ACTIVE_CTRL;
-  if (key[KEY_LSHIFT])
-    mods |= GLUT_ACTIVE_SHIFT;
-  if (key[KEY_RSHIFT])
-    mods |= GLUT_ACTIVE_SHIFT;
-  if (key[KEY_ALT])
-    mods |= GLUT_ACTIVE_ALT;
-	  
-  return mods;
-}
-
-GLUTAPI int GLUTAPIENTRY glutLayerGet(GLenum type)
-{
-  return 0;
-}
-
-#if 0
-/* create a custom mouse cursor bitmap... */
-   custom_cursor = create_bitmap(32, 32);
-   clear(custom_cursor); 
-   for (c=0; c<8; c++)
-      circle(custom_cursor, 16, 16, c*2, c);
-
-   /* select the custom cursor and set the focus point to the middle of it */
-   set_mouse_sprite(custom_cursor);
-   set_mouse_sprite_focus(16, 16);
-#endif
-
-GLUTAPI void GLUTAPIENTRY glutSetCursor(int cursor)
-{
-  if (g_mouse) 
-    {
-      switch (cursor)
-      {
-      case GLUT_CURSOR_NONE:
-	//scare_mouse();
-	show_mouse(NULL);
-	return;
-      case GLUT_CURSOR_INHERIT:
-	//set_mouse_sprite(NULL);
-	break;
-      case GLUT_CURSOR_WAIT:
-      default:
-      }
-      show_mouse(screen);
-      //unscare_mouse();
-    }
-}
-
-GLUTAPI void GLUTAPIENTRY glutWarpPointer(int x, int y)
-{
-  position_mouse(x, y);
-  //show_mouse(screen);
-}
-
-GLUTAPI void GLUTAPIENTRY glutFullScreen(void)
-{
-}
-
 #endif
 
 /***************************************************************/
