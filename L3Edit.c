@@ -443,29 +443,10 @@ int Find1PartMatrix(int partnum, float m[4][4])
 }
 
 /*****************************************************************************/
-int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
+int Print1LineP(struct L3LineS *LinePtr, char *s)
 {
     float          m[4][4];
     int            j,k;
-
-    if (!LinePtr)
-    {
-      if (i < 0)
-      {
-      if (s)
-	sprintf(s,"--START--");
-      if (f)
-	fprintf(f,"--START--\n");
-      }
-      else
-      {
-      if (s)
-	sprintf(s,"--END--");
-      if (f)
-	fprintf(f,"--END--\n");
-      }
-      return 0; //partnum not found
-    }
 
     //Round very small numbers to 0.0
     if (LinePtr->LineType != 0)
@@ -474,7 +455,7 @@ int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
       for (k = 0; k < 4; k++)
 	for (j = 0; j < 4; j++)
 	{
-	  if (m[k][j] < 0.000001)
+	  if (fabs(m[k][j]) < 0.000001)
 	    m[k][j] = 0.0;
 	}
     }
@@ -482,22 +463,10 @@ int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
     switch (LinePtr->LineType)
     {
     case 0:
-      if (s)
 	sprintf(s,"%d %s", LinePtr->LineType, LinePtr->Comment);
-      if (f)
-	fprintf(f,"%d %s\n", LinePtr->LineType, LinePtr->Comment);
       break;
     case 1:
-      if (s)
 	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g %s",
-		LinePtr->LineType, LinePtr->Color,
-		m[0][3],m[1][3],m[2][3],
-		m[0][0],m[0][1],m[0][2],
-		m[1][0],m[1][1],m[1][2],
-		m[2][0],m[2][1],m[2][2],
-		LinePtr->PartPtr->DatName);
-      if (f)
-	fprintf(f,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g %s\n",
 		LinePtr->LineType, LinePtr->Color,
 		m[0][3],m[1][3],m[2][3],
 		m[0][0],m[0][1],m[0][2],
@@ -506,41 +475,20 @@ int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
 		LinePtr->PartPtr->DatName);
       break;
     case 2:
-      if (s)
 	sprintf(s,"%d %d %g %g %g %g %g %g",
-		LinePtr->LineType, LinePtr->Color,
-		m[0][0],m[0][1],m[0][2],
-		m[1][0],m[1][1],m[1][2]);
-      if (f)
-	fprintf(f,"%d %d %g %g %g %g %g %g\n",
 		LinePtr->LineType, LinePtr->Color,
 		m[0][0],m[0][1],m[0][2],
 		m[1][0],m[1][1],m[1][2]);
       break;
     case 3:
-      if (s)
 	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g",
-		LinePtr->LineType, LinePtr->Color,
-		m[0][0],m[0][1],m[0][2],
-		m[1][0],m[1][1],m[1][2],
-		m[2][0],m[2][1],m[2][2]);
-      if (f)
-	fprintf(f,"%d %d %g %g %g %g %g %g %g %g %g\n",
 		LinePtr->LineType, LinePtr->Color,
 		m[0][0],m[0][1],m[0][2],
 		m[1][0],m[1][1],m[1][2],
 		m[2][0],m[2][1],m[2][2]);
       break;
     case 4:
-      if (s)
 	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g",
-		LinePtr->LineType, LinePtr->Color,
-		m[0][0],m[0][1],m[0][2],
-		m[1][0],m[1][1],m[1][2],
-		m[2][0],m[2][1],m[2][2],
-		m[3][0],m[3][1],m[3][2]);
-      if (f)
-	fprintf(f,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
 		LinePtr->LineType, LinePtr->Color,
 		m[0][0],m[0][1],m[0][2],
 		m[1][0],m[1][1],m[1][2],
@@ -548,15 +496,7 @@ int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
 		m[3][0],m[3][1],m[3][2]);
       break;
     case 5:
-      if (s)
 	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g",
-		LinePtr->LineType, LinePtr->Color,
-		m[0][0],m[0][1],m[0][2],
-		m[1][0],m[1][1],m[1][2],
-		m[2][0],m[2][1],m[2][2],
-		m[3][0],m[3][1],m[3][2]);
-      if (f)
-	fprintf(f,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
 		LinePtr->LineType, LinePtr->Color,
 		m[0][0],m[0][1],m[0][2],
 		m[1][0],m[1][1],m[1][2],
@@ -564,15 +504,27 @@ int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
 		m[3][0],m[3][1],m[3][2]);
       break;
     default:
-      if (s)
 	sprintf(s,"");
-      if (f)
-	fprintf(f,"\n");
       break;
     }
 
     return 1;
 }
+
+/*****************************************************************************/
+int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s)
+{
+    if (!LinePtr)
+    {
+      if (i < 0)
+	sprintf(s,"--START--");
+      else
+	sprintf(s,"--END--");
+      return 0; //partnum not found
+    }
+
+    return Print1LineP(LinePtr, s);
+  }
 
 /*****************************************************************************/
 int Print3Parts(int partnum, char *s1, char *s2, char *s3)
@@ -611,9 +563,9 @@ int Print3Parts(int partnum, char *s1, char *s2, char *s3)
     else 
       NextPtr = LinePtr->NextLine;
 
-    Print1LinePtr(PrevPtr, i-1, s1, NULL);
-    Print1LinePtr(LinePtr, i, s2, NULL);
-    Print1LinePtr(NextPtr, i+1, s3, NULL);
+    Print1LinePtr(PrevPtr, i-1, s1);
+    Print1LinePtr(LinePtr, i, s2);
+    Print1LinePtr(NextPtr, i+1, s3);
     
     return i;
 }
@@ -621,26 +573,28 @@ int Print3Parts(int partnum, char *s1, char *s2, char *s3)
 /*****************************************************************************/
 int Print1Part(int partnum, FILE *f)
 {
-    int            i = 0;
-    struct L3LineS *LinePtr;
-    
-    if (SelectedLinePtr)
-    {
-	LinePtr = SelectedLinePtr;
-	i = partnum;
-    }
-    else for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
-    {
-	if (i == partnum)
-	    break;
-	i++;
-    }
-
-    if (!LinePtr)
-      i = partnum;
-    i = Print1LinePtr(LinePtr, i, NULL, f);
-    
-    return i;
+  char           s[256];
+  int            i = 0;
+  struct L3LineS *LinePtr;
+  
+  if (SelectedLinePtr)
+  {
+    LinePtr = SelectedLinePtr;
+    i = partnum;
+  }
+  else for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+  {
+    if (i == partnum)
+      break;
+    i++;
+  }
+  
+  if (!LinePtr)
+    i = partnum;
+  i = Print1LinePtr(LinePtr, i, s);
+  fprintf(f, "%s\n", s);
+  
+  return i;
 }
 
 /*****************************************************************************/
@@ -818,6 +772,7 @@ int Print1Model(char *filename)
 {
     FILE *f;
     struct L3LineS *LinePtr;
+    char s[1024];
     
     printf("Write DAT %s\n", filename);
     //f = fopen(filename, "w+");
@@ -829,53 +784,11 @@ int Print1Model(char *filename)
     }
     for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
     {
-	switch (LinePtr->LineType)
-	{
-	case 0:
-	    fprintf(f,"%d %s\n", LinePtr->LineType, LinePtr->Comment);
-	    break;
-	case 1:
-	    fprintf(f,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g %s\n",
-		    LinePtr->LineType, LinePtr->Color,
-		    LinePtr->v[0][3],LinePtr->v[1][3],LinePtr->v[2][3],
-		    LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		    LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
-		    LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2],
-		    LinePtr->PartPtr->DatName);
-	    break;
-	case 2:
-	    fprintf(f,"%d %d %g %g %g %g %g %g\n",
-		    LinePtr->LineType, LinePtr->Color,
-		    LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		    LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2]);
-	    break;
-	case 3:
-	    fprintf(f,"%d %d %g %g %g %g %g %g %g %g %g\n",
-		    LinePtr->LineType, LinePtr->Color,
-		    LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		    LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
-		    LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2]);
-	    break;
-	case 4:
-	    fprintf(f,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
-		    LinePtr->LineType, LinePtr->Color,
-		    LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		    LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
-		    LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2],
-		    LinePtr->v[3][0],LinePtr->v[3][1],LinePtr->v[3][2]);
-	    break;
-	case 5:
-	    fprintf(f,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
-		    LinePtr->LineType, LinePtr->Color,
-		    LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		    LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
-		    LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2],
-		    LinePtr->v[3][0],LinePtr->v[3][1],LinePtr->v[3][2]);
-	    break;
-	default:
-	    fprintf(f,"\n");
-	    break;
-	}
+      Print1LineP(LinePtr, s);
+      fprintf(f, "%s\n", s);
+
+      //if (ldraw_commandline_opts.debug_level == 1)
+      //  fprintf(stdout, "%s\n", s);
     }
     fclose(f);
     return 0;
@@ -1317,7 +1230,7 @@ int Inline1Part(int partnum)
     // Convert LinePtr into comments.
     strcpy(Comment, "Inlined: ");
     n = strlen(Comment);
-    Print1LinePtr(LinePtr, i, &(Comment[n]), NULL);
+    Print1LinePtr(LinePtr, i, &(Comment[n]));
 
     //Start the inlined part with a blank comment.
     Comment1LinePtr(LinePtr, " "); 
@@ -1426,4 +1339,57 @@ int GetCurLineType(int partnum)
     return LinePtr->LineType;
 }
 
+#ifdef PART_BOX_TEST
+/***************************************************************/
+void PrintPartBox(struct L3PartS *PartPtr, char *boxfilename)
+{
+  extern char datfilepath[256];
 
+  char filename[256];
+  FILE *fp;
+  char *p;
+
+  double x, y, z;
+  double dx, dy, dz;
+
+  printf("BBox = (%0.2f,%0.2f,%0.2f) (%0.2f,%0.2f,%0.2f)\n",
+	 PartPtr->BBox[0][0],PartPtr->BBox[0][1],PartPtr->BBox[0][2],
+	 PartPtr->BBox[1][0],PartPtr->BBox[1][1],PartPtr->BBox[1][2]);
+
+#if 0
+  if (boxfilename)
+      concat_path(datfilepath, boxfilename, filename);
+  else
+  {
+      strcpy(filename, datfilename);
+      if ((p = strrchr(filename, '.')) != NULL)
+	  *p = 0;
+      strcat(filename, use_uppercase ? ".BOX" : ".box");
+      
+      printf("Write BOX file %s\n", filename);
+  }
+
+  if ((fp = fopen(filename,"w+"))==NULL) {
+    printf("Could not open %s\n", filename);
+    return;
+  }
+
+  dx = (PartPtr->BBox[1][0] - PartPtr->BBox[0][0]) / 2.0;
+  dy = (PartPtr->BBox[1][1] - PartPtr->BBox[0][1]) / 2.0;
+  dz = (PartPtr->BBox[1][2] - PartPtr->BBox[0][2]) / 2.0;
+
+  x = PartPtr->BBox[0][0] + dx;
+  y = PartPtr->BBox[1][1] - dy;
+  z = PartPtr->BBox[0][2] + dz;
+  
+  fprintf(fp,"1 16 %g %g %g %g 0 0 0 %g 0 0 0 %g box.dat\n",x, y, z, dx, dy, dz);
+#endif
+}
+
+/***************************************************************/
+void Print1PartBox()
+{
+  PrintPartBox(&Parts[0], NULL);
+}
+
+#endif
