@@ -944,6 +944,36 @@ void platform_step_filename(int step, char *filename)
 }
 
 /***************************************************************/
+char * extend_filename(	char *filename)
+{
+  char *p;
+
+  if ((p = strrchr(filename, '.')) != NULL)
+    *p = 0;
+  else 
+    p = filename + strlen(filename);
+
+#ifdef USE_PNG
+  if (ldraw_image_type == IMAGE_TYPE_PNG_RGB)
+    strcat(filename, use_uppercase ? ".PNG" : ".png");
+  else if (ldraw_image_type == IMAGE_TYPE_PNG_RGBA)
+    strcat(filename, use_uppercase ? ".PNG" : ".png");
+  else
+#endif
+  if (ldraw_image_type == IMAGE_TYPE_PPM)
+    strcat(filename, use_uppercase ? ".PPM" : ".ppm");
+  else
+#ifdef USE_BMP8
+  if (ldraw_image_type == IMAGE_TYPE_BMP8)
+    strcat(filename, use_uppercase ? ".BMP" : ".bmp");
+  else
+#endif
+    strcat(filename, use_uppercase ? ".BMP" : ".bmp");
+
+  return p;
+}
+
+/***************************************************************/
 void platform_step(int step, int level, int pause, ZIMAGE *zp)
 {
   char filename[256];
@@ -982,6 +1012,22 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
     else if (level<=ldraw_commandline_opts.maxlevel) {
       // save bitmap
       platform_step_filename(step, filename);
+
+
+//*************************************************************************
+      if ((step == INT_MAX) && (level == 0) && (pause == -1)&& (!picfilename))
+      {
+	int i = 0;
+	char *p = extend_filename(filename);
+
+	while ( (_access( filename, 0 )) != -1 )
+	{
+	  /* The file already exists */
+	  i++;
+	  sprintf(p,"%0d",i);
+	  extend_filename(filename);
+	}
+      }
 
 //*************************************************************************
 //NOTE: Write a fn to calc zp->extents_* by checking zbuf a line at a time.
