@@ -120,6 +120,21 @@ void	handlefileselection(muiObject *obj, enum muiReturnValue value)
     muiSetVSValue(vs, 1.0);
 }
 
+//---------------------------------------------------------------------
+// see if its a directory
+static int isDir(char *filename)
+{
+  struct stat st;
+
+  if (stat(filename, &st))
+    return 0;
+
+  if (S_ISDIR(st.st_mode))
+    return 1;
+
+  return 0;
+}
+
 void handleaccept(muiObject *obj, enum muiReturnValue value)
 {
     char *fname;
@@ -131,6 +146,10 @@ void handleaccept(muiObject *obj, enum muiReturnValue value)
     len = strlen(fname);
     if (fname[len-1] == '/') {
 	fname[len-1] = 0;
+	cd(fname);
+	return;
+    }
+    else if (isDir(fname)) {
 	cd(fname);
 	return;
     } else {
@@ -201,46 +220,57 @@ void handletextbox(muiObject *obj, enum muiReturnValue value)
 
 void maketestui(void)
 {
-    muiObject *l1, *l2, *l3, *b1, *b2, *b3, *b4, *t;
+    muiObject *l1, *l2, *l3, *b1, *b2, *b3, *b4, *t1, *t2;
     int xmin, ymin, xmax, ymax;
 
+    int dw = 320;
+    int dh = 240;
+
     muiNewUIList(1);
-    l1 = muiNewBoldLabel(10, 475, "Directory:");
+    l1 = muiNewBoldLabel(4, dh-22, "Folder:");
     muiAddToUIList(1, l1);
-    l4 = muiNewLabel(80, 475, "./");
+    l4 = muiNewLabel(50, dh-22, "./");
     muiAddToUIList(1, l4);
-    l2 = muiNewBoldLabel(10, 430, "Set directory:");
-    muiAddToUIList(1, l2);
-    b1 = muiNewButton(10, 100, 390, 415);
-    muiLoadButton(b1, "Up");
+
+    b1 = muiNewButton(dw-60, dw-35, dh-30, dh-5);
+    muiLoadButton(b1, "<-");
     muiAddToUIList(1, b1);
-    muiSetCallback(b1, handleupdir);
-    b2 = muiNewButton(10, 100, 355, 380);
-    muiLoadButton(b2, "Original");
+    muiSetCallback(b1, handleoriginal);
+
+    b2 = muiNewButton(dw-30, dw-5, dh-30, dh-5);
+    muiLoadButton(b2, "..");
     muiAddToUIList(1, b2);
-    muiSetCallback(b2, handleoriginal);
-    //tl = muiNewTextList(120, 80, 370, 22);
-    tl = muiNewTextList(120, 80, 370, 22);
+    muiSetCallback(b2, handleupdir);
+
+    tl = muiNewTextList(4, 62, dw-25, 8);
     muiAddToUIList(1, tl);
     muiGetObjectSize(tl, &xmin, &ymin, &xmax, &ymax);
     vs = muiNewVSlider(xmax, ymin+2, ymax, 0, THUMBHEIGHT);
     muiSetVSValue(vs, 1.0);
     muiSetVSArrowDelta(vs, 10);
     muiAddToUIList(1, vs);
-    t = muiNewTextbox(120, 390, 40);
-    muiSetActive(t, 1);
-    muiAddToUIList(1, t);
-    muiSetCallback(t, handletextbox);
-    l3 = muiNewBoldLabel(40, 50, "Open File:");
+
+    l2 = muiNewBoldLabel(4, 36, "File:");
+    muiAddToUIList(1, l2);
+
+    t1 = muiNewTextbox(35, dw-65, 30);
+    muiSetActive(t1, 1);
+    muiAddToUIList(1, t1);
+    muiSetCallback(t1, handletextbox);
+
+    l3 = muiNewBoldLabel(4, 8, "Filter:");
     muiAddToUIList(1, l3);
-    b3 = muiNewButton(130, 230, 9, 34);
-    muiLoadButton(b3, "Accept");
+
+    b3 = muiNewButton(dw-60, dw-5, 32, 57);
+    muiLoadButton(b3, "Ok");
     muiSetCallback(b3, handleaccept);
     muiAddToUIList(1, b3);
-    b4 = muiNewButton(250, 350, 9, 34);
+
+    b4 = muiNewButton(dw-60, dw-5, 2, 27);
     muiLoadButton(b4, "Cancel");
     muiSetCallback(b4, handlecancel);
     muiAddToUIList(1, b4);
+
     muiSetCallback(vs, controltltop);
     muiSetCallback(tl, handlefileselection);
     
@@ -248,19 +278,33 @@ void maketestui(void)
     strcpy(originaldir, directory);
 }
 
-void main(int argc, char **argv)
+int main(int argc, char **argv)
 {
     FILE *f;
 
+#if 0
     f = fopen(BROWSEFILE, "r");
     parsebrowsefile(f);
     fclose(f);
+#else
+    if (f = fopen(BROWSEFILE, "r"))
+    {
+      parsebrowsefile(f);
+      fclose(f);
+    }
+    else 
+    {
+      strcpy(currentdirectoryname,".");
+      strcpy(currentfilename,"somefile");
+      strcpy(browseprompt,"prompt ");
+    }
+#endif
     strcpy(directory, currentdirectoryname);
     maketestui();
     glutInit(&argc, argv);
     if (argc > 1) mui_singlebuffered = 1;
     glutInitWindowPosition(xcenter-200, ycenter-250);
-    glutInitWindowSize(400, 500);
+    glutInitWindowSize(320, 240);
     if (mui_singlebuffered)
 	glutInitDisplayMode( GLUT_RGB | GLUT_SINGLE );
     else
@@ -316,6 +360,9 @@ int cat(void)
 /* get the current working directory (the following 3 routines are from pwd.c) */
 void pwd(void)
 {
+#ifndef UNIX
+        getcwd(directory, MAXNAMLEN);
+#else
 	for(off = 0;;) {
 		if(stat(dot, &d) < 0) {
 			fprintf(stderr, "pwd: cannot stat .!\n");
@@ -325,17 +372,14 @@ void pwd(void)
 			fprintf(stderr,"pwd: cannot open ..\n");
 			exit(2);
 		}
-#ifdef UNIX
 		if(fstat(file->dd_fd, &dd) < 0) {
 			fprintf(stderr, "pwd: cannot stat ..!\n");
 			exit(2);
 		}
-#else
 		if(stat(dotdot, &dd) < 0) {
 			fprintf(stderr, "pwd: cannot stat ..!\n");
 			exit(2);
 		}
-#endif
 		if(chdir(dotdot) < 0) {
 			fprintf(stderr, "pwd: cannot chdir to ..\n");
 			exit(2);
@@ -366,6 +410,7 @@ void pwd(void)
 			return;
 		}
 	}
+#endif
 }
 
 void freels(void)
@@ -417,6 +462,11 @@ void ls(void)
 	    filelist[i][len-2] = '/'; filelist[i][len-1] = 0;
 	}
 	i++;
+	if (i >= MAXFILES)
+	{
+	  // UH OH!  Too many files in directory.
+	  break;
+	}
     }
     filelist[i] = 0;
     qsort(&filelist[0], i, sizeof (char *), (int (*)(const void *, const void *))mystrcmp);

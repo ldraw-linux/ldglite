@@ -74,12 +74,26 @@ void charstr(char *s, int font)
 	glutBitmapCharacter(f, s[i]);
 }
 
+#if 1
+GLint scissor[4];
+GLboolean scissoring = GL_FALSE;
+#endif
+
 void uipushviewport(void)
 {
+#if 1
+    glGetBooleanv(GL_SCISSOR_TEST, &scissoring);
+    glGetIntegerv(GL_SCISSOR_BOX, scissor);
+#endif
 }
 
 void uipopviewport(void)
 {
+#if 1
+    if (scissoring)
+      glScissor(scissor[0],scissor[1],scissor[2],scissor[3]);
+    else
+#endif
     glDisable(GL_SCISSOR_TEST);
 }
 

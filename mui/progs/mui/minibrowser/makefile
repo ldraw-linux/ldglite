@@ -25,3 +25,18 @@ libmui.a: $(libmui_a_OBJECTS)
 	$(AR) cru libmui.a $(libmui_a_OBJECTS)
 	$(RANLIB) libmui.a
 
+mui_test.exe	: mui_test.o $(OBJS)
+	$(CC) $(CFLAGS) -o mui_test.exe mui_test.o $(OBJS) -lglut32 -lglu32 -lopengl32
+
+mui_test.o: mui_test.c
+	$(CC) -c $(CFLAGS) mui_test.c
+
+browser.exe	: browseparse.o browser.o $(OBJS)
+	$(CC) $(CFLAGS) -o browser.exe browser.o browseparse.o $(OBJS) -lglut32 -lglu32 -lopengl32
+
+browser.o: browser.c
+	$(CC) -c $(CFLAGS) browser.c
+
+browseparse.o: browseparse.c
+	$(CC) -c $(CFLAGS) browseparse.c
+

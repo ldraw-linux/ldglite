@@ -1,0 +1,32 @@
+GLUT_BITMAP_HELVETICA_12
+GLUT_BITMAP_9_BY_15
+
+GLUT_LEFT_BUTTON
+GLUT_MIDDLE_BUTTON
+GLUT_RIGHT_BUTTON
+GLUT_DOWN
+
+
+glutBitmapCharacter(f, c);
+glutBitmapWidth(GLUT_BITMAP_HELVETICA_12, c);
+
+glutGetWindow();
+glutGet(GLUT_WINDOW_X);
+glutGet(GLUT_WINDOW_Y);
+glutGet(GLUT_WINDOW_WIDTH);
+glutGet(GLUT_WINDOW_HEIGHT);;
+
+glutSwapBuffers();
+glutPostRedisplay();
+
+glutKeyboardFunc(mui_keyboard);
+glutMouseFunc(mui_mouse);
+glutReshapeFunc(mui_Reshape);
+glutMotionFunc(mui_glutmotion);
+glutPassiveMotionFunc(mui_glutpassivemotion);
+glutDisplayFunc(mui_drawgeom);
+glutMenuStateFunc(mui_menufunc);
+
+glutSetMenu(activemenu);
+glutAttachMenu(GLUT_LEFT_BUTTON);
+glutDetachMenu(GLUT_LEFT_BUTTON);

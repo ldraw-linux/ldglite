@@ -112,7 +112,8 @@ void mui_mouse(int b, int s, int x, int y)
     glutPostRedisplay();
 }
 
-static void mui_Reshape(int width, int height)
+//static void mui_Reshape(int width, int height)
+void mui_Reshape(int width, int height)
 {
     Window win = &winList[glutGetWindow()-1];
 
@@ -121,6 +122,8 @@ static void mui_Reshape(int width, int height)
     win->mui_xsize = width;
     win->mui_ysize = height;
     glViewport(0, 0, win->mui_xsize, win->mui_ysize);
+
+    glutPostRedisplay();
 }
 
 void mui_glutmotion(int x, int y)

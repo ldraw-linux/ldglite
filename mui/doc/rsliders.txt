@@ -1,0 +1,90 @@
+Creating MUI Range Sliders
+You can create MUI range sliders in the InitMui routine as follows: 
+
+
+muiObject       *BLprice;
+muiObject       *RSprice;
+
+. . .
+
+void DoRSliders( muiObject *obj, enum muiReturnValue rv );
+
+. . .
+
+	RSprice = muiNewRSlider( 10, 550, MAXX-10, 10, MAXX-10 );
+	muiSetVisible( RSprice, 1 );
+	muiSetActive( RSprice, 1 );
+	muiSetEnable( RSprice, 1 );
+	muiSetCallback( RSprice, DoRSliders );
+	muiAddToUIList( 1, RSprice );
+	Minprice = MINPRICE;
+	Maxprice = MAXPRICE;
+	sprintf( str, "Price Range: $%8.0f - $%8.0f", Minprice, Maxprice );
+	BLprice = muiNewBoldLabel( 10, 575, str );
+	muiAddToUIList( 1, BLprice );
+
+The integer arguments to muiNewRSlider() are (in order): xmin,ymin Lower-left location of the slider bar 
+xmax Right hand location of the slider bar 
+left Location of the left (minimum) range slider indicator 
+right Location of the right (maximum) range slider indicator 
+
+
+The arguments to muiNewBoldLabel() are (in order): xmin,ymin Lower-left location of the text 
+str The string to put there 
+
+
+
+The MUI Range Slider Callback Routine
+All range sliders should use the same callback routine: 
+
+
+void
+DoRSliders( muiObject *obj, enum muiReturnValue rv )
+{
+        float vmin, vmax;
+        char str[256];
+
+
+        /* get min, max values from the range slider that moved: */
+	/* 0.  <=  vmin, vmax  <=  1.				 */
+
+        muiGetRSVal( obj, &vmin, &vmax );
+
+
+        /* do different things depending on which slider it was:  */
+
+        if( obj == RSprice )
+        {
+                Minprice = MINPRICE  +  vmin * ( MAXPRICE - MINPRICE );
+                Maxprice = MINPRICE  +  vmax * ( MAXPRICE - MINPRICE );
+                sprintf( str, "Price Range: $%8.0f - $%8.0f", Minprice, Maxprice );
+                muiChangeLabel( BLprice, str );
+        }
+        else if( obj == RSxh )
+	{
+	. . .
+	}
+
+	. . .
+
+        glutSetWindow( MuiWindow );
+        glutPostRedisplay();
+
+        glutSetWindow( GrWindow );
+        glutPostRedisplay();
+}
+
+
+In Subroutine Display()
+
+        for(i = 0; i < NHOUSES; i++ )
+        {
+                if( Houses[i].price < Minprice  ||  Houses[i].price > Maxprice )
+                        continue;
+
+        	. . .
+
+                glCallList( Houses[i].list );
+
+        }
+
