@@ -374,6 +374,7 @@ void CopyColorBuffer(int srcbuffer, int destbuffer)
   glDisable( GL_DEPTH_TEST ); // Speed up copying
   glDisable(GL_LIGHTING);     // Speed up copying
   glDisable(GL_BLEND);        // Speed up copying
+  glDisable(GL_ALPHA_TEST);   // Speed up copying
   glMatrixMode( GL_PROJECTION );
   glLoadIdentity();
   gluOrtho2D(0, Width, 0, Height);
