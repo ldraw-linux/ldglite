@@ -281,6 +281,7 @@ int use_quads = 0;
 int curstep = 0;
 int cropping = 1;
 int panning = 0;
+int panlock = 0;
 int dirtyWindow = 0;
 int pan_start_sx = 0; // Screen Coords
 int pan_start_sy = 0;
@@ -5489,7 +5490,6 @@ mouse(int button, int state, int x, int y)
 
     if (ldraw_commandline_opts.debug_level == 1)
       printf("pdn(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
-    panning = 0;
 
     pan_start_sx = x; // Save start point for when we pass hysteresis.
     pan_start_sy = y;
@@ -5501,8 +5501,21 @@ mouse(int button, int state, int x, int y)
 #endif
     //glutWarpPointer(Width/2, Height/2);
 
+    if (!panlock)
+      panning = 0;
+
+    if (glutModifiers & GLUT_ACTIVE_ALT)
+    {
+      panlock ^= 1;
+      panning = 1;
+    }
+    else 
+      panlock = 0;
+
     return;
   }
+  else if (panlock)
+    return;
   else if (panning)
   {
     // Restore wireframe and stud draw modes.
@@ -5750,7 +5763,16 @@ motion(int x, int y)
 	    }
 #endif
 	    if (pan_y != 0)
-	      truckCamera( pan_y, false, false, true ); // forward, backward
+	    {
+	      if (ldraw_projection_type == 1)
+		truckCamera( pan_y, false, false, true ); // forward, backward
+	      else
+	      {
+		// Trucking camera is not visible in orthographic mode.  Scale instead.
+		ldraw_commandline_opts.S *= (1.0 - (0.001 * pan_y));
+	      }
+	    }
+		
 	  }
 	  else
 	  {
@@ -5788,6 +5810,14 @@ motion(int x, int y)
     }
   }
 
+}
+
+/***************************************************************/
+void
+passive_motion(int x, int y)
+{
+  if (panlock)
+    motion(x,y);
 }
 
 void filemenu(int);
@@ -6727,8 +6757,8 @@ int registerGlutCallbacks()
   glutMouseFunc(mouse);
   glutMotionFunc(motion);
   glutIdleFunc(myGlutIdle);
+  glutPassiveMotionFunc(passive_motion);
 #ifdef TEST_MUI_GUI
-  glutPassiveMotionFunc(NULL);
   glutMenuStateFunc(NULL);
 #ifdef USE_GLUT_MENUS
   glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
