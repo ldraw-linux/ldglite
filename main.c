@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.0.6      ";
+char ldgliteVersion[] = "Version 1.0.7      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -1322,6 +1322,63 @@ DoRasterString( float x, float y, char *s )
 }
 
 /***************************************************************/
+void
+DoMenuString( float x, float y, char *s )
+{
+  char c;			/* one character to print		*/
+  int accelcolor = 0;
+
+#ifdef USE_GLFONT
+  if (fontname)
+  {
+    glScalef(fontwidth, fontwidth, 1.0f);
+
+    glEnable(GL_TEXTURE_2D);
+    glAlphaFunc(GL_GEQUAL, 0.0625);
+    glEnable(GL_ALPHA_TEST);
+    glEnable( GL_BLEND );
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glFontBegin (&Font); //Needs to be called before text output
+    glFontTextOut (s, x/fontwidth, y/fontwidth+2, 1);
+    glFontEnd (); //Needs to be called after text output
+
+    glDisable( GL_BLEND );
+    glDisable(GL_ALPHA_TEST);
+    glDisable(GL_TEXTURE_2D);
+    //glLoadIdentity();
+    glScalef(1.0/fontwidth, 1.0/fontwidth, 1.0f);
+    return;
+  }
+#endif
+  
+  glRasterPos2f( x, y );
+  for( ; ( c = *s ) != '\0'; s++ )
+  {
+#ifndef AGL    
+    if (c == '&')
+    {
+      glColor4f( 0.0, 0.0, 0.5, 1.0 );	/* Current char is dark blue */
+      glRasterPos2f( x, y );
+      accelcolor = 1;
+      continue;
+    }
+    glutBitmapCharacter( GLUT_BITMAP_HELVETICA_12, c );
+    x += glutBitmapWidth( GLUT_BITMAP_HELVETICA_12, c );
+    if (accelcolor)
+    {
+      glColor4f( 0.0, 0.0, 0.0, 1.0 );  // Black
+      glRasterPos2f( x, y );
+      accelcolor = 0;
+    }
+#endif
+  }
+#ifdef AGL    
+  //allegro_gl_printf(font, x, y, 1, 0, s);
+#endif
+}
+
+/***************************************************************/
 void NewColorPrompt()
 {
     int i, c, x, y, w, h;
@@ -1513,6 +1570,8 @@ int edit_mode_gui()
   glDisable( GL_POLYGON_SMOOTH ); 
   glHint( GL_POLYGON_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
   glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+  // No need to dither the menu, even if at 8bpp.
+  glDisable(GL_DITHER);
 
   glMatrixMode( GL_PROJECTION );
   glPushMatrix();
@@ -1529,11 +1588,21 @@ int edit_mode_gui()
   glVertex2f(0.0, Height-(lineheight*4.5));
   glEnd();
   glColor4f( 0.0, 0.0, 0.0, 1.0 );		/* black  	*/
-  DoRasterString( charwidth, Height - lineheight, eline[0] );
-  if (!strncmp(eline[0], "New Color:", 10))
+  if (strlen(ecommand))
+  {
+    DoMenuString( charwidth, Height - lineheight, eline[0] );
+    if (!strncmp(eline[0], "New Color:", 10))
       NewColorPrompt();
-  else
+    else if (strlen(eprompt[1]))
+      DoMenuString( charwidth, Height - lineheight*2.0, eline[1] );
+    else
       DoRasterString( charwidth, Height - lineheight*2.0, eline[1] );
+  }
+  else 
+  {
+    DoRasterString( charwidth, Height - lineheight, eline[0] );
+    DoRasterString( charwidth, Height - lineheight*2.0, eline[1] );
+  }
   glColor4f( 0.5, 0.0, 0.0, 1.0 );		/* Current line is dark red */
   DoRasterString( charwidth, Height - lineheight*3.0, eline[2] );
   glColor4f( 0.0, 0.0, 0.0, 1.0 );		/* black  	*/
@@ -5313,49 +5382,49 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       switch(key) {
       case 'f':
 	sprintf(eprompt[0], "File: ");
-	sprintf(eprompt[1], "Load Save Exit");
+	sprintf(eprompt[1], "&Load &Save &Exit");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
 	break;
       case 'e':
 	sprintf(eprompt[0], "Edit: ");
-	sprintf(eprompt[1], "Insert Delete Swap Line-type  Hoser Plugins");
+	sprintf(eprompt[1], "&Insert &Delete &Swap &Line-type  &Hoser &Plugins");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
 	break;
       case 'v':
 	sprintf(eprompt[0], "View: ");
-	sprintf(eprompt[1], "Front Right Left Back Over Under Three-D In Center");
+	sprintf(eprompt[1], "&Front &Right &Left &Back &Over &Under &Three-&D &In &Center");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
 	break;
       case 'p':
 	sprintf(eprompt[0], "Piece: ");
-	sprintf(eprompt[1], "File Color Goto  Location Scale Matrix  Inline");
+	sprintf(eprompt[1], "&File &Color &Goto  &Location &Scale &Matrix  &Inline");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
 	break;
       case 'o':
 	sprintf(eprompt[0], "Options: ");
-	sprintf(eprompt[1], "Line-as-stud Start-at-line Draw-to-current");
+	sprintf(eprompt[1], "&Line-as-stud &Start-at-line &Draw-to-current");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
 	break;
       case 't':
 	sprintf(eprompt[0], "Turn: ");
-	sprintf(eprompt[1], "X-axis Y-axis Z-axis Center-set  Origin Axis Rotate");
+	sprintf(eprompt[1], "&X-axis &Y-axis &Z-axis &Center-set  &Origin &Axis &Rotate");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
 	break;
       case 'r':
 	sprintf(eprompt[0], "Rotate: ");
-	sprintf(eprompt[1], "X-axis Y-axis Z-axis");
+	sprintf(eprompt[1], "&X-axis &Y-axis &Z-axis");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
@@ -5451,7 +5520,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       case 'r':
 	// Switch to the rotate menu
 	sprintf(eprompt[0], "Rotate: ");
-	sprintf(eprompt[1], "X-axis Y-axis Z-axis");
+	sprintf(eprompt[1], "&X-axis &Y-axis &Z-axis");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
@@ -5506,7 +5575,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       case 'l':
 	clear_edit_mode_gui();
 	sprintf(eprompt[0], "Line Type: ");
-	sprintf(eprompt[1], "Piece Comment Step 2 3 4 5");
+	sprintf(eprompt[1], "&Piece &Comment &Step &2 &3 &4 &5");
 	ecommand[0] = 'e'; // EDIT_LINE_ID
 	edit_mode_gui();
 	return 1;
@@ -6161,7 +6230,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
   switch(key) {
   case 27:
   case '/':
-    sprintf(eprompt[0], "File Edit View Turn Rotate Piece Options Hide  Quit");
+    sprintf(eprompt[0], "&File &Edit &View &Turn &Rotate &Piece &Options &Hide  &Quit");
     ecommand[0] = '/';
     ecommand[1] = 0;
     edit_mode_gui();
