@@ -5591,31 +5591,37 @@ motion(int x, int y)
 #ifdef USE_F00_CAMERA
       if (glutModifiers & GLUT_ACTIVE_ALT)
       {
-	x_angle = x-(Width/2.0); // dx
-	y_angle = y-(Height/2.0); // dy
-	if ((x_angle != 0.0) || (y_angle != 0.0))
+	pan_x = x-(Width/2.0); // dx
+	pan_y = y-(Height/2.0); // dy
+	if ((pan_x != 0.0) || (pan_y != 0.0))
 	{
-	  //printf("(DX,DY) about(%0.2f, %0.2f) by angle %0.2f\n", x_angle, y_angle, angle);
 	  if (glutModifiers & GLUT_ACTIVE_SHIFT)
 	  {
-	    x_angle = angle * (x_angle / (fabs(x_angle) + fabs(y_angle)));
-	    y_angle = angle * (y_angle / (fabs(x_angle) + fabs(y_angle)));
-	    turnCamera( (GLfloat)(y_angle), (GLfloat)x_angle, 0.0 );
-	    //printf("TURNING about(%0.2f, %0.2f) by angle %0.2f\n", x_angle, y_angle, angle);
+	    y_angle = angle * (pan_x / (fabs(pan_x) + fabs(pan_y)));
+	    x_angle = angle * (pan_y / (fabs(pan_x) + fabs(pan_y)));
+	    turnCamera( (GLfloat)(x_angle), (GLfloat)y_angle, 0.0 );
 	  }
 	  else if (glutModifiers & GLUT_ACTIVE_CTRL)
 	  {
-	    if (x_angle != 0)
-	      truckCamera( x_angle, true, false, false );
-	    if (y_angle != 0)
-	      truckCamera( y_angle, false, false, true );
+#if 0	    
+	    if (pan_x != 0)
+	      truckCamera( pan_x, true, false, false ); // left, right
+#else
+	    if (pan_x != 0)
+	    {
+	      y_angle = angle * (pan_x / (fabs(pan_x) + fabs(pan_y)));
+	      turnCamera( 0.0, (GLfloat)y_angle, 0.0 );
+	    }
+#endif
+	    if (pan_y != 0)
+	      truckCamera( pan_y, false, false, true ); // forward, backward
 	  }
 	  else
 	  {
-	    if (x_angle != 0)
-	      truckCamera( x_angle, true, false, false );
-	    if (y_angle != 0)
-	      truckCamera( -y_angle, false, true, false );
+	    if (pan_x != 0)
+	      truckCamera( pan_x, true, false, false ); // left, right 
+	    if (pan_y != 0)
+	      truckCamera( -pan_y, false, true, false ); // up, down
 	  }
 	    
 	}
