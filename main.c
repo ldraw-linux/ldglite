@@ -72,6 +72,7 @@ int use_uppercase = 0;
 #define IMAGE_TYPE_PNG_RGBA 2
 #define IMAGE_TYPE_BMP8 3
 #define IMAGE_TYPE_BMP 4
+#define IMAGE_TYPE_PPM 5
 
 int use_png_alpha = 1;
 
@@ -219,46 +220,29 @@ DoRasterString( float x, float y, char *s )
 #define BYTE4(i) ((unsigned char) ((i / 0x1000000) & 0x0ff))
 
 /***************************************************************/
-void write_bmp(char *filename)
+FILE *start_bmp(char *filename, int width, int height)
 {
-  int i, j;
+  BITMAPINFOHEADER bmhbuf;
   BITMAPFILEHEADER bmfh;
   LPBITMAPINFOHEADER bmh;
   char *p, c;
   FILE *fp;
 
-  int width = Width;
-  int height = Height;
-  GLint xoff = 0;
-  GLint yoff = 0;
-
-  if (cropping)
-  {
-    xoff = max(0, z.extent_x1);
-    yoff = max(0, z.extent_y1);
-    width = min((z.extent_x2 - xoff), (Width - xoff));
-    height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
-    //width = ((width + 31)/32) * 32; // round to a multiple of 32.
-    width = ((width + 3)/4) * 4; // round to a multiple of 4.
-    if (ldraw_commandline_opts.debug_level == 1)
-      printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
-    if ((width <= 0) || (height <= 0)) return;
-  }
-  
   printf("Write BMP %s\n", filename);
   if ((fp = fopen(filename,"wb+"))==NULL) {
     printf("Could not open %s\n", filename);
-    return;
+    return(NULL);
   }
   
-  
-  bmh = (LPBITMAPINFOHEADER) z.dib;
+  //bmh = (LPBITMAPINFOHEADER) z.dib;
+  bmh = (LPBITMAPINFOHEADER) &bmhbuf;
   bmh->biSize = 40;
   bmh->biWidth = width;
   bmh->biHeight = height;
   bmh->biPlanes = 1;
   //bmh->biBitCount = 16;
   bmh->biBitCount = 24;
+
   bmh->biSizeImage = (bmh->biWidth*bmh->biBitCount+31)/32*4
     * (bmh->biHeight>0?bmh->biHeight:-bmh->biHeight);
 
@@ -315,6 +299,38 @@ void write_bmp(char *filename)
   fwrite(buf, 54, 1, fp);
 #endif
 
+  return(fp);
+}
+
+/***************************************************************/
+void write_bmp(char *filename)
+{
+  int i, j;
+  char *p, c;
+  FILE *fp;
+
+  int width = Width;
+  int height = Height;
+  GLint xoff = 0;
+  GLint yoff = 0;
+
+  if (cropping)
+  {
+    xoff = max(0, z.extent_x1);
+    yoff = max(0, z.extent_y1);
+    width = min((z.extent_x2 - xoff), (Width - xoff));
+    height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
+    //width = ((width + 31)/32) * 32; // round to a multiple of 32.
+    width = ((width + 3)/4) * 4; // round to a multiple of 4.
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
+    if ((width <= 0) || (height <= 0)) return;
+  }
+
+  fp = start_bmp(filename, width, height);
+  if (fp == NULL)
+    return;
+
   // no pallete since we use RGB
 
   glReadBuffer(GL_FRONT);
@@ -333,6 +349,77 @@ void write_bmp(char *filename)
   }
   fclose(fp);
 }
+
+/***************************************************************/
+FILE *start_ppm(char *filename, int width, int height)
+{
+  char *p;
+  FILE *fp;
+
+  if ((p = strrchr(filename, '.')) != NULL)
+    *p = 0;
+  strcat(filename, use_uppercase ? ".PPM" : ".ppm");
+  
+  printf("Write PPM %s\n", filename);
+  
+  fp = fopen(filename, "wb");  // open in binary mode (to use unix \n chars)
+  if (!fp) {
+    printf("Couldn't open image file: %s\n", filename);
+    return(NULL);
+  }
+  fprintf(fp,"P6\n");
+  fprintf(fp,"# ppm-file created by %s\n", progname);
+  fprintf(fp,"%i %i\n", width, height);
+  fprintf(fp,"255\n"); // need unix \n here for some ppm interpreters.
+  fclose(fp);
+  fp = fopen(filename, "ab");  /* now append binary data */
+  if (!fp) {
+    printf("Couldn't append to image file: %s\n", filename);
+    return(NULL);
+  }
+
+  return (fp);
+}
+
+/***************************************************************/
+void write_ppm(char *filename)
+{
+  int i, j;
+
+  FILE *fp;
+  int width = Width;
+  int height = Height;
+  GLint xoff = 0;
+  GLint yoff = 0;
+
+  if (cropping)
+  {
+    xoff = max(0, z.extent_x1);
+    yoff = max(0, z.extent_y1);
+    width = min((z.extent_x2 - xoff), (Width - xoff));
+    height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
+    //width = ((width + 3)/4) * 4; // round to a multiple of 4.
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
+    if ((width <= 0) || (height <= 0)) return;
+  }
+
+  fp = start_ppm(filename, width, height);
+  if (fp == NULL)
+    return;
+
+  glReadBuffer(GL_FRONT);
+  // Write image rows
+  //png_write_image(png_ptr, row_pointers);
+  for (i = height-1; i >= 0; i--)
+  {
+    glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, buf);
+    fwrite(buf, width*3, 1, fp);
+  }
+
+  fclose(fp);
+}
+
 
 #ifdef USE_PNG
 /***************************************************************/
@@ -866,6 +953,9 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
       }
       else
 #endif
+      if (ldraw_image_type == IMAGE_TYPE_PPM)
+	write_ppm(filename);
+      else
 #ifdef USE_BMP8
       if (ldraw_image_type == IMAGE_TYPE_BMP8)
 	write_bmp8(filename);
@@ -1692,8 +1782,9 @@ void TiledDisplay(void)
    GLubyte *tile;
    FILE *f;
    int more;
-   int i;
-   char *p;
+   int i,j,k = 0;
+   long foffset = 0;
+   char *p, c;
    char filename[256];
 
 #ifdef USE_PNG
@@ -1814,28 +1905,16 @@ void TiledDisplay(void)
    }
    else
 #endif
+   if ((ldraw_image_type == IMAGE_TYPE_BMP) ||
+       (ldraw_image_type == IMAGE_TYPE_BMP8))
    {
-     if ((p = strrchr(filename, '.')) != NULL)
-       *p = 0;
-     strcat(filename, use_uppercase ? ".PPM" : ".ppm");
-   
-     f = fopen(filename, "wb");  // open in binary mode (to use unix \n chars)
-     if (!f) {
-       printf("Couldn't open image file: %s\n", filename);
-       return;
-     }
-     fprintf(f,"P6\n");
-     fprintf(f,"# ppm-file created by %s\n", "trdemo2");
-     fprintf(f,"%i %i\n", TILE_IMAGE_WIDTH, TILE_IMAGE_HEIGHT);
-     fprintf(f,"255\n"); // need unix \n here for some ppm interpreters.
-     fclose(f);
-     f = fopen(filename, "ab");  /* now append binary data */
-     if (!f) {
-       printf("Couldn't append to image file: %s\n", filename);
-       return;
-     }
+     f = start_bmp(filename, width, height);
+     foffset = ftell(f);
    }
-   /*************************************************************/
+   else
+   {
+     f = start_ppm(filename, TILE_IMAGE_WIDTH, TILE_IMAGE_HEIGHT);
+   }
 
    /* just to be safe... */
    glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -1886,6 +1965,26 @@ void TiledDisplay(void)
 	  }
 	  else
 #endif
+	  if ((ldraw_image_type == IMAGE_TYPE_BMP) ||
+	      (ldraw_image_type == IMAGE_TYPE_BMP8))
+	  {
+	    long offset = foffset;
+	    offset += (height-k) * width * 3;
+	    fseek(f, offset, SEEK_SET);
+	    k++;
+
+	    p = rowPtr;
+	    for (j = 0; j < width; j++) // RGB -> BGR
+	    {
+	      c = p[0];
+	      p[0] = p[2];
+	      p[2] = c;
+	      p+=3;
+	    }
+	    fwrite(rowPtr, 1,width*3, f);
+	  }
+	  else
+	  
 	  /************* Save a row to the ppm output file *************/
 	  // NOTE: We will have to disable ALPHA (just use RGB) for png files.
 	  fwrite(rowPtr, 1, TILE_IMAGE_WIDTH*3, f);
