@@ -106,6 +106,7 @@ static int list_made = 0;
 int curstep = 0;
 int cropping = 1;
 int panning = 0;
+int not_stepping = 0;
 GLdouble pan_start_x = 0.0;
 GLdouble pan_start_y = 0.0;
 GLdouble pan_end_x = 0.0;
@@ -1197,7 +1198,9 @@ void reshape(int width, int height)
       // Perhaps this belongs in the ModelView matrix.
       // Supposedly only GluPerspective, glGrustrum, glOrtho* belong in
       // the Projection matrix.
+#if 0
       glDepthRange(0.0, 1.0); // I do NOT understand this fn.
+#endif
     }
 
 #if 0    
@@ -1476,7 +1479,10 @@ GLUT_BITMAP_HELVETICA_18
   //int glutStrokeLength(void *font, const unsigned char *string);
 #endif
 
-  if (!panning)
+  // Do not increment step right after (or during) panning.
+  if (not_stepping)
+    not_stepping = 0;
+  else if (!panning)
   {
     if (ldraw_commandline_opts.M == 'P')
     {
@@ -1554,6 +1560,16 @@ void fnkeys(int key, int x, int y)
     This will rotate you around x and y and translate you along x, y, and z. 
     It shouldn't take much to add rotation around the z axis.
   */
+
+  // Add modifier check so I can:
+  //   spin about the 3 axis with 
+  //   slide along 3 axis with shifted keys
+  //   orbit about the center of the viewpoint with ctrl modified keys?
+  //
+  // glutGetModifiers() return masks.
+  //   GLUT_ACTIVE_SHIFT
+  //   GLUT_ACTIVE_CTRL
+  //   GLUT_ACTIVE_ALT
 
   // The PG_UP, PG_DN keys seem to zoom in and out (only in perspective mode)
   // You can NOT zoom in or out in orthographic mode, only scale.
@@ -1809,7 +1825,10 @@ void keyboard(unsigned char key, int x, int y)
 	return;
     }
     if (newview)
+    {
       parse_view(m_viewMatrix);
+      initCamera(); // Reset the camera position for any stock views.
+    }
 
     glutPostRedisplay();
 }
@@ -2042,8 +2061,8 @@ mouse(int button, int state, int x, int y)
     if (ldraw_commandline_opts.debug_level == 1)
       printf("pdn(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
     panning = 0;
-    glutSetCursor(GLUT_CURSOR_INHERIT);
-    glutWarpPointer(Width/2, Height/2);
+    //glutSetCursor(GLUT_CURSOR_INHERIT);
+    //glutWarpPointer(Width/2, Height/2);
     return;
   }
   else if (panning)
@@ -2113,6 +2132,7 @@ mouse(int button, int state, int x, int y)
 #endif
 
     panning = 0;
+    not_stepping = 1;  // Do not increment step counter on post pan redraw.
     glutSetCursor(GLUT_CURSOR_INHERIT);
     glutWarpPointer(Width/2, Height/2);
   }
@@ -2146,6 +2166,19 @@ motion(int x, int y)
     
     if (panning == 0)
     {
+      // Add some hysteresis before we start panning.
+      // NOTE:  This should really be done in screen coords, 
+      // not world coords that have gone thru gluUnProject.
+      // In fact the whole spinning thing is messed up when done 
+      // in perspective mode (too fast) because I think I use the 
+      // rear plane of the viewing volume for the z coord.
+      // Should I use -1.0 for the z coord to get the front plane?
+      if((fabs(pan_x -pan_start_x) < 4) && (fabs(pan_y -pan_start_y) < 4))
+      {
+	printf("hysteresis = %0.2f, %0.2f\n", 
+	       fabs(pan_x -pan_start_x), fabs(pan_y -pan_start_y));
+	return;
+      }
       // Save draw modes, then switch to wireframe and turn off studs.
       pan_start_zWire = zWire;
 
