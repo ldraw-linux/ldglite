@@ -8617,7 +8617,16 @@ main(int argc, char **argv)
   // Get params first so we can skip this if rendering in OSMesa
   if (OffScreenRendering == 0)
   {
+#  ifdef MACOS_X
+    //The GLUT framework will chdir to the Resources folder of your 
+    // application bundle on glutInit!  Ouch!
+    char cwdpath[512];
+    getcwd(cwdpath, 512);
     glutInit(&argc, argv);
+    chdir(cwdpath); // problem with chdir to dir with spaces in win32.
+#  else
+    glutInit(&argc, argv);
+#  endif
   }
 #endif
 
