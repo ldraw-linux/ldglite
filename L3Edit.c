@@ -132,6 +132,31 @@ int Delete1Part(int partnum)
 }
 
 /*****************************************************************************/
+int Get1PartPos(int partnum, float m[4][4])
+{
+    int            i = 0;
+    struct L3LineS *LinePtr;
+
+    if (SelectedLinePtr)
+	LinePtr = SelectedLinePtr;
+
+    else 
+      for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+    {
+	if (i == partnum)
+	    break;	    // Found the part
+	i++;
+    }
+
+    if (!LinePtr)
+	return 0; //partnum not found
+
+    memcpy(m, LinePtr->v, sizeof(LinePtr->v));
+
+    return 1;
+}
+
+/*****************************************************************************/
 int Move1Part(int partnum, float m[4][4], int premult)
 {
     float          r[4], m1[4][4];
@@ -156,11 +181,11 @@ int Move1Part(int partnum, float m[4][4], int premult)
     case 0:
 	break;
     case 1:
-        if (premult)
+        if (premult == 1)
 	{
 	  M4M4Mul(m1,LinePtr->v,m);
 	}
-	else
+	else if (premult == 2)
 	{
           x = LinePtr->v[0][3]; // Save the original origin
 	  y = LinePtr->v[1][3];
@@ -169,9 +194,23 @@ int Move1Part(int partnum, float m[4][4], int premult)
 	  LinePtr->v[1][3] = 0;
 	  LinePtr->v[2][3] = 0;
 	  M4M4Mul(m1,m,LinePtr->v);
-	  m1[0][3] = x;         // Restory the original origin
+	  m1[0][3] = x;         // Restore the original origin
 	  m1[1][3] = y;
 	  m1[2][3] = z;
+	}
+	else
+	{
+          x = m[0][3]; // Save the original origin
+	  y = m[1][3];
+	  z = m[2][3];
+	  m[0][3] = m[1][3] = m[2][3] = 0;
+          LinePtr->v[0][3] -= x; 
+	  LinePtr->v[1][3] -= y;
+	  LinePtr->v[2][3] -= z;
+	  M4M4Mul(m1,m,LinePtr->v);
+	  m1[0][3] += x;         // Restore the original origin
+	  m1[1][3] += y;
+	  m1[2][3] += z;
 	}
 	//LinePtr->v = m1;
         memcpy(LinePtr->v, m1, sizeof(LinePtr->v));
