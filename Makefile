@@ -16,6 +16,8 @@ TR_SRC=tr.c
 #GUI_SRC=ldglgui.c
 #GUI_LIBS=-lmui
 
+RES_SRC=ldglite.rc
+
 # NOTE: -mwindows makes it detach from the console.
 #       This is good for gui apps but bad if launched from dos
 #       because we lose stdin.  Perhaps I should make 2 versions
@@ -30,8 +32,8 @@ RANLIB = ranlib
 ## This is lame.  I don't know how to do both .c and .cpp for the OBJS line
 ## so I pretend L3*.cpp is L3*.c and make rules for them later.
 #
-SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c y.tab.c lex.yy.c qbuf.c main.c L3Edit.c L3Math.c L3Input.c L3View.c $(TR_SRC) $(GUI_SRC)
-OBJS = $(SRCS:.c=.o)
+SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c y.tab.c lex.yy.c qbuf.c main.c L3Edit.c L3Math.c L3Input.c L3View.c $(TR_SRC) 
+OBJS = $(SRCS:.c=.o) $(RES_SRC:.rc=.o)
 
 all	: ldglite
 
@@ -45,6 +47,9 @@ l3glite:   ldglite
 ldglitepng:   ldglite
 
 l3glitepng:   ldglite
+
+ldglite.o: ldglite.rc
+	windres -i ldglite.rc -o ldglite.o
 
 ## This is lame.  I don't know how to do both .c and .cpp for the OBJS line.
 #
