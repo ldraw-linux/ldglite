@@ -1768,6 +1768,58 @@ char * extend_filename(	char *filename)
 }
 
 /***************************************************************/
+// Push, pop extents is used in render for multipass drawing extents.
+/***************************************************************/
+int p_extent_x1;
+int p_extent_x2;
+int p_extent_y1;
+int p_extent_y2;
+
+/***************************************************************/
+void push_extents(void)
+{
+  // Save the cropping extents from the previous step
+  // so I can restore them after zReset().
+  p_extent_x1 = z.extent_x1;
+  p_extent_x2 = z.extent_x2;
+  p_extent_y1 = z.extent_y1;
+  p_extent_y2 = z.extent_y2;
+}
+
+/***************************************************************/
+void pop_extents(void)
+{
+  // Restore the cropping extents from the previous step if needed.
+  z.extent_x1 = min(p_extent_x1, z.extent_x1);
+  z.extent_x2 = max(p_extent_x2, z.extent_x2);
+  z.extent_y1 = min(p_extent_y1, z.extent_y1);
+  z.extent_y2 = max(p_extent_y2, z.extent_y2);
+}
+
+/***************************************************************/
+// Save, merge extents is used in display for multistep drawing extents.
+/***************************************************************/
+void save_extents(void)
+{
+  // Save the cropping extents from the previous step
+  // so I can restore them after zReset().
+  z_extent_x1 = z.extent_x1;
+  z_extent_x2 = z.extent_x2;
+  z_extent_y1 = z.extent_y1;
+  z_extent_y2 = z.extent_y2;
+}
+
+/***************************************************************/
+void merge_extents(void)
+{
+  // Restore the cropping extents from the previous step if needed.
+  z.extent_x1 = min(z_extent_x1, z.extent_x1);
+  z.extent_x2 = max(z_extent_x2, z.extent_x2);
+  z.extent_y1 = min(z_extent_y1, z.extent_y1);
+  z.extent_y2 = max(z_extent_y2, z.extent_y2);
+}
+
+/***************************************************************/
 void platform_step(int step, int level, int pause, ZIMAGE *zp)
 {
   char filename[256];
@@ -2992,11 +3044,13 @@ render(void)
 
     stepcount = 0; // NOTE: Not sure what effect this will have...
 
+    push_extents(); // Save the cropping extents before zReset();
     rc = zReset(&(client_rect_right),&(client_rect_bottom));
     if (rc != 0) {
       printf("Out of Memory, exiting");
       exit(-1);
     }
+    pop_extents();
 
     mpd_subfile_name = NULL; // potential memory leak
     znamelist_push();
@@ -3010,11 +3064,13 @@ render(void)
 
       zcolor_init();
 
+      push_extents(); // Save the cropping extents before zReset();
       rc = zReset(&(client_rect_right),&(client_rect_bottom));
       if (rc != 0) {
 	printf("Out of Memory, exiting");
 	exit(-1);
       }
+      pop_extents();
 
       znamelist_push();
       ldlite_parse_with_rc(mpd_subfile_name);
@@ -3056,8 +3112,10 @@ void DrawScene(void)
     // I may only want to check preprintstep if (opts.M == 'S').
     while (stepcount != curstep)
     {
+      save_extents();
       curstep++;
       render();
+      merge_extents();
     }
   }
   
@@ -4267,10 +4325,7 @@ void display(void)
 
 	// Save the cropping extents from the previous step
 	// so I can restore them after zReset().
-	z_extent_x1 = z.extent_x1;
-	z_extent_x2 = z.extent_x2;
-	z_extent_y1 = z.extent_y1;
-	z_extent_y2 = z.extent_y2;
+	save_extents();
 #else
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 #endif
@@ -4298,8 +4353,10 @@ void display(void)
     // in tiled render and offscreen render.
     while (stepcount != curstep)
     {
+      save_extents();
       curstep++;
       render();
+      merge_extents();
     }
   }
   
@@ -4322,12 +4379,7 @@ void display(void)
 #ifndef ALWAYS_REDRAW
       // Restore the cropping extents from the previous step if needed.
       if (curstep > 0)
-      {
-	z.extent_x1 = min(z_extent_x1, z.extent_x1);
-	z.extent_x2 = max(z_extent_x2, z.extent_x2);
-	z.extent_y1 = min(z_extent_y1, z.extent_y1);
-	z.extent_y2 = max(z_extent_y2, z.extent_y2);
-      }
+	merge_extents();
 #endif
     }
   }
