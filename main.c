@@ -1223,6 +1223,13 @@ void reshape(int width, int height)
     //glTranslatef(0.0, 0.0, -200.0 + zoom);
 }
 
+#define USE_F00_CAMERA 1
+#ifdef USE_F00_CAMERA
+  extern void resetCamera();
+  extern void applyCamera();
+  extern void specialFunc( int key, int x, int y );
+#endif
+
 /***************************************************************/
 void display(void)
 {
@@ -1275,6 +1282,10 @@ void display(void)
   }
 #else
   glLoadIdentity();
+#endif
+
+#ifdef USE_F00_CAMERA
+  applyCamera();
 #endif
 
 #define ORBIT_THE_CAMERA_ABOUT_THE_MODEL 1
@@ -1534,6 +1545,10 @@ void initCamera(void)
   fXRot = 0.0;
   fYRot = 0.0;
   fZRot = 0.0;
+
+#ifdef USE_F00_CAMERA
+  resetCamera();
+#endif
 }
 
 void rotate_about(float x, float y, float z, float degrees);
@@ -1574,6 +1589,16 @@ void fnkeys(int key, int x, int y)
   // The PG_UP, PG_DN keys seem to zoom in and out (only in perspective mode)
   // You can NOT zoom in or out in orthographic mode, only scale.
   switch(key) {
+#ifdef USE_F00_CAMERA
+  case GLUT_KEY_PAGE_UP:
+  case GLUT_KEY_PAGE_DOWN:
+  case GLUT_KEY_RIGHT:
+  case GLUT_KEY_LEFT:
+  case GLUT_KEY_UP:
+  case GLUT_KEY_DOWN:
+    specialFunc( key, x, y );
+    break;
+#else
   case GLUT_KEY_PAGE_UP:
     fCamX += (float)sin(fYRot*PI_180) * MOVE_SPEED * 20;
     fCamZ += (float)cos(fYRot*PI_180) * MOVE_SPEED * 20;
@@ -1604,6 +1629,7 @@ void fnkeys(int key, int x, int y)
     if(fXRot > 360.0)
       fXRot -= 360.0;
     break;
+#endif
   case GLUT_KEY_HOME:
     rotate_about(0.0, 1.0, 0.0, 45.0 );
     break;
@@ -1815,6 +1841,9 @@ void keyboard(unsigned char key, int x, int y)
 	//glutChangeToMenuEntry(3, "Pause              ", 'c');
       }
       curstep = 0; // Reset to first step
+      return;
+    case 'g':
+      ldraw_commandline_opts.poll ^= 1;
       return;
     case 27:
 	exit(0);
@@ -2959,6 +2988,7 @@ main(int argc, char **argv)
   glutAddMenuEntry("Studs           ", 'f');
   glutAddMenuEntry("Visible spin    ", 'v');
   glutAddMenuEntry("Continuous      ", 'c');
+  glutAddMenuEntry("polling         ", 'g');
   glutAddMenuEntry("                ", '\0');
   glutAddMenuEntry("Zoom out        ", 'z');
   glutAddMenuEntry("Zoom in         ", 'Z');
@@ -3032,6 +3062,7 @@ main(int argc, char **argv)
   filemenu(15);
   }
 
+  initCamera();
   init();
 
   glutMainLoop();
