@@ -350,7 +350,9 @@ void mouse(int button, int state, int x, int y);
 static char *partlistbuf = NULL;
 static int partlookup = 0;
 static char **partlistptr = NULL;
+static char **partliststr = NULL;
 static int partlistsize = 0;
+static int partlisttotal = 0;
 static int partlistmax = 0;
 
 /***************************************************************/
@@ -3891,6 +3893,14 @@ void saveasdatfile(char *datpath, char *datfile)
 }
 
 /***************************************************************/
+int resetpartlist()
+{
+  memcpy(partlistptr, partliststr, sizeof (char *) *partlisttotal);
+  partlistsize = partlisttotal;
+  partlookup = 1;
+}
+
+/***************************************************************/
 char *loadpartlist(void)
 {
   char filename[256];
@@ -3902,8 +3912,13 @@ char *loadpartlist(void)
   unsigned char c;
   char seps[] = "\r\n"; 
   
+  partlookup = 0;
+
   if (partlistbuf)
+  {
+    resetpartlist();
     return(partlistbuf);
+  }
   
   concat_path(pathname, use_uppercase ? "PARTS.LST" : "parts.lst", filename);
   fp = fopen(filename, "rb");
@@ -3930,7 +3945,7 @@ char *loadpartlist(void)
   buffer[filesize-1] = 0;
 
   partlistmax = 2000;
-  partlistptr = (char **) calloc(sizeof (char *), partlistmax);
+  partliststr = (char **) calloc(sizeof (char *), partlistmax);
 
   // Save a pointer to each line
   for (i = 0, s = strtok( buffer, seps );
@@ -3940,22 +3955,83 @@ char *loadpartlist(void)
     if (i >= partlistmax)
     {
       partlistmax += 1000;
-      partlistptr = realloc(partlistptr, partlistmax * sizeof(char *));
+      partliststr = realloc(partliststr, partlistmax * sizeof(char *));
     }
-    partlistptr[i] = s;
+    partliststr[i] = s;
   }
-  partlistsize = i;
-
   printf("Found %d parts\n", i);
 
-  if (partlistsize == 0)
+  if (i == 0)
   {
     free(buffer);
     buffer = NULL;
+    return(NULL);
   }
+
+  partlisttotal = i;
+  partlistptr = (char **) calloc(sizeof(char *), partlisttotal);
+  resetpartlist();
 
   partlistbuf = buffer;
   return(partlistbuf);
+}
+
+/***************************************************************/
+int stristr(char *src, char *dst)
+{
+  int n;
+  char ss[256];
+  char dd[256];
+
+  // Copy and lowercase
+  if (strlen(src) > 255)
+    src = strdup(src);
+  else 
+  {
+    strcpy(ss, src);
+    src = ss;
+  }
+  _strlwr(src);
+  
+  // Copy and lowercase
+  if (strlen(dst) > 255)
+    dst = strdup(dst);
+  else 
+  {
+    strcpy(dd, dst);
+    dst = dd;
+  }
+  _strlwr(dst);
+  
+  n = strstr(src, dst);
+
+  if (strlen(src) > 255)
+    free(src);
+  if (strlen(dst) > 255)
+    free(dst);
+
+  return n;
+}
+
+/***************************************************************/
+int limitpartlist(char *str)
+{
+  int i, j, n;
+
+  j = 0;
+  for (n = 0; n < partlisttotal; n++)
+    if (stristr(partliststr[n], str))
+    {
+      partlistptr[j++] = partliststr[n];
+    }
+
+  if (j > 0)
+  {
+    partlistsize = j;
+    partlookup = 1;
+  }
+  else
+    resetpartlist();
 }
 
 /***************************************************************/
@@ -4755,13 +4831,13 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	//sscanf(&(ecommand[1]),"%s", partname);
 	if (partlookup)
 	{
-	  if (!strlen(&(ecommand[1])))
-	  {
-	    char *token;
-	    strcpy(&(ecommand[1]), partlistptr[partlookup - 1]);
-	    if (token = strpbrk(&(ecommand[1])," \t"))
-	      *token = 0;
-	  }
+	  char *token;
+
+	  // Use the part from the lookup list. 
+	  strcpy(&(ecommand[1]), partlistptr[partlookup - 1]);
+	  if (token = strpbrk(&(ecommand[1])," \t"))
+	    *token = 0;
+
 	  partlookup = 0;
 	}
 	else if (ecommand[1] == 0)
@@ -4771,7 +4847,6 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	  ecommand[0] = 'p';
 	  //StashPart0();
 	  loadpartlist();
-	  partlookup = 1;
 	  edit_mode_gui(); // Redisplay the GUI
 	  return 1;
 	}
@@ -5073,6 +5148,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     case 127: // Delete
       if (i > 1) // Don't backspace past the command char.
 	ecommand[i-1] = 0;
+      if (partlookup)
+	limitpartlist(&(ecommand[1]));
       edit_mode_gui(); // Redisplay the GUI
       break;
     case '?': // Part lookup?
@@ -5080,15 +5157,18 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       {
 	//StashPart0();
 	loadpartlist();
-	partlookup = 1;
+	if (partlookup)
+	  limitpartlist(&(ecommand[1]));
 	edit_mode_gui(); // Redisplay the GUI
 	break;
       }
     default:
-      // printf("key = %d = '%c'\n",key,key);
+      // printf("KEY = %d = '%c'\n",key,key);
       // Just add to the command
       ecommand[i] = key;
       ecommand[i+1] = 0;
+      if (partlookup)
+	limitpartlist(&(ecommand[1]));
       edit_mode_gui(); // Redisplay the GUI
       break;
     }
@@ -5460,7 +5540,7 @@ void keyboard(unsigned char key, int x, int y)
   if (pastelist)
     key = 22;
 
-  //if (ldraw_commandline_opts.debug_level == 1)
+  if (ldraw_commandline_opts.debug_level == 1)
     printf("key(%c) = (%d, %d)\n", key, key, glutModifiers);
 
   if (editing)
