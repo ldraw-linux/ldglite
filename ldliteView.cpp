@@ -45,7 +45,7 @@ static char THIS_FILE[] = __FILE__;
 extern "C" {
 	extern FILE *log_output_file;
 
-	void ldlite_parse(char *filename, char *ldraw_lines);
+	void ldlite_parse(char *ldraw_lines);
 	void zDraw(void *);
 	int zReset(long *, long *);
 	int zInvalidate(void);
@@ -273,105 +273,121 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
 			mWnd->GetActiveView()->UpdateWindow();
 		}
 	}
-	if ((step >= 0 ) && (ldraw_commandline_opts.M == 'S')) {
-		// if something has been drawn, save bitmap
-		int x_size = zp->extent_x2 - zp->extent_x1 + 1;
-		int y_size = zp->extent_y2 - zp->extent_y1 + 1;
-		int x_orig = zp->extent_x1;
-		int y_orig = zp->extent_y1;
+	if ((step >= 0 ) && ((ldraw_commandline_opts.M == 'S')||(ldraw_commandline_opts.M == 'F'))) {
+		int x_size;
+		int y_size;
+		int x_orig;
+		int y_orig;
 
-		if ((x_size<=0)||(y_size<=0)) {
-			// this seems to be what LDRAW does if nothing has been drawn yet
-			x_size = 3;
-			y_size = 3;
+		if (ldraw_commandline_opts.clip == 1) {
+			// clip edges of image to include only pixels that have been set
+			x_size = zp->extent_x2 - zp->extent_x1 + 1;
+			y_size = zp->extent_y2 - zp->extent_y1 + 1;
+			x_orig = zp->extent_x1;
+			y_orig = zp->extent_y1;
+			if ((x_size<=0)||(y_size<=0)) {
+				// this seems to be what LDRAW does if nothing has been drawn yet
+				x_size = 3;
+				y_size = 3;
+				x_orig = 0;
+				y_orig = 0;
+			} 
+		} else {
+			x_size = zp->rows;
+			y_size = zp->cols;
 			x_orig = 0;
 			y_orig = 0;
-		} 
+		}
+		
 		if ((step == INT_MAX) && (pause == 0)) {
 			// do nothing
-		} else {
-			// save bitmap
-			CSize csize(x_size, y_size);
-			CDib cdib(csize, 24, TRUE);
-			int i,j;
-			static char filename[256];
-			static char basename[256];
-			CPoint cpoint;
-			DWORD color;
-			int pixel;
-
-			if (!cdib.DibLoaded()) {
-				MessageBox(NULL,"dib error","error",MB_OK);
-			}
-			// This could be optimized quite a bit,since the source and
-			// destination are both DIB structures.
-			for(i=0; i<x_size; i++) {
-				for (j=0; j < y_size; j++) {
-					cpoint.x = i;
-					cpoint.y = j;
-					pixel = 3*((i+x_orig) + zp->rows*(j+y_orig));
-
-					color = (0xff & zp->b[pixel]) |
-						((0xff & zp->g[pixel]) <<8) |
-						((0xff & zp->r[pixel]) << 16);
-					cdib.SetPixel(cpoint, color);
+		} else if ((level<=ldraw_commandline_opts.maxlevel) && ((ldraw_commandline_opts.M == 'S')||(step == INT_MAX))){
+			if (ldraw_commandline_opts.image_filetype = 4) {
+				// save bitmap
+				CSize csize(x_size, y_size);
+				CDib cdib(csize, 24, TRUE);
+				int i,j;
+				static char filename[256];
+				static char basename[256];
+				CPoint cpoint;
+				DWORD color;
+				int pixel;
+				
+				if (!cdib.DibLoaded()) {
+					MessageBox(NULL,"dib error","error",MB_OK);
 				}
-			}
-			if (wApp->base_filename != NULL) {
-				unsigned int i;
-				strcpy(basename,wApp->base_filename);
-				for(i=0; i<strlen(basename); i++) {
-					basename[i] = toupper(basename[i]);
-				}
-				for(i=strlen(basename); i<6; i++) {
-					basename[i] = '-';
-				}
-				if (step == INT_MAX) {
-					if ((last_step+2) < 100) {
-						basename[6]=0;
-						sprintf(filename, "%s/bitmap/%s%02d.BMP",pathname,basename,last_step+2);
-					} else if ((last_step+2) < 1000) {
-						basename[5] = 0;
-						sprintf(filename, "%s/bitmap/%s%03d.BMP",pathname,basename,last_step+2);
-					} else if ((last_step+2) < 10000) {
-						basename[4] = 0;
-						sprintf(filename, "%s/bitmap/%s%04d.BMP",pathname,basename,last_step+2);
-					} else if ((last_step+2) < 100000) {
-						basename[3] = 0;
-						sprintf(filename, "%s/bitmap/%s%05d.BMP",pathname,basename,last_step+2);
-					} else if ((last_step+2) < 1000000) {
-						basename[2] = 0;
-						sprintf(filename, "%s/bitmap/%s%06d.BMP",pathname,basename,last_step+2);
-					} else {
-						sprintf(filename, "%s/bitmap/%s%d.BMP",pathname,basename,last_step+2);
+				// This could be optimized quite a bit,since the source and
+				// destination are both DIB structures.
+				for(i=0; i<x_size; i++) {
+					for (j=0; j < y_size; j++) {
+						cpoint.x = i;
+						cpoint.y = j;
+						pixel = 3*((i+x_orig) + zp->rows*(j+y_orig));
+						
+						color = (0xff & zp->b[pixel]) |
+							((0xff & zp->g[pixel]) <<8) |
+							((0xff & zp->r[pixel]) << 16);
+						cdib.SetPixel(cpoint, color);
 					}
-				} else {
-					if ((step+1) < 100) {
-						basename[6]=0;
-						sprintf(filename, "%s/bitmap/%s%02d.BMP",pathname,basename,step+1);
-					} else if ((step+1) < 1000) {
-						basename[5] = 0;
-						sprintf(filename, "%s/bitmap/%s%03d.BMP",pathname,basename,step+1);
-					} else if ((step+1) < 10000) {
-						basename[4] = 0;
-						sprintf(filename, "%s/bitmap/%s%04d.BMP",pathname,basename,step+1);
-					} else if ((step+1) < 100000) {
-						basename[3] = 0;
-						sprintf(filename, "%s/bitmap/%s%05d.BMP",pathname,basename,step+1);
-					} else if ((step+1) < 1000000) {
-						basename[2] = 0;
-						sprintf(filename, "%s/bitmap/%s%06d.BMP",pathname,basename,step+1);
-					} else {
-						sprintf(filename, "%s/bitmap/%s%d.BMP",pathname,basename,step+1);
-					}
-					
 				}
-				cdib.Write(filename, TRUE);
-				cdib.Empty();
+				if (wApp->base_filename != NULL) {
+					unsigned int i;
+					strcpy(basename,wApp->base_filename);
+					for(i=0; i<strlen(basename); i++) {
+						basename[i] = toupper(basename[i]);
+					}
+					for(i=strlen(basename); i<6; i++) {
+						basename[i] = '-';
+					}
+					if (step == INT_MAX) {
+						if ((last_step+2) < 100) {
+							basename[6]=0;
+							sprintf(filename, "%s/bitmap/%s%02d.BMP",pathname,basename,last_step+2);
+						} else if ((last_step+2) < 1000) {
+							basename[5] = 0;
+							sprintf(filename, "%s/bitmap/%s%03d.BMP",pathname,basename,last_step+2);
+						} else if ((last_step+2) < 10000) {
+							basename[4] = 0;
+							sprintf(filename, "%s/bitmap/%s%04d.BMP",pathname,basename,last_step+2);
+						} else if ((last_step+2) < 100000) {
+							basename[3] = 0;
+							sprintf(filename, "%s/bitmap/%s%05d.BMP",pathname,basename,last_step+2);
+						} else if ((last_step+2) < 1000000) {
+							basename[2] = 0;
+							sprintf(filename, "%s/bitmap/%s%06d.BMP",pathname,basename,last_step+2);
+						} else {
+							sprintf(filename, "%s/bitmap/%s%d.BMP",pathname,basename,last_step+2);
+						}
+					} else {
+						if ((step+1) < 100) {
+							basename[6]=0;
+							sprintf(filename, "%s/bitmap/%s%02d.BMP",pathname,basename,step+1);
+						} else if ((step+1) < 1000) {
+							basename[5] = 0;
+							sprintf(filename, "%s/bitmap/%s%03d.BMP",pathname,basename,step+1);
+						} else if ((step+1) < 10000) {
+							basename[4] = 0;
+							sprintf(filename, "%s/bitmap/%s%04d.BMP",pathname,basename,step+1);
+						} else if ((step+1) < 100000) {
+							basename[3] = 0;
+							sprintf(filename, "%s/bitmap/%s%05d.BMP",pathname,basename,step+1);
+						} else if ((step+1) < 1000000) {
+							basename[2] = 0;
+							sprintf(filename, "%s/bitmap/%s%06d.BMP",pathname,basename,step+1);
+						} else {
+							sprintf(filename, "%s/bitmap/%s%d.BMP",pathname,basename,step+1);
+						}
+						
+					}
+					cdib.Write(filename, TRUE);
+					cdib.Empty();
+				}
+			} else {
+				// other image formats are not yet supported
 			}
 		}			
 	}
-	if (pause && (ldraw_commandline_opts.M == 'P')&&(step!=INT_MAX))  {
+	if (pause && (level<=ldraw_commandline_opts.maxlevel) && (ldraw_commandline_opts.M == 'P')&&(step!=INT_MAX))  {
 #ifdef SETWINDOWTEXT
 		if (step >= 0) {
 			sprintf(buf,"%s: Step %d -- Click on drawing to continue.",wApp->base_filename,step+1);
@@ -596,13 +612,18 @@ void CldliteView::render_file()
 		wApp->DoWaitCursor(1);
 		strcpy(filename, wApp->selected_filename_p);
 		start = ::timeGetTime();
-		// determine window size
-		GetClientRect(&client_rect);
-		// round up to multiple of four.
-		client_rect.right = 4*((client_rect.right+3) / 4);
-		client_rect.bottom = 4*((client_rect.bottom+3) / 4);
 		zcolor_init();
-		rc = zReset(&(client_rect.right),&(client_rect.bottom));
+		if (ldraw_commandline_opts.V_x==0) {
+			// determine window size in case it has been resized
+			GetClientRect(&client_rect);
+			// round up to multiple of four.
+			client_rect.right = 4*((client_rect.right+3) / 4);
+			client_rect.bottom = 4*((client_rect.bottom+3) / 4);
+			rc = zReset(&(client_rect.right),&(client_rect.bottom));
+		} else {
+			rc = zReset((long *)&(ldraw_commandline_opts.V_x),
+				(long *)&(ldraw_commandline_opts.V_y));
+		}
 		if (rc != 0) {
 			MessageBox("Out of Memory, exiting","Fatal Error",MB_OK);
 			exit(-1);
@@ -610,17 +631,21 @@ void CldliteView::render_file()
 		redraw_needed = 2;
 	}
 	znamelist_push();
-#if 0
-	ldlite_parse(filename,NULL);
-#else
 	{
-		static char buf[4096];
+		static char buf[16*1024];
+		FILE *fp;
+		int bytes;
 		
-		sprintf(buf,"1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n",
+		bytes = 0;
+		fp = fopen("ldliterc.dat","rb");
+		if (fp != NULL) {
+			bytes += fread(buf,1,15*1024,fp);
+			fclose(fp);
+		}
+		sprintf(&(buf[bytes]),"\n1 16 0 0 0 1 0 0 0 1 0 0 0 1 \"%s\"\n",
 			filename);
-		ldlite_parse(NULL,buf);
+		ldlite_parse(buf);
 	}
-#endif
 
 	znamelist_pop();
 	finish = ::timeGetTime();
@@ -692,7 +717,7 @@ void CldliteView::render_string(char *ldraw_lines)
 	}
 	redraw_needed = 2;
 	znamelist_push();
-	ldlite_parse(NULL,ldraw_lines);
+	ldlite_parse(ldraw_lines);
 	znamelist_pop();
 	zStep(INT_MAX, 0);
 	return;	
@@ -716,7 +741,7 @@ LRESULT CldliteView::OnParseFile(WPARAM wParam, LPARAM lParam)
 			}
 		}
 		if ((ldraw_commandline_opts.output == 1) ||
-			(ldraw_commandline_opts.M == 'S')) {
+			(ldraw_commandline_opts.M == 'S')||(ldraw_commandline_opts.M == 'F')) {
 			// quit the program
 			PostQuitMessage(0);
 		}
@@ -923,6 +948,17 @@ void CldliteView::OnMenuOptions()
 		ldraw_commandline_opts.Z = cod.m_distance;
 		ldraw_commandline_opts.B = atoi( cod.m_bgColor.Left(cod.m_bgColor.Find(':')) );
 		ldraw_commandline_opts.C = atoi( cod.m_pieceColor.Left(cod.m_pieceColor.Find(':')) );
+		switch(cod.m_drawingMode) {
+		case 0:
+			ldraw_commandline_opts.M = 'P';
+			break;
+		case 1:
+			ldraw_commandline_opts.M = 'C';
+			break;
+		case 2:
+			ldraw_commandline_opts.M = 'S';
+			break;
+		}
 		zInvalidate();
 		InvalidateRect(NULL,FALSE);
 		PostMessage( WM_PARSEFILE, 0, 0 );
@@ -992,7 +1028,7 @@ void CldliteView::SpinDraw()
 	save_mode=ldraw_commandline_opts.M;
 	ldraw_commandline_opts.M='C';
 //	sprintf(buf,"0 ROTATE %f 0 1 0 \n1 %d 0 0 0 1 0 0 0 1 0 0 0 1 979.dat\n0 ROTATE END\n0 STEP\n",m_spin_rotation,m_spin_color);
-	sprintf(buf,"0 ROTATE %f 0 1 0 \n1 %d 0 0 0 1 0 0 0 1 0 0 0 1 %s\n0 ROTATE END\n0 STEP\n",
+	sprintf(buf,"0 ROTATE %f 0 1 0 \n1 %d 0 0 0 1 0 0 0 1 0 0 0 1 \"%s\"\n0 ROTATE END\n0 STEP\n",
 		m_spin_rotation,m_spin_color, filename);
 	render_string(buf);
 	ldraw_commandline_opts.M=save_mode;
@@ -1011,7 +1047,7 @@ void CldliteView::OnMenuPause()
 					mMenu->CheckMenuItem( IDR_PAUSE, MF_BYCOMMAND | MF_CHECKED  );
 					ldraw_commandline_opts.M = 'P';
 				} else {
-					mMenu->CheckMenuItem( IDR_PAUSE, MF_BYCOMMAND | MF_CHECKED  );
+					mMenu->CheckMenuItem( IDR_PAUSE, MF_BYCOMMAND | MF_UNCHECKED  );
 					ldraw_commandline_opts.M = 'C';
 				}
 //				wApp->WriteProfileInt("ldlite","pause",ldraw_commandline_opts.M);

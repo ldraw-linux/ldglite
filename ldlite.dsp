@@ -44,9 +44,9 @@ RSC=rc.exe
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /c
 # ADD CPP /nologo /MT /W3 /GX /O1 /Ob2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FR /FD /c
-# SUBTRACT CPP /Z<none> /YX /Yc /Yu
-# ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
-# ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
+# SUBTRACT CPP /YX /Yc /Yu
+# ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o /win32 "NUL"
+# ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o /win32 "NUL"
 # ADD BASE RSC /l 0x409 /d "NDEBUG" /d "_AFXDLL"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -71,10 +71,10 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /c
-# ADD CPP /nologo /Zp1 /MTd /W3 /Gm /GX /ZI /Od /Ob0 /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /c
+# ADD CPP /nologo /Zp1 /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /c
 # SUBTRACT CPP /YX /Yc /Yu
-# ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
-# ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
+# ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o /win32 "NUL"
+# ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o /win32 "NUL"
 # ADD BASE RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -96,6 +96,10 @@ LINK32=link.exe
 # Begin Source File
 
 SOURCE=.\dibkernel.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\lcolors.c
 # End Source File
 # Begin Source File
 
@@ -242,19 +246,11 @@ SOURCE=".\ldl-logo.dat"
 # End Source File
 # Begin Source File
 
-SOURCE=.\ldlite.l
+SOURCE=.\parser\ldlite.l
 # End Source File
 # Begin Source File
 
-SOURCE=.\ldlite.y
-# End Source File
-# Begin Source File
-
-SOURCE=.\notes.txt
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\ldraw\models\wood2.dat
+SOURCE=.\parser\ldlite.y
 # End Source File
 # End Target
 # End Project

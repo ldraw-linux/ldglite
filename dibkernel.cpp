@@ -523,9 +523,9 @@ DWORD CDib::SetPixel(CPoint pt, DWORD color)
 #if 0 // causes memory fault on some sizes of images
 			*((DWORD*)adr) = ((*((DWORD*)adr)) & 0xff000000) | (color & 0x00ffffff);
 #else
-			*adr++ =  color & 0x000000ff;
-			*adr++ = (color & 0x0000ff00)>>8;
-			*adr   = (color & 0x00ff0000)>>16;
+			*adr++ =  (unsigned char) (color & 0x000000ff);
+			*adr++ = (unsigned char) ((color & 0x0000ff00)>>8);
+			*adr   = (unsigned char) ((color & 0x00ff0000)>>16);
 #endif
 			break;
 		default:
