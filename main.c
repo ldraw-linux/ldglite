@@ -343,6 +343,7 @@ float fZRot = 0.0;
 void reshape(int width, int height);
 void rendersetup(void);
 int edit_mode_keyboard(unsigned char key, int x, int y);
+int edit_mode_fnkeys(int key, int x, int y);
 void mouse(int button, int state, int x, int y);
 
 /***************************************************************/
@@ -365,6 +366,40 @@ char *strrpbrk(const char *szString, const char *szChars)
 
 #ifdef WINDOWS
 /***************************************************************/
+void pasteMove(int moving)
+{
+  static int moveCnt = 0;
+  static int moveMax = 0;
+  static int moveDir = 0;
+  int moveKeys[4] = {GLUT_KEY_UP, GLUT_KEY_LEFT, GLUT_KEY_DOWN, GLUT_KEY_RIGHT};
+
+  if (moving <= 0)
+  {
+    moveCnt = 0;
+    moveMax = 0;
+    moveDir = -1;
+    printf("pasteMove{%d)\n",moving);
+    return;
+  }
+
+  moveCnt++;
+
+  if (moveCnt > moveMax)
+  {
+    moveCnt = 0;
+    if (moveDir == 1)
+      moveMax++;
+    else if (moveDir == 3)
+      moveMax++;
+    moveDir++;
+    moveDir &= 3;
+  }
+
+  edit_mode_fnkeys(moveKeys[moveDir], 0, 0);
+  printf("pasteMove{%d, %d)\n",moving, moveDir);
+}
+
+/***************************************************************/
 void pasteCommand(int x, int y)
 {
   char *str;
@@ -379,6 +414,7 @@ void pasteCommand(int x, int y)
   char partstr[255];
   char colorstr[255];
   int color;
+  int pastecount = 0;
 	  
   if (pastelist)
   {
@@ -424,6 +460,7 @@ void pasteCommand(int x, int y)
 	  printf("// Hey, it's an inventory from peeron.com.\n");
 	  inventory = 1;
 	  token = strtok( NULL, seps); // Move on to the actual inventory.
+	  printf("Got token <%s> from clipboard\n", token);
 	}
       }
 
@@ -534,8 +571,11 @@ void pasteCommand(int x, int y)
       {
 	edit_mode_keyboard('\n', x, y);
 	edit_mode_keyboard('i', x, y);
+	pasteMove(pastecount++);
 	edit_mode_keyboard('p', x, y);
       }
+      else 
+	pasteMove(pastecount++);
       strcat(dst, token);
 
       // Only do more than one if it's a part.
@@ -555,6 +595,8 @@ void pasteCommand(int x, int y)
 	{
 	  edit_mode_keyboard('\n', x, y);
 	  edit_mode_keyboard('i', x, y);
+	  pasteMove(pastecount++);
+#if 1
 	  edit_mode_keyboard('p', x, y);
 	  strcat(dst, token);
 	  if (color >= 0)
@@ -563,6 +605,7 @@ void pasteCommand(int x, int y)
 	    edit_mode_keyboard('c', x, y);
 	    strcat(dst, colorstr);
 	  }	
+#endif
 	}
     }
   }
