@@ -261,6 +261,45 @@ int Color1Part(int partnum, int Color)
 }
 
 /*****************************************************************************/
+int Find1PartMatrix(int partnum, float m[4][4])
+{
+    int            i = 0;
+    struct L3LineS *LinePtr;
+    
+    if (SelectedLinePtr)
+	LinePtr = SelectedLinePtr;
+
+    else for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+    {
+	if (i == partnum)
+	    break;
+	i++;
+    }
+    if (!LinePtr)
+	return 0; //partnum not found
+
+    switch (LinePtr->LineType)
+    {
+    case 0:
+	break;
+    case 1:
+        memcpy(m, LinePtr->v, sizeof(LinePtr->v));
+	//printf("Piece (%0.2f, %0.2f, %0.2f)\n", m[0][3],m[1][3],m[2][3]);
+	M4M4Mul(m,m_m,LinePtr->v); // Adjust center point of part by view matrix.
+	//printf("View  (%0.2f, %0.2f, %0.2f)\n", m[0][3],m[1][3],m[2][3]);
+	return 1;
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    default:
+	break;
+    }
+    
+    return 0;
+}
+
+/*****************************************************************************/
 int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
 {
     if (!LinePtr)
