@@ -286,13 +286,63 @@ DoRasterString( float x, float y, char *s )
 }
 
 /***************************************************************/
+void NewColorPrompt()
+{
+    int i, c, x, y, w, h;
+    char str[] = " 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 19 25 Trans+32";
+    char *s;
+    ZCOLOR zc, zs;
+    int lineheight = 14.0;
+    int charwidth = 9.0;
+
+    extern void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs);
+    
+    s = str;
+    y = Height-(lineheight*2)-2;
+    x = charwidth;
+    h = lineheight;
+    for(i = -1; ( c = *s ) != '\0'; s++ )
+    {
+	if (c == ' ')
+	{
+	    i++;
+	    if (i == 16)
+		i = 19; // Skip to tan
+	    if (i == 20)
+		i = 25; // Skip to orange
+	    if (i > 25)
+		zc.r =  zc.g =  zc.b = 144;
+	    else
+		translate_color(i,&zc,&zs);
+	}
+	w = glutBitmapWidth( GLUT_BITMAP_HELVETICA_12, c );
+	glColor3ub(zc.r, zc.g, zc.b);
+	glBegin(GL_QUADS);
+	glVertex2i(x, y);
+	glVertex2i(x+w,y);
+	glVertex2i(x+w, y+h);
+	glVertex2i(x, y+h);
+	glEnd();
+	if (i == 6)
+	    glColor4f( 0.8, 0.8, 0.8, 1.0 );		/* white on brown*/
+	else if (i)
+	    glColor4f( 0.0, 0.0, 0.0, 1.0 );		/* black  	*/
+	else
+	    glColor4f( 0.5, 0.5, 0.5, 1.0 );		/* grey  	*/
+	glRasterPos2f( x-2, y+2 );
+	glutBitmapCharacter( GLUT_BITMAP_HELVETICA_12, c );
+	x += w;
+    }
+}
+
+/***************************************************************/
 void clear_edit_mode_gui()
 {
   ecommand[0] = 0;
   eprompt[0][0] = 0;
   eprompt[1][0] = 0;
   eprompt[2][0] = 0;
-  eprompt[4][0] = 0;
+  eprompt[3][0] = 0;
 }
 
 /***************************************************************/
@@ -301,7 +351,7 @@ int edit_mode_gui()
   static char eline[4][100];
   int savedirty;
   int lineheight = 14.0;
-  int charwidth = 14.0;
+  int charwidth = 9.0;
   char *viewstr;
   char *movestr;
 
@@ -367,7 +417,10 @@ int edit_mode_gui()
   glEnd();
   glColor4f( 0.0, 0.0, 0.0, 1.0 );		/* black  	*/
   DoRasterString( charwidth, Height - lineheight, eline[0] );
-  DoRasterString( charwidth, Height - lineheight*2.0, eline[1] );
+  if (!strncmp(eline[0], "New Color:", 10))
+      NewColorPrompt();
+  else
+      DoRasterString( charwidth, Height - lineheight*2.0, eline[1] );
   DoRasterString( charwidth, Height - lineheight*3.0, eline[2] );
   DoRasterString( charwidth, Height - lineheight*4.0, eline[3] );
   glPopMatrix();
@@ -3740,7 +3793,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	edit_mode_gui();
 	return 1;
       case 'c':
-	sprintf(eprompt[0], "New Color: ");
+        sprintf(eprompt[0], "New Color: ");
 	ecommand[0] = 'c';
 	ecommand[1] = 0;
 	edit_mode_gui();
@@ -4044,41 +4097,17 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     edit_mode_gui();
     return 1;
   case 'c':
-#if 1
     sprintf(eprompt[0], "New Color: ");
     ecommand[0] = 'c';
     ecommand[1] = 0;
     edit_mode_gui();
     return 1;
-#else
-    printf("New Color: ");
-    scanf("%d", &color);
-    CopyStaticBuffer(); // It would be nice to recolor without "moving" it.
-    movingpiece = curpiece;
-    Color1Part(curpiece, color);
-    DrawMovingPiece();
-    Print1Part(curpiece, stdout);
-    edit_mode_gui();
-    return 1;
-#endif
   case 'p':
-#if 1
     sprintf(eprompt[0], "New Part: ");
     ecommand[0] = 'p';
     ecommand[1] = 0;
     edit_mode_gui();
     return 1;
-#else
-    printf("New Part: ");
-    scanf("%s", partname);
-    CopyStaticBuffer();
-    movingpiece = curpiece;
-    Swap1Part(curpiece, partname);
-    DrawMovingPiece();
-    Print1Part(curpiece, stdout);
-    edit_mode_gui();
-    return 1;
-#endif
   case 'o':
     sprintf(eprompt[0], "Offset: ");
     sprintf(eprompt[1], "X-axis Y-axis Z-axis");
@@ -5963,7 +5992,7 @@ main(int argc, char **argv)
 
   helpmenunum = glutCreateMenu(menu);
   glutAddMenuEntry(progname             , '\0');
-  glutAddMenuEntry("Version 0.9.1a     ", '\0');
+  glutAddMenuEntry("Version 0.9.1b     ", '\0');
 
   mainmenunum = glutCreateMenu(menu);
   glutAddSubMenu(  "File               ", filemenunum);
