@@ -35,6 +35,8 @@ int  filemenunum;
 int  dirmenunum;
 int  mainmenunum;
 int  fovmenunum;
+int  spinmenunum;
+int  studsmenunum;
 int  DateiCount    = 0;
 int  FolderCount    = 0;
 char DateiListe[MAX_DIR_ENTRIES][NAMELENGTH];
@@ -57,6 +59,9 @@ extern void colormenu(int c);
 
 extern double projection_fov;
 extern int ldraw_projection_type;  // 1 = perspective, 0 = orthographic.
+extern int pan_visible;
+extern int qualityLines;
+extern int dirtyWindow;
 
 /***************************************************************/
 void fovmenu(int c)
@@ -105,6 +110,59 @@ void fovmenu(int c)
     menuKeyEvent('J', 0, 0);
   else
     menuKeyEvent('j', 0, 0);
+}
+
+/***************************************************************/
+void studsmenu(int c)
+{
+  switch (c)
+  {
+  case 1:
+    // Normal studs
+    ldraw_commandline_opts.F &= ~(TYPE_F_STUDLINE_MODE); 
+    ldraw_commandline_opts.F &= ~(TYPE_F_STUDLESS_MODE); 
+    break;
+  case 2:
+    // Line studs
+    ldraw_commandline_opts.F |= TYPE_F_STUDLINE_MODE;
+    ldraw_commandline_opts.F &= ~(TYPE_F_STUDLESS_MODE); 
+    break;
+  case 3:
+    // No studs
+    ldraw_commandline_opts.F &= ~(TYPE_F_STUDLINE_MODE); 
+    ldraw_commandline_opts.F |= TYPE_F_STUDLESS_MODE;
+    break;
+  default:
+    return;
+  }
+
+  dirtyWindow = 1;
+  glutPostRedisplay();
+}
+
+/***************************************************************/
+void spinmenu(int c)
+{
+  switch (c)
+  {
+  case 1:
+    pan_visible = (TYPE_F_BBOX_MODE | TYPE_F_NO_POLYGONS);
+    break;
+  case 2:
+    pan_visible = (TYPE_F_NO_POLYGONS | TYPE_F_STUDLESS_MODE);
+    break;
+  case 3:
+    pan_visible = (TYPE_F_INVISIBLE);
+    break;
+  case 4:
+    pan_visible = (TYPE_F_BBOX_MODE | TYPE_F_SHADED_MODE);
+    break;
+  case 5:
+    pan_visible = (TYPE_F_STUDLESS_MODE | TYPE_F_SHADED_MODE);
+    break;
+  case 6:
+    pan_visible = (TYPE_F_SHADED_MODE);
+  }
 }
 
 /***************************************************************/
@@ -325,13 +383,101 @@ void initializeMenus(void)
   glutAddMenuEntry("Perspective     ", 'J');
   glutAddSubMenu(  "FOV Angle       ", fovmenunum);
 
+#if 0
+  //**************************************************************************
+  // Consider mirroring the checkboxes of the MUI drawing mode dialog.
+  // Unfortunately Windows and OSX use a Proportional font for glut menus.
+  // This makes the [ * ] check boxes look bigger than [   ] boxes.
+  // What about [ - ] and [ + ]?  Would they be the same size in any font?
+  // No, but [ - ] and [   ] are almost the same with Windows large fonts.
+  // I've also seen an arrow approach "Shaded --> Flat" or "Shading: On -> Off"
+  // and an on/off approach "Shading   On " or "Shading  Off".
+
+  drawstyle = glutCreateMenu(stylesmenu);
+  glutAddMenuEntry("[ * ] Shading  ", 1);
+  glutAddMenuEntry("[ * ] Surfaces ", 2);
+  glutAddMenuEntry("[ * ] Edges    ", 3);
+  glutAddMenuEntry("[   ] AntiAlias", 4);
+
+  studs = glutCreateMenu(studsmenu);
+  glutAddMenuEntry("[ * ] Normal", 1);
+  glutAddMenuEntry("[   ] Lines ", 2);
+  glutAddMenuEntry("[   ] None  ", 3);
+
+  spin = glutCreateMenu(spinmenu);
+  glutAddMenuEntry("[   ] Wire Boxes ", 1);
+  glutAddMenuEntry("[   ] Wireframe  ", 2);
+  glutAddMenuEntry("[   ] Dragline   ", 3);
+  glutAddMenuEntry("[ * ] Solid Boxes", 4);
+  glutAddMenuEntry("[   ] Studless   ", 5);
+  glutAddMenuEntry("[   ] Everything ", 6);
+  // Zoom should really be a submenu off of the view menu.  Oh Well.
+
+  // Hey, this might work with a tab before the On or Off
+  // On Windows Glut, tabs ('\t') jump to the accelerator key field.
+  // I can use this to put a check char (* or + or nothing) 
+  // followed by a tab and text.
+  // I seem to be allowed one tab on Windows (for accelerator key?)
+  // I can use this to line up 2 columns in a menu.
+  // Either check marks (on the left) or On/Off on the right)
+  // Or I can use it to list the accelerator keys.
+  // NOTE: on Windows an & will be hidden but will activate a hotkey
+  // that only works when that menu is displayed.  Weird!
+  // 
+  // NOTE:  Unfortuntely on Linux the tab renders as a hollow box
+
+  glutAddMenuEntry("OrthoGraphic \tOn ", 'j');
+  glutAddMenuEntry("Perspective  \tOff", 'J');
+
+  glutAddMenuEntry("[ - ]   Wire Boxes ", 0);
+  glutAddMenuEntry("[ - ]   Wireframe  ", 0);
+  glutAddMenuEntry("[ - ]   Dragline   ", 0);
+  glutAddMenuEntry("[   ]   Solid Boxes", 0);
+  glutAddMenuEntry("[ - ]   Studless   ", 0);
+  glutAddMenuEntry("[ - ]   Everything ", 0);
+  // Underscores render as a solid line in most fonts, but they are WIDE.
+  glutAddMenuEntry("___________________", 0); 
+  glutAddMenuEntry("                   ", 0);
+
+  glutAddMenuEntry("*\t Wire Boxes ", 0);
+  glutAddMenuEntry("*\t Wireframe  ", 0);
+  glutAddMenuEntry("*\t Dragline   ", 0);
+  glutAddMenuEntry(" \t Solid Boxes", 0);
+  glutAddMenuEntry("*\t Studless   ", 0);
+  glutAddMenuEntry("*\t Everything ", 0);
+  glutAddMenuEntry("", 0);
+  glutAddMenuEntry(" \t Enlarge    ", 3);
+  glutAddMenuEntry(" \t Reduce     ", 2);
+  glutAddMenuEntry(" \t Zoom in    ", '+');
+  glutAddMenuEntry(" \t Zoom out   ", '-');
+  //**************************************************************************
+#endif
+
+  studsmenunum = glutCreateMenu(studsmenu);
+  glutAddMenuEntry("Normal", 1);
+  glutAddMenuEntry("Lines ", 2);
+  glutAddMenuEntry("None  ", 3);
+
+  spinmenunum = glutCreateMenu(spinmenu);
+  glutAddMenuEntry("Wire Boxes ", 1);
+  glutAddMenuEntry("Wireframe  ", 2);
+  glutAddMenuEntry("Dragline   ", 3);
+  glutAddMenuEntry("Solid Boxes", 4);
+  glutAddMenuEntry("Studless   ", 5);
+  glutAddMenuEntry("Everything ", 6);
+
   opts = glutCreateMenu(menu);
   glutAddMenuEntry("Shading         ", 'h');
   glutAddMenuEntry("Linemode        ", 'l');
   glutAddMenuEntry("Normal          ", 'n');
-  glutAddMenuEntry("Studs           ", 'f');
   glutAddMenuEntry("Quality Lines   ", 'q');
+#if 0
+  glutAddMenuEntry("Studs           ", 'f');
   glutAddMenuEntry("Spin Mode       ", 'V');
+#else
+  glutAddSubMenu(  "Studs           ", studsmenunum);
+  glutAddSubMenu(  "Spin Mode       ", spinmenunum);
+#endif
   glutAddMenuEntry("                ", '\0');
   glutAddMenuEntry("Step-Continuous ", 's');
   glutAddMenuEntry("Polling         ", 'g');
