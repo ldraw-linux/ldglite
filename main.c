@@ -32,6 +32,8 @@
 #include "wstubs.h"
 #endif
 
+#include "dirscan.h"
+
 #ifdef USE_L3_PARSER
 extern void          LoadModelPre(void);
 extern int           LoadModel(const char *lpszPathName);
@@ -89,6 +91,15 @@ GLdouble pan_start_y = 0.0;
 #ifdef USE_QUATERNION
 float qspin[4] = {0.0, 0.0, 1.0, 0.0};
 #endif
+
+int  filemenunum;
+int  mainmenunum;
+int  DateiCount    = 0;
+char DateiListe[MAX_DIR_ENTRIES][NAMELENGTH];
+int  minfilenum    = 0;
+char progname[256];
+char dirfilepath[256];
+char filepattern[256] = "*";
 
 /***************************************************************/
 #define BYTE1(i) ((unsigned char) (i & 0x0ff))
@@ -515,6 +526,9 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
   char filepath[256];
   char filenum[32];
   char *dotptr;
+
+  if (ldraw_commandline_opts.debug_level == 1)
+    printf("platform_step(%d, %d, %d)\n", step, level, pause);
 
   // This is probably a great place to handle begin & end display lists.
   if (step == INT_MAX) {
@@ -1472,7 +1486,8 @@ mouse(int button, int state, int x, int y)
     pan_start_x = pan_x;
     pan_start_y = pan_y;
 
-    printf("pdn(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("pdn(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
 
     panning = 0;
     return;
@@ -1487,7 +1502,8 @@ mouse(int button, int state, int x, int y)
 		 &pan_x, &pan_y, &pan_z);
     pan_y = -pan_y;
 
-    printf("pup(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("pup(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
     // NOTE:  This would be a great place to rotate or pan the model.
 
     //glRotated(pan_x-pan_start_x, 1.0, 0.0, 0.0);
@@ -1505,13 +1521,15 @@ mouse(int button, int state, int x, int y)
     y_angle = atan2(pan_z, depth);
     y_angle *= -1.0;
     y_angle *= (180.0/3.1415927);
-    printf("rotating(%0.2f - %0.2f = %0.2f) by angle %0.2f\n", pan_x, pan_start_x, pan_z, y_angle);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("rotating(%0.2f - %0.2f = %0.2f) by angle %0.2f\n", pan_x, pan_start_x, pan_z, y_angle);
 
     pan_z = pan_y - pan_start_y;
     x_angle = atan2(pan_z, depth);
     x_angle *= -1.0;
     x_angle *= (180.0/3.1415927);
-    printf("rotating(%0.2f - %0.2f = %0.2f) by angle %0.2f\n", pan_y, pan_start_y, pan_z, x_angle);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("rotating(%0.2f - %0.2f = %0.2f) by angle %0.2f\n", pan_y, pan_start_y, pan_z, x_angle);
     //rotate_the_model(0.0, x_angle);
     //rotate_the_model(y_angle, 0.0 );
     rotate_the_model(y_angle, x_angle );
@@ -1523,7 +1541,8 @@ mouse(int button, int state, int x, int y)
     angle = atan2(pan_z, depth);
     angle *= -1.0;
     angle *= (180.0/3.1415927);
-    printf("rotating about(%0.2f, %0.2f) by angle %0.2f\n", pan_y, -pan_x, angle);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("rotating about(%0.2f, %0.2f) by angle %0.2f\n", pan_y, -pan_x, angle);
     rotate_about(pan_y, -pan_x, 0.0, angle );
 #endif
     panning = 0;
@@ -1550,7 +1569,8 @@ motion(int x, int y)
 		 &pan_x, &pan_y, &pan_z);
     pan_y = -pan_y;
 
-    printf("pan(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("pan(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
     // NOTE:  This would be a nice place to rotate or pan the model.
     //        (If only the redisplay were more realtime)
     
@@ -1586,8 +1606,108 @@ void colormenu(int c)
   zc.g = zcolor_table_default[c].primary.g;
 #endif
   glClearColor(((float)zc.r)/255.0,((float)zc.g)/255.0,((float)zc.b)/255.0,0.0);
-  printf("clearcolor %d = (%d, %d, %d)\n", c, zc.r, zc.g, zc.b);
+  if (ldraw_commandline_opts.debug_level == 1)
+    printf("clearcolor %d = (%d, %d, %d)\n", c, zc.r, zc.g, zc.b);
   glutPostRedisplay();
+}
+
+/***************************************************************/
+void filemenu(int item)
+{
+  int         i, j, len1;
+  const int   len3 = WORDLENGTH;
+  char        myDir[len3+1];
+  char title[256];
+  char filename[256];
+
+  extern char modelspath[];
+
+  if (item == 15) // Real Refresh
+    minfilenum = 0;
+  if (item == 0) // Nothing (seperator line)
+    return;
+  if (item == 13) // PgUp
+  {
+    minfilenum -= MAX_DIR_ENTRIES;
+    if (minfilenum < 0)
+      minfilenum = 0;
+    item = 15;
+  }
+  if (item == 14) // PgDn
+  {
+    minfilenum += MAX_DIR_ENTRIES;
+    item = 15;
+  }
+  if (item == 15) // Refresh
+  {
+    strcpy(myDir, dirfilepath);
+    strcat(myDir, "/");
+
+    DateiCount = ScanDirectory(myDir, filepattern, minfilenum, DateiListe);
+    if ((DateiCount == 0) && (minfilenum > 0))
+    { // Dont PgDn past the last file in the directory.
+      if (ldraw_commandline_opts.debug_level == 1)
+	printf("Rescanning from file %d", minfilenum);
+      minfilenum -= MAX_DIR_ENTRIES; 
+      if (minfilenum < 0)
+	minfilenum = 0;
+      if (ldraw_commandline_opts.debug_level == 1)
+	printf("to %d\n", minfilenum);
+      DateiCount = ScanDirectory(myDir, filepattern, minfilenum, DateiListe);
+    }
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf ("Found %d files starting at %d in %s\n", DateiCount,minfilenum, myDir);
+
+    glutSetMenu(filemenunum);
+    for(j = 1; j <= MAX_DIR_ENTRIES; i++) 
+    {
+      //      if( CheckFile(DateiListe[i], "r") ) 
+      {// file > 0 byte ??
+	glutChangeToMenuEntry(j, basename(DateiListe[j-1]), j);
+	j++;
+      }
+    }
+
+    // Reset the current menu to the main menu.
+    glutSetMenu(mainmenunum);
+  }
+  else 
+  {
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("selected file %d = %s\n", item, DateiListe[item-1]);
+    if (item <= DateiCount)
+    {
+      if (isDir(DateiListe[item-1]))
+      {
+	strcpy(dirfilepath, DateiListe[item-1]);
+	strcpy(myDir, basename(dirfilepath));
+	if (stricmp(myDir, ".") == 0)
+	  strcpy(dirfilepath, dirname(DateiListe[item-1]));
+#if 0
+	if (stricmp(myDir, "..") == 0)
+	  strcpy(myDir, dirname(dirname(DateiListe[item-1])));
+#endif	
+	filemenu(15); // refresh the file list with files in new dir.
+	return;
+      }
+      strcpy(datfilename, basename(DateiListe[item-1]));
+      strcpy(datfilepath, dirname(DateiListe[item-1]));
+      strcpy(dirfilepath, dirname(DateiListe[item-1]));
+
+      // Change the title of the window to show the new dat filename.
+      concat_path(datfilepath, datfilename, filename);
+      if (filename[0] == '.') // I hate the ./filename thing.
+	sprintf(title, "%s - %s", progname, datfilename);
+      else
+	sprintf(title, "%s - %s", progname, filename);
+      glutSetWindowTitle(title);
+
+#ifdef USE_L3_PARSER
+      list_made = 0; // Gotta reparse the file.
+#endif
+      glutPostRedisplay();
+    }
+  }
 }
 
 /***************************************** myGlutIdle() ***********/
@@ -1655,6 +1775,9 @@ void myGlutIdle( void )
   if ((ldraw_commandline_opts.output == 1) ||
       (ldraw_commandline_opts.M == 'S')) 
   {
+    // Draw the last step.
+    if (ldraw_commandline_opts.M == 'S')
+      platform_step(INT_MAX, 0, -1, NULL);
     // quit the program
     exit(0);
   }
@@ -1720,6 +1843,7 @@ void ParseParams(int *argc, char **argv)
 #error unspecified platform in ParseParams() definition
 #endif
   
+  strcpy(dirfilepath, datfilepath);
 
   for (i = 1; i < *argc; i++)
   {
@@ -1729,6 +1853,7 @@ void ParseParams(int *argc, char **argv)
       // It must be a filename.  Save it for parsing.
       strcpy(datfilename, basename(argv[i]));
       strcpy(datfilepath, dirname(argv[i]));
+      strcpy(dirfilepath, datfilepath);
 #if 0
       chdir(datfilepath); // problem with chdir to dir with spaces in win32.
 #endif
@@ -1909,6 +2034,7 @@ int setfilename(const char *newfile)
 {
   strcpy(datfilename, basename(newfile));
   strcpy(datfilepath, dirname(newfile));
+  strcpy(dirfilepath, datfilepath);
 }
 
 
@@ -1972,11 +2098,12 @@ main(int argc, char **argv)
   glutInitWindowSize(Width, Height);
   glutInitWindowPosition(0, 0);
 
+  strcpy(progname, argv[0]);
   concat_path(datfilepath, datfilename, filename);
   if (filename[0] == '.') // I hate the ./filename thing.
-    sprintf(title, "%s - %s", argv[0], datfilename);
+    sprintf(title, "%s - %s", progname, datfilename);
   else
-    sprintf(title, "%s - %s", argv[0], filename);
+    sprintf(title, "%s - %s", progname, filename);
   main_window = glutCreateWindow(title);
 
   if (ldraw_commandline_opts.V_x < 0)
@@ -2040,8 +2167,23 @@ main(int argc, char **argv)
   glutAddMenuEntry("Yellow             ", 14);
   glutAddMenuEntry("White              ", 15);
 
-  glutCreateMenu(menu);
-  glutAddMenuEntry("Ldlite OpenGL Demo ", '\0');
+  filemenunum = glutCreateMenu(filemenu);
+  glutAddMenuEntry("                   ", 1);
+  glutAddMenuEntry("                   ", 2);
+  glutAddMenuEntry("                   ", 3);
+  glutAddMenuEntry("                   ", 4);
+  glutAddMenuEntry("                   ", 5);
+  glutAddMenuEntry("                   ", 6);
+  glutAddMenuEntry("                   ", 7);
+  glutAddMenuEntry("                   ", 8);
+  glutAddMenuEntry("                   ", 9);
+  glutAddMenuEntry("                   ", 10);
+  glutAddMenuEntry("                   ", 0);
+  glutAddMenuEntry("Page Up            ", 13);
+  glutAddMenuEntry("Page Dn            ", 14);
+
+  mainmenunum = glutCreateMenu(menu);
+  glutAddSubMenu(  "Files              ", filemenunum);
   glutAddMenuEntry("                   ", '\0');
   glutAddSubMenu(  "View               ", view);
   glutAddSubMenu(  "Options            ", opts);
@@ -2051,6 +2193,9 @@ main(int argc, char **argv)
   glutAddMenuEntry("                   ", '\0');
   glutAddMenuEntry("Quit               ", '\033');
   glutAttachMenu(GLUT_RIGHT_BUTTON);
+
+  // Read in the current directories dat filenames.
+  filemenu(15);
 
   init();
 
