@@ -390,7 +390,7 @@ void makemainui(void)
 
     //l1 = muiNewBoldLabel(ow+60+dw/2-35, oh+dh/2+18, "LdGLite");
     l1 = muiNewLabel(ow+60+dw/2-35, oh+dh/2+18, "LdGLite");
-    l2 = muiNewLabel(ow+60+dw/2-55, oh+dh/2-18, "Version 0.9.7");
+    l2 = muiNewLabel(ow+60+dw/2-55, oh+dh/2-18, "Version 0.9.8");
 
     b13 = muiNewButton(ow+dw-60, ow+dw-34, oh+2, oh+27);
     muiLoadButton(b13, "Ok");
