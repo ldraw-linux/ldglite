@@ -1578,7 +1578,7 @@ int Hose1Part(int partnum, int steps)
     }
 
     if (SelectedLinePtr)
-	LinePtr = SelectedLinePtr;
+      LinePtr = SelectedLinePtr;
     else
     for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
     {
@@ -1587,16 +1587,22 @@ int Hose1Part(int partnum, int steps)
 	i++;
     }
 
-    FirstPtr = LinePtr;
-    if (!FirstPtr)
+    LastPtr = LinePtr;
+    if (!LastPtr)
 	return -1; //partnum not found
-    if (FirstPtr->LineType != 1)
+    if (LastPtr->LineType != 1)
       return i;
 
-    LastPtr = LinePtr->NextLine; 
-    if (!LastPtr)
+    for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+    {
+	if (LinePtr->NextLine == LastPtr)
+	    break;	    // Found the part
+    }
+
+    FirstPtr = LinePtr; 
+    if (!FirstPtr)
       return i;
-    if (LastPtr->LineType != 1)
+    if (FirstPtr->LineType != 1)
       return i;
 
     // Get partname and color
