@@ -2560,7 +2560,7 @@ void rendersetup(void)
   glColor3f(1.0, 1.0, 1.0); // White.
 
   // Turn off dithering for more than 8bpp.  The default is enabled!
-  if ((rBits + gBits + bBits) > 8) // ((rBits + gBits + bBits) >= 15)
+  if ((rBits + gBits + bBits) > 16) // ((rBits + gBits + bBits) >= 15)
     glDisable(GL_DITHER);
   else
     glEnable(GL_DITHER);
@@ -3796,7 +3796,7 @@ int XORcurPiece()
   glDisable( GL_COLOR_LOGIC_OP ); 
 
   // Restore dithering to whatever rendersetup() sets it at.
-  if ((rBits + gBits + bBits) > 8) // ((rBits + gBits + bBits) >= 15)
+  if ((rBits + gBits + bBits) > 16) // ((rBits + gBits + bBits) >= 15)
     glDisable(GL_DITHER);
   else
     glEnable(GL_DITHER);
