@@ -24,13 +24,17 @@ opendir(char *pSpec)
      fine?  Open "*" instead of "." to be safe. -mjk */
   pDir->hFind = FindFirstFile(strcmp(pSpec, ".") ? pSpec : "*",
     &pDir->wfd);
+  if( pDir->hFind == INVALID_HANDLE_VALUE ) 
+  {
+    pDir->hFind = NULL;
+  }
   return pDir;
 }
 
 static void
 closedir(DIR * pDir)
 {
-  //FindClose(pDir->hFind);
+  if (pDir->hFind) FindClose(pDir->hFind);
   free(pDir);
 }
 
