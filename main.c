@@ -157,6 +157,16 @@ int qualityLines = 0;
 float lineWidth = 0.0;
 int zSolid = 0;
 
+#ifdef TILE_RENDER_OPTION
+#include "tr.h"
+int tiledRendering = 0;
+int TILE_WIDTH = 512;
+int TILE_HEIGHT = 512;
+int TILE_BORDER = 0;
+int TILE_IMAGE_WIDTH = 2000;
+int TILE_IMAGE_HEIGHT = 1500;
+#endif
+
 // Camera movement variables
 #define MOVE_SPEED 10.0
 #define PI 3.1415927
@@ -1623,6 +1633,118 @@ render(void)
 
 }
 
+#ifdef TILE_RENDER_OPTION
+/***************************************************************/
+void TiledDisplay(void)
+{
+   TRcontext *tr;
+   GLubyte *buffer;
+   GLubyte *tile;
+   FILE *f;
+   int more;
+   int i;
+
+   char filename[32] = "tileimg.ppm";
+
+   printf("Generating %d by %d image file...\n", TILE_IMAGE_WIDTH, TILE_IMAGE_HEIGHT);
+
+   /* allocate buffer large enough to store one tile */
+   tile = malloc(TILE_WIDTH * TILE_HEIGHT * 3 * sizeof(GLubyte));
+   if (!tile) {
+      printf("Malloc of tile buffer failed!\n");
+      return;
+   }
+
+   /* allocate buffer to hold a row of tiles */
+   buffer = malloc(TILE_IMAGE_WIDTH * TILE_HEIGHT * 3 * sizeof(GLubyte));
+   if (!buffer) {
+      free(tile);
+      printf("Malloc of tile row buffer failed!\n");
+      return;
+   }
+
+   /* Setup.  Each tile is TILE_WIDTH x TILE_HEIGHT pixels. */
+   tr = trNew();
+   trTileSize(tr, TILE_WIDTH, TILE_HEIGHT, TILE_BORDER);
+   trTileBuffer(tr, GL_RGB, GL_UNSIGNED_BYTE, tile);
+   trImageSize(tr, IMAGE_WIDTH, IMAGE_HEIGHT);
+   trRowOrder(tr, TR_TOP_TO_BOTTOM);
+
+   if (Perspective)
+      trFrustum(tr, -1.0, 1.0, -1.0, 1.0, 5.0, 25.0);
+   else
+      trOrtho(tr, -3.0, 3.0, -3.0, 3.0, -3.0, 3.0);
+
+   /* Prepare ppm output file */
+   f = fopen(FILENAME, "w");
+   if (!f) {
+      printf("Couldn't open image file: %s\n", FILENAME);
+      return;
+   }
+   fprintf(f,"P6\n");
+   fprintf(f,"# ppm-file created by %s\n", "trdemo2");
+   fprintf(f,"%i %i\n", IMAGE_WIDTH, IMAGE_HEIGHT);
+   fprintf(f,"255\n");
+   fclose(f);
+   f = fopen(FILENAME, "ab");  /* now append binary data */
+   if (!f) {
+      printf("Couldn't append to image file: %s\n", FILENAME);
+      return;
+   }
+
+   /* just to be safe... */
+   glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+   /* Draw tiles */
+   more = 1;
+   while (more) {
+      int curColumn;
+      trBeginTile(tr);
+      curColumn = trGet(tr, TR_CURRENT_COLUMN);
+      DrawScene();      /* draw our stuff here */
+      more = trEndTile(tr);
+
+      /* save tile into tile row buffer*/
+      {
+	 int curTileWidth = trGet(tr, TR_CURRENT_TILE_WIDTH);
+	 int bytesPerImageRow = IMAGE_WIDTH*3*sizeof(GLubyte);
+	 int bytesPerTileRow = (TILE_WIDTH-2*TILE_BORDER) * 3*sizeof(GLubyte);
+	 int xOffset = curColumn * bytesPerTileRow;
+	 int bytesPerCurrentTileRow = (curTileWidth-2*TILE_BORDER)*3*sizeof(GLubyte);
+	 int i;
+	 for (i=0;i<TILE_HEIGHT;i++) {
+	    memcpy(buffer + i*bytesPerImageRow + xOffset, /* Dest */
+		   tile + i*bytesPerTileRow,              /* Src */
+		   bytesPerCurrentTileRow);               /* Byte count*/
+	 }
+      }
+      
+      if (curColumn == trGet(tr, TR_COLUMNS)-1) {
+	 /* write this buffered row of tiles to the file */
+	 int curTileHeight = trGet(tr, TR_CURRENT_TILE_HEIGHT);
+	 int bytesPerImageRow = IMAGE_WIDTH*3*sizeof(GLubyte);
+	 int i;
+	 GLubyte *rowPtr;
+	 for (i=0;i<curTileHeight;i++) {
+	    /* Remember, OpenGL images are bottom to top.  Have to reverse. */
+	    rowPtr = buffer + (curTileHeight-1-i) * bytesPerImageRow;
+	    fwrite(rowPtr, 1, IMAGE_WIDTH*3, f);
+	 }
+      }
+
+   }
+   trDelete(tr);
+
+   fclose(f);
+   printf("%s complete.\n", FILENAME);
+
+   free(tile);
+   free(buffer);
+
+   exit(0);
+}
+#endif
+
 /***************************************************************/
 void display(void)
 {
@@ -2915,6 +3037,15 @@ void myGlutIdle( void )
 
   if (ldraw_commandline_opts.rotate == 1) 
   {
+    printf("IDLE: stepcount = %d, curstep = %d\n",stepcount,curstep);
+    if (ldraw_commandline_opts.M == 'P')
+      if (stepcount != curstep)
+      {
+	// Do all the steps BEFORE twirling.
+	// make them click the steps when in pause mode like ldlite.
+	//glutPostRedisplay();
+	return;
+      }
     // rotate model
     twirl_angle += twirl_increment;
     if (twirl_angle >= 360.0)
@@ -2940,7 +3071,9 @@ void myGlutIdle( void )
     glutPostRedisplay();
     return;
   }
-  else if (ldraw_commandline_opts.poll == 1) 
+
+  // NOTE: Should I move polling up before twirl mode?
+  if (ldraw_commandline_opts.poll == 1) 
   {
     // Gotta handle polling.
     // Check to see if timestamp on filename has changed.
@@ -3189,6 +3322,15 @@ void ParseParams(int *argc, char **argv)
       case 't':
 	ldraw_commandline_opts.rotate = 1;
 	break;
+#ifdef TILE_RENDER_OPTION
+      case 'U':
+      case 'u':
+	// We only do this for non-interactive modes like -MS. (check later)
+	tiledRendering = 1;
+	sscanf(pszParam,"%c%d,%d", 
+	       &type, &TILE_IMAGE_WIDTH, &TILE_IMAGE_HEIGHT);
+	break;
+#endif
       case 'V':
       case 'v':
 	sscanf(pszParam,"%c%d",&type, &mode);
