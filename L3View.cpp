@@ -61,6 +61,8 @@ static	float	v[4];
 extern int Skip1Line(int IsModel, struct L3LineS *LinePtr);
 extern int Init1LineCounter(void);
 
+extern int include_stack_ptr;
+
 //************************************************************************
 void MakePartBox(struct L3PartS *PartPtr,float m[4][4], vector3d bb3d[8])
 {
@@ -266,7 +268,7 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 	for (LinePtr = PartPtr->FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
 	{
 #ifdef USE_OPENGL
-	        if (Skip1Line(IsModel,LinePtr))
+	        if (Skip1Line(!IsModel,LinePtr))
 		  continue;
 #endif
 		switch (LinePtr->Color)
@@ -295,8 +297,12 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 #ifdef USE_OPENGL
 			if (strnicmp(LinePtr->Comment,"STEP",4) == 0)
 			{
-			  zStep(stepcount,1);
-			  stepcount++;
+			  // if (include_stack_ptr <= ldraw_commandline_opts.output_depth )
+			  {
+			    include_stack_ptr = IsModel;
+			    zStep(stepcount,1);
+			    stepcount++;
+			  }
 			}
 			if (ldraw_commandline_opts.M != 'C')
 			{
@@ -327,10 +333,12 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			}
 #endif
 			M4M4Mul(m1,m,LinePtr->v);
-			DrawPart(0,LinePtr->PartPtr,Color,m1);
 #ifdef USE_OPENGL
+			// Use IsModel as a nesting level counter.
+			DrawPart(IsModel+1,LinePtr->PartPtr,Color,m1);
 			// Do zStep() after the model, not toplevel parts.
 #else
+			DrawPart(0,LinePtr->PartPtr,Color,m1);
 			if (IsModel) zStep(0,0);
 #endif
 			break;
@@ -633,9 +641,13 @@ void DrawModel(void)
 
 	Init1LineCounter();
 
-	DrawPart(1,&Parts[0], 7, m_m);
+	// Use IsModel arg as a nesting level pointer.  Start it at 0.
+	include_stack_ptr = 0;
+	DrawPart(include_stack_ptr,&Parts[0], 7, m_m);
 
 	//if (ldraw_commandline_opts.output != 1) zStep(INT_MAX, 0);
+	// if (include_stack_ptr <= ldraw_commandline_opts.output_depth )
+	include_stack_ptr = 0;
 	zStep(stepcount,0);
 
 	if (output_file != NULL) {
