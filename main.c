@@ -76,6 +76,7 @@ char *picfilename = NULL;
 char datfilename[256];
 char title[256];
 char progname[256];
+char progpath[256];
 
 char buf[16*1024]; // sizeof buf copied from render_file() in ldliteView.cpp
 int use_uppercase = 0;
@@ -4314,6 +4315,7 @@ int edit_mode_fnkeys(int key, int x, int y)
 #define EDIT_LINE_ID    'e'
 #define EDIT_COMMENT_ID 'C'
 #define EDIT_HOSE_ID    'h'
+#define EDIT_PLUGIN_ID  'g'
 
 #define LINETYPE_2_ID	2
 #define LINETYPE_3_ID	3
@@ -4390,7 +4392,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	break;
       case 'e':
 	sprintf(eprompt[0], "Edit: ");
-	sprintf(eprompt[1], "Insert Delete Swap Line-type  Hoser");
+	sprintf(eprompt[1], "Insert Delete Swap Line-type  Hoser Plugins");
 	ecommand[0] = toupper(key);
 	ecommand[1] = 0;
 	edit_mode_gui();
@@ -4578,6 +4580,13 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	clear_edit_mode_gui();
 	sprintf(eprompt[0], "Hoser steps: ");
 	ecommand[0] = 'h'; // EDIT_HOSE_ID
+	ecommand[1] = 0;
+	edit_mode_gui();
+	return 1;
+      case 'p':
+	clear_edit_mode_gui();
+	sprintf(eprompt[0], "Plugins: ");
+	ecommand[0] = 'g'; // EDIT_PLUGIN_ID
 	ecommand[1] = 0;
 	edit_mode_gui();
 	return 1;
@@ -5117,6 +5126,10 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	  i = curpiece;
 	HiLightCurPiece(i);
 	return 1;
+      case 'g':
+	// Plugins.  Gotta figure out which plugin.
+	clear_edit_mode_gui();
+	break;
       case 2:
       case 3:
       case 4:
@@ -7610,6 +7623,29 @@ main(int argc, char **argv)
 #if 0
   sprintf(output_file_name, "%s.log", datfilename);
   output_file = fopen(output_file_name,"w+");
+#endif
+
+  // Get the path to the program to find the plugins directory
+#ifdef WINDOWS
+  GetModuleFileName(NULL, progname, sizeof(progname));
+  printf("progpath = <%s>\n", dirname(progpath));
+#else
+  // getexecname() on Solaris??
+  strcpy(progpath, dirname(argv[0]));
+  printf("progpath = <%s>\n",progpath);
+  if (progpath[0] == '.')
+  {
+    strcpy(progname, progpath);
+    getcwd(progpath, sizeof(progpath));
+    concat_path(progpath, progname, filename);
+    if (filename[strlen(filename)-1] == '.')
+      concat_path(filename, "", progpath); // add an extra separator at the end
+    else
+      strcpy(progpath, dirname(filename)); 
+    printf("PROGPATH = <%s>\n",progpath);
+    strcpy(filename, progpath);
+    concat_path(filename, "plugins", progpath); // find plugins directory.
+  }
 #endif
 
   strcpy(progname, basename(argv[0]));
