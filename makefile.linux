@@ -1,21 +1,29 @@
 CC=gcc
 
-CFLAGS=-g -DUNIX -DUSE_OPENGL
+# Comment these out to disable PNG output if no PNG lib is available.
+#
+PNG_FLAGS=-DUSE_PNG 
+PNG_LIBS= -lpng -lz 
 
-ldglite:   ldliteVR_main.o stub.o y.tab.o lex.yy.o qbuf.o main.o platform.o dirscan.o
-	$(CC) $(CFLAGS) ldliteVR_main.o stub.o y.tab.o lex.yy.o qbuf.o main.o platform.o dirscan.o -o ldglite -L/usr/X11R6/lib -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
+CFLAGS=-g -DUNIX -DUSE_OPENGL -DUSE_L3_PARSER $(PNG_FLAGS)
 
-ldglitepng:   ldliteVR_main.o stub.o y.tab.o lex.yy.o qbuf.o pngMain.o platform.o dirscan.o
-	$(CC) $(CFLAGS) ldliteVR_main.o stub.o y.tab.o lex.yy.o qbuf.o pngMain.o platform.o dirscan.o -o ldglite -L/usr/X11R6/lib -lpng -lz -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
+all	: ldglite
 
-l3glite:   ldliteVR_main.o platform.o dirscan.o L3Stub.o y.tab.o lex.yy.o qbuf.o L3Main.o L3Math.o L3Input.o L3View.o
-	$(CC) $(CFLAGS) ldliteVR_main.o platform.o dirscan.o L3Stub.o y.tab.o lex.yy.o qbuf.o L3Main.o L3Math.o L3Input.o L3View.o -o l3glite -L/usr/X11R6/lib -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
+ldglite:   ldliteVR_main.o platform.o dirscan.o camera.o f00QuatC.o stub.o y.tab.o lex.yy.o qbuf.o main.o L3Math.o L3Input.o L3View.o
+	$(CC) $(CFLAGS) ldliteVR_main.o platform.o dirscan.o camera.o f00QuatC.o quant.o stub.o y.tab.o lex.yy.o qbuf.o main.o L3Math.o L3Input.o L3View.o -o ldglite -L/usr/X11R6/lib $(PNG_LIBS) -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
+	ln -s ldglite.exe l3glite.exe
 
-l3glitepng:   ldliteVR_main.o platform.o dirscan.o L3Stub.o y.tab.o lex.yy.o qbuf.o L3pngMain.o L3Math.o L3Input.o L3View.o
-	$(CC) $(CFLAGS) ldliteVR_main.o platform.o dirscan.o L3Stub.o y.tab.o lex.yy.o qbuf.o L3pngMain.o L3Math.o L3Input.o L3View.o -o l3glite -L/usr/X11R6/lib -lpng -lz -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
+l3glite:   ldglite
+
+ldglitepng:   ldglite
+
+l3glitepng:   ldglite
 
 ldliteVR_main.o: ldliteVR_main.c
 	$(CC) -c $(CFLAGS) ldliteVR_main.c
+
+main.o: main.c
+	$(CC) -c $(CFLAGS) main.c
 
 stub.o: stub.c
 	$(CC) -c $(CFLAGS) stub.c
@@ -23,8 +31,11 @@ stub.o: stub.c
 platform.o: platform.c
 	$(CC) -c $(CFLAGS) platform.c
 
-dirscan.o: dirscan.c
-	$(CC) -c $(CFLAGS) dirscan.c
+camera.o: f00QuatC.h camera.c
+	$(CC) -c $(CFLAGS) camera.c
+
+f00QuatC.o: f00QuatC.h
+	$(CC) -c $(CFLAGS) f00QuatC.c
 
 y.tab.o: y.tab.c
 	$(CC) -c $(CFLAGS) y.tab.c
@@ -35,19 +46,9 @@ lex.yy.o: lex.yy.c
 qbuf.o: qbuf.c
 	$(CC) -c $(CFLAGS) qbuf.c
 
-main.o: main.c
-	$(CC) -c $(CFLAGS) main.c
+dirscan.o: dirscan.c
+	$(CC) -c $(CFLAGS) dirscan.c
 
-# Experimental stuff: png output and L3 parser
-pngMain.o: main.c
-	$(CC) -c $(CFLAGS) -DUSE_PNG main.c -o pngMain.o
-L3pngMain.o: main.c
-	$(CC) -c $(CFLAGS) -DUSE_PNG -DUSE_L3_PARSER main.c -o L3pngMain.o
-
-L3Main.o: main.c
-	$(CC) -c $(CFLAGS) -DUSE_L3_PARSER main.c -o L3Main.o
-L3Stub.o: stub.c
-	$(CC) -c $(CFLAGS) -DUSE_L3_PARSER stub.c -o L3Stub.o
 L3Math.o: L3Math.cpp
 	$(CC) -c $(CFLAGS) L3Math.cpp
 L3Input.o: L3Input.cpp
