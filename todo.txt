@@ -1,4 +1,12 @@
 ----------------------------------------------------------------------
+I can't change a type 2 line into a type 1 line in LEDIT mode.  I
+think I have to change it to a comment first (type 0).  This
+is probably also true for other linetypes.  Fix me.
+
+I should also add a faster way to create new lines, quads, and  tris.
+Inserting a part and then changing the linetype is too clumsy.
+
+----------------------------------------------------------------------
 When I try to display datfiles\foo.dat ldglite will instead display
 %LDRAWDIR%\models\foo.dat if it exists (overriding my explicit path
 on the command line).  This is perhaps OK for parts, but for the top 
@@ -364,6 +372,8 @@ xformation info out of the LDRAW -A view/model matrix.  How does
 introduces a view transformation style shear element?  Should I 
 keep the rotation, but toss the shearing?
 
+Maybe the default view should be LdrawOrtho, -j ortho, -J perspective.
+
 How about keeping the shear and applying it before glOrtho()...
 
 void reshape (int w, int h)
@@ -388,6 +398,42 @@ Can I just apply the LDRAW command line matrix this way?
 Finish off the Quake/Freespace style camera movement.  Consider using
 the same key combo/visual cues as ldview to make things easier on
 folks who might use both.
+
+Paraphrased from the ldview help.html file:
+
+--------Examine Mode------------
+
+Left Mouse rotates the model.  (Same)
+Ctrl Left pans (different from l3lab and ldglite)
+Right Mouse zooms (different, and non-negotiable.  ldglite menu)
+(Middle button is mouse wheel in windows glut patch)
+Mouse Wheel zooms 
+(glut seems to ignore wheel spin, press it gets a middle btn paste, yuk!)
+Ctrl Right moves clip plane (different)
+
+--------Fly-through Mode--------
+
+Left Mouse turns the camera look at point.  
+(I could use Ctrl-Shift left mouse for this.  Like ctrl-shift-arrows)
+(Switch solid rotate to Alt-Lmouse)
+(Switch shift LeftMouse to pan?  Consistent with arrow keys)
+(Switch Ctrl LeftMouse to pan? not consistent with ldglite CTRL)
+
+The camera can be moved using the keyboard.  Shift doubles the speed.
+(I could avoid conflicts by using CTRL with these, since CTRL means camera
+in ldglite) 
+
+Camera Movement 	Key 
+Forward:  		W 
+Backward:  		S 
+Left:  			A 
+Right:  		D 
+Up:  			R 
+Down:  			F                                                                         
+Camera Rotation		Key 
+Rotate Clockwise:  	E 
+Rotate Counter-Clockwise:  Q 
+
 
 ----------------------------------------------------------------------
 
