@@ -1,0 +1,388 @@
+----------------------------------------------------------------------
+
+Implement some sort of part spreading algorithm for drag and drop
+of multiple parts.
+
+----------------------------------------------------------------------
+
+Implement drag and drop for unix (and MacOs?) so they can at least 
+pull in peeron style inventory lists, parts from an emacs window, 
+and perhaps the HTML version of the printable parts catalog.
+
+----------------------------------------------------------------------
+
+Incorporate Andrews MacLdraw parser and it's nice premade display 
+list parts.
+
+----------------------------------------------------------------------
+
+Finish up the MUI menus or replace them with something better.
+
+----------------------------------------------------------------------
+
+Come up with a texture mapped font (built into the executable) for
+speed with hardware opengl and for the DOS version.  Investigate
+glfont and the font code in freeglut.
+
+----------------------------------------------------------------------
+
+Add bezier/hoser code to LEDIT mode.
+
+----------------------------------------------------------------------
+
+Document disabling the Alpha blended cursor on Win2k for laptops
+and other computers without the hardware to keep up with that silly
+piece of eye candy.
+
+----------------------------------------------------------------------
+
+Fix 2 pass rendering -q to work with things like 0 CLEAR.  This needs
+work for both on and offscreen rendering.
+
+----------------------------------------------------------------------
+
+Implement the normal fixing curve smoothing algorithm based on 
+type 5 lines, or the alternative algorithm that looks for the
+lack of type 2 edge lines.
+
+----------------------------------------------------------------------
+
+Implement type 5 silhouette lines as a reverse BFC wireframe of 
+the shaded polys.  This algorithm has the advantage that it can 
+be done *inside* a display list.  Thus it should be much faster.
+
+----------------------------------------------------------------------
+
+Implement a display list for each part.
+
+----------------------------------------------------------------------
+
+Document ALL of the command line args, including the ldlite and LDRAW
+args.
+
+----------------------------------------------------------------------
+
+Unify the VIEW code.  (Ortho/Perspective/LDRAW3D)  Pull any view 
+xformation info out of the LDRAW -A view/model matrix.  How does
+-A and -J on the command line work?  Should it be an error if -A
+introduces a view transformation style shear element?  Should I 
+keep the rotation, but toss the shearing?
+
+----------------------------------------------------------------------
+
+Finish off the Quake/Freespace style camera movement.  Consider using
+the same key combo/visual cues as ldview to make things easier on
+folks who might use both.
+
+----------------------------------------------------------------------
+
+Fix the POV camera dump code to write it to a file
+
+----------------------------------------------------------------------
+
+Fix the POV camera dump code to work with the projection
+
+----------------------------------------------------------------------
+
+Document what's in the various source files.  Here's a first pass
+at it.
+
+main.c contains most of the GLUT code.  It starts the app and runs
+the event loop.  It also contains some platform specific hooks and 
+manages the view transform, lighting, etc.
+
+stub.c contains most of the opengl drawing calls.  Look at the
+functions that begin with render_ to see how it draws each of the
+5 LDRAW linetypes.
+
+L3*.cpp implement the l3 parser from l3p and l3lab.
+
+lex.yy.c and y.tab.c implement the ldlite parser.  They're generated
+from lex sources (ldlite.l and ldlite.y?) and are almost unreadable
+because of that.  I do most of my work with the l3 parser.  The .CPP
+files that don't begin with L3* are the Windows MFC code from ldlite
+and are not used ldglite.
+
+l3edit.c my hack on the l3 parser and data structures to implement the
+LEDIT emulation mode in ldglite.  It's not particularly well written
+and the LEDIT keyboard command parsing routines in main.c that support
+it are especially hideous.
+
+ldglpr.c is my image file printing routines.
+
+platform.c contains some platform specific functions.  Probably some
+more functions from main.c should be in here.
+
+dirscan.c contains the code used to search directories for the 
+really cheesy GLUT menu file lookup.
+
+ldglgui contains a MUI version of the GLUT menus.  It's got a slightly
+better file browser dialog, and radio buttons for the drawing options
+but I still don't really like it much.
+
+Overall my coding strategy is to make it portable, but not necessarily
+fast.  For example, there is some experimental code in main.c to use
+a single large display list for the model, but because of problems
+with type 5 lines and the default LDRAW view matrix I abandoned it
+until sometime in the future.  Also because the ldlite parser doesn't 
+build a data structure, the individual quads, triangles, and lines
+are all passed to opengl one at a time.  I'd like to change this to
+be more efficient, but I've been putting it off since I don't have
+good hardware.  Ldglite could also use some sort of occlusion culling
+to eliminate all the unseen studs.  It uses two sided lighting which
+supposedly slows down some hardware to a crawl.
+
+----------------------------------------------------------------------
+
+From: James Reynolds
+
+In using ldglite (on Mac OS X), I have noticed a few issues, mainly 
+with the keys.
+
+First, I don't think your webpage has been updated to show the 
+changed hotkeys (the changes that occurred when you added LEdit 
+emulation).   PGUP and PGDN and arrow keys are now used by LEdit.
+
+Second, many of the keys don't work on the Macintosh.
+
+For example, there is no INSERT key, so toggling LEdit emulation doesn't work.
+
+I don't believe the BMP or PNG works.
+
+V doesn't work.
+
+I don't know what g does, so I couldn't tell.
+
++ and - are a bit of a mystery (_ and = seem to do the same thing...?)
+
+Alt and Cntr arrow keys do not work (LEdit receives the commands as 
+"move the piece"..).
+
+Ctrl mouse drag doesn't work (but shift mouse drag does).
+
+1-button mice don't do the right button stuff (usually on the Mac, 
+cntr-click acts as the right button--this may explain why ctrl mouse 
+drag doesn't work too).
+
+2-button mouse (supported by Mac OS X) don't work either.
+
+F10 and F9 don't work.
+
+Anyway, I don't know if you have time to look at it much.  I was 
+thinking you could have a text configuration file that could easily 
+be modified to set to commands keys.
+
+----------------------------------------------------------------------
+
+In lugnet.cad, Steve Bliss writes:
+> ..they're batched up currently, I write a file like:
+> 1 0 0 0 0 1 0 0 0 1 0 0 0 1 3001.dat
+> 0 STEP
+> 0 CLEAR
+> 1 0 0 0 0 1 0 0 0 1 0 0 0 1 3002.dat
+> 0 STEP
+> 0 CLEAR
+> ...
+> and put 100 parts through LDLite at one system call.
+
+Ouch, I just tried this in ldglite with the following command
+
+  ldglite foo.ldr -s3 -w3 -MS -q
+
+and found not one, but 4 different bugs I have to fix.
+
+1.  I need to increase the calculated image extents by the half
+the linewidth to get all of the wide lines at the edges of the
+saved cropped image files.
+
+2.  I need to reset the image extents after a 0 CLEAR so the
+second image is cropped correctly.
+
+3.  I need to fix a bug with the -q switch.  When you use -q the
+image after the 0 CLEAR shows only the nice antialiased lines.
+(Something else to reset after a 0 CLEAR).  It works ok if you
+skip the -q though.
+
+4.  It put the bitmap files in the right directory, but it named
+them foo1.bmp and foo2.bmp instead of foo---01.bmp and foo---02.bmp
+like ldlite.  Not sure if I should really call this a bug, but
+it might break any scripts you've wrapped around ldlite.
+
+----------------------------------------------------------------------
+
+In lugnet.cad.dev, Jeremy H. Sproat writes:
+>Okay, this is a quick and dirty list, just what I've observed or confirmed
+>today:
+>
+>Menu - The right-click menu is very confusing.  Why not put this in the menu
+>bar and standard dialog boxes?  File browser is confusing, as is file filter.
+>
+>Menu - File browser skips files, I can't load my file if it falls within the
+>last three slots in browser submenu.  I had to delete files from my
+>LDRAW\MODELS directory before I could see my test file.
+
+Yeah I've known about the problems with the menu for quite a while now.
+I refuse to go to a 1.0 release number until I fix that.  However since
+I'm running out of release numbers I've actually started to do something
+about it.  Could you give me some feedback on the experimental menu
+(still right click) in this recently escaped beta version of ldglite?
+
+  http://news.lugnet.com/cad/?n=8490
+
+I really wish someone would create some nice control widgets written
+in C (not C++) that use opengl for all the drawing.  This would meet
+my portability goals for ldglite.  But I've been waiting a long time
+and it just isn't happening.  It looks like I'm gonna have to do it
+myself.  Rats! 
+
+>Window - Program starts with window bounds matching screen resolution; I'm
+>missing the title bar due to my task bar.  Why not start at a smaller size,
+>or have it remember window size between sessions?
+
+I've gotten into the habbit of always putting a -v3 on the command line
+because that's the size I like.  I even put it into the registry for 
+when I load a file straight from lugnet.  But I did that manually 
+because I don't want to put unportable registry code in ldglite.  I
+suppose I could invent a new LDRAW meta-command for this and stick
+it in the ldliterc.dat file.  But then I'd have to come up with a
+license for the meta-command.  ;)
+
+>Command-line Option - option -Bn doesn't work, bg always 15 (white).
+
+Hey, you're right.  I wonder when I broke that.  I think it used
+to work at one point.
+
+>LEdit Mode Toggle - Why not put this in the menu?
+
+That's a good idea, and an easy one too.  Thanks.
+
+>Input Keys - ALT-F4 doesn't close the window.
+
+That's an easy one, but is it any sort of standard beyond windows?
+CUA perhaps?  Could you point me to a page where this is documented?
+I'm guessing that pressing that key combo generates some Windows
+message that's ignored by the glut library.  If so, I could catch it
+myself in the ldglite keyboard handler when running on a Windows
+platform, or everywhere if it's a standard in wide use.
+
+>Redraw - Clears screen during redraw for any small reason - a tooltip from
+>the task bar triggers this, sometimes a mouse movement will.  When this
+>happens, after waiting for the redraw, it redraws again from the beginning.
+>Can become an endless cycle in some circumstances.  Must kill program from
+>task manager.
+>
+>Redraw - Won't restart redraw in middle of redraw, must wait until it's
+>finished.  You can't input a command during a redraw.
+>
+>LEdit Mode - OpenGL text takes too long to redraw, why not use native font,
+>or a subwindow that doesn't need to redraw constantly?
+
+>> Do you have any numbers to back that up?
+>
+>I stand corrected.  LDGLite renders faster than LEdit on my box.
+>
+>I'm running on an AMD K6-500 with 192 Mb RAM, 1024x768x24.  In LEdit, my
+>test file took 43 seconds; in LDGLite, 17 seconds (per redraw).  I note that
+>it took 4 redraws in LDGLite before I could do anything, though, so it
+>really took more than a minute before I could do anything with it.
+
+Ah, Now we're getting to the speed issue.  It looks like it's not
+actually the redraw speed, but the response time that's the issue.
+LEdit scores high in this area.  It's quite good at responding
+to key strokes right away and then fixing the rest of the display
+later.  The glut Opengl library expects the redraw times to be in 
+frames per second and not seconds per frame so it's not designed 
+to be interruptable by keystrokes.  That makes this one a tough
+problem to solve.  I can either break up the display loop somehow,
+or figure out a way to make it redraw so fast I don't need to 
+worry about it.
+
+----------------------------------------------------------------------
+
+I did some work on the other solution, rendering in the background.
+Use -n2 to render each part in the backbuffer, -n4 does the whole
+model.  Also the backbuffer is retained for faster refreshes on window
+expose events.  I haven't gotten this to work in LEDIT mode yet
+though.  
+
+I also fixed the -b<color> bug.
+
+>I like the L3P-like camera command-line options, except they don't seem to
+>work.  Specifically, I'm using -cgx,y,z (is that x,y,z or lat,long,dist?)
+>and -cox,y,z -- no matter what values I give the -cg the view never changes
+>(or changes just slightly?)  This happens both with and without a -a option.
+>Similarly, the -co doesn't seem to be moving the model origin.  Tested with
+>both the release version and the "silver beta" version.
+
+What's -cg?  I'm gonna assume you mean -ccX,Y,Z.  Anyhow, it's been a 
+while, but I think it's X,Y,Z in opengl world coordinates (Which I think
+are like ldraw world coords except the Y direction is reversed)  Some 
+effects like distance from the camera aren't visible in orthographic
+mode.  Try -J for perspective mode.  I think the default camera position
+is 0,0,1000 so using -cc0,500,1000 will be looking at the model more
+from above.  Using -cc0,250,500 will be looking from the same angle,
+but closer in perspective mode.
+
+I'm currently reworking much of the camera code while working on the
+quake style navigation for moving and aiming the camera interactivly.
+
+  http://news.lugnet.com/cad/dev/?n=7515
+
+So now's the time to make suggestions.  You can get a sample of where
+I'm going (but with a bad choice of keys) by holding ctrl-alt and left
+mouse button and then wandering around the model on the latest beta.
+Make sure you're in perspective mode first.  Oh yeah, the new menu
+has a setting in the VIEW panel for FOV angle if you want to play
+with that.  Hmm, I wonder how I could do that visually with the mouse...
+
+>When you start up the window, is it possible to place it centered on-screen?
+>It always comes up with the upper-left at 0,0 on my monitor, which places
+>its title bar smack-dab underneath my task bar.  Right-clicking on its
+>taskbar entry to get to the "Move" menu item is tricky, due to the tooltip
+>causing the redraw.  :-,
+
+Where's your task bar, at the top of the screen?  What are you some
+kind of nut?  ;-)  I'll see what I can do, but I'm running out of
+letters to use on the command line, and I don't think I can predict
+where the task bar (or docking station or whatever) is gonna be.  I
+don't particularly like the window popping up in the exact top left
+corner either, but I think defaulting to the center of the screen
+would irritate me even more.  How about something like +200,100
+on the command line?  Give that a try in the beta version.
+
+>I really like the -q option -- especially when I can catch it in mid-draw so
+>that it clears the screen just when it starts drawing the line edges.  This
+>is a nifty effect -- how about an option to draw *just* the line edges?
+
+Use -fw for that.  That's an old ldlite option so it may not be in the
+readme.txt file.  I guess I should add a section in the readme file
+that covers all the ldlite compatible commandline options.
+
+>That's all I have tonight.  Playing with the -fh, -W and -q settings, and
+>the rendering is just gorgeous.  Wish I could position the camera quickly.
+
+Feel free to tell me more about how you want it to work, both
+interactivly and on the command line.
+
+Don
+
+----------------------------------------------------------------------
+
+Sproat's wish list:
+
+- L3View.cpp, function DrawPart()
+   - linetype 3 and 4 render in constant color (can be bg color) 
+   -- see render_triangle() in switch (LinePtr->LineType) case 3 
+   -- see render_quad()in switch (LinePtr->LineType) case 4
+   - color 24 can be same as color 16 
+   -- see switch (LinePtr->Color)
+   - amaze your CAD friends with tron-like graphics, among other things!  
+   -- see http://www.sproat.us/l3glite-tron.png
+
+- jitter in render_line, may cause sketch effects! 
+  -- see http://www.sproat.us/l3glite-sketch.png
+    - number of jitter lines, from 0+
+    - endpoint jitter factor
+    - random number seed
+
+----------------------------------------------------------------------
