@@ -356,6 +356,25 @@ xformation info out of the LDRAW -A view/model matrix.  How does
 introduces a view transformation style shear element?  Should I 
 keep the rotation, but toss the shearing?
 
+How about keeping the shear and applying it before glOrtho()...
+
+void reshape (int w, int h)
+{
+// Oblique Projection
+//{1,0,-cot20,0, 0,1,-cot10,0, 0,0,1,0, 0,0,0,0};
+//float shear[16]={1,0,87.14,0, 0,1,84.29,0, 0,0,1,0, 0,0,0,0};
+float shear[16]={1,0,87.14,0, 0,1,84.29,0, 0,0,1,0, 0,0,0,1};
+
+glViewport (0, 0, (GLsizei) w, (GLsizei) h); 
+glMatrixMode (GL_PROJECTION);
+glLoadIdentity ();
+glMultMatrixf(shear); 
+glOrtho (-1.0, 1.0, -1.0, 1.0, 1.5, 20.0);
+glMatrixMode (GL_MODELVIEW);
+}
+
+Can I just apply the LDRAW command line matrix this way?
+
 ----------------------------------------------------------------------
 
 Finish off the Quake/Freespace style camera movement.  Consider using
