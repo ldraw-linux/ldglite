@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.0.12     ";
+char ldgliteVersion[] = "Version 1.1.0      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -1800,9 +1800,20 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
   else {
     // step == -1 means a redraw partway through a step
   }
+
+  //NOTE:  for some reason (probably -Q) I do this:  zStep(stepcount,0)
+  // instead of:  if (ldraw_commandline_opts.output != 1) zStep(INT_MAX, 0);
+  // at the end of the render() fn to save/pause after the last step.
+  // This makes some of the tests below look different than ldliteView.cpp.
+
   if ((ldraw_commandline_opts.M != 'C')||(step==INT_MAX)||(step== -1)) { 
   }
-  if ((step >= 0 ) && (ldraw_commandline_opts.M == 'S')) {
+  if ((step >= 0 ) && ((ldraw_commandline_opts.M == 'S') || (ldraw_commandline_opts.M == 'F'))) {
+
+    //    printf("Platform_Step(%d, %d, %d, %d, %d) %c\n", 
+    //	   step, level, pause, curstep, stepcount,
+    //	   ldraw_commandline_opts.M);
+
     // if something has been drawn, save bitmap
     if ((step == INT_MAX) && (pause == 0)) {
       // do nothing
@@ -1814,12 +1825,13 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
       // qualityLines = Multistage drawing.  Must count steps.
       //	curstep++; // Move on to next step
     }
-    else if (level<=ldraw_commandline_opts.maxlevel) {
+    else if ((level<=ldraw_commandline_opts.maxlevel) && ((ldraw_commandline_opts.M == 'S')||(step == INT_MAX))) {
       // save bitmap
       platform_step_filename(step, filename);
 
 
 //*************************************************************************
+      // This only happens when keyboard or menu requests a bitmap.
       if ((step == INT_MAX) && (level == 0) && (pause == -1)&& (!picfilename))
       {
 	int i = 0;
@@ -3053,6 +3065,9 @@ void DrawScene(void)
   glFlush();
 
   dirtyWindow = 0;  // The window is nice and squeaky clean now.
+
+  if (ldraw_commandline_opts.M == 'F')
+    platform_step(INT_MAX, 0, -1, NULL);
 }
 
 #ifdef TILE_RENDER_OPTION
@@ -4321,8 +4336,11 @@ void display(void)
 
   // If we just want the output files then quit when idle.
   if ((ldraw_commandline_opts.output == 1) ||
-       (ldraw_commandline_opts.M == 'S')) 
+      (ldraw_commandline_opts.M == 'S') || (ldraw_commandline_opts.M == 'F'))
   {
+    if (ldraw_commandline_opts.M == 'F')
+      platform_step(INT_MAX, 0, -1, NULL);
+      
     // Do NOT quit just yet if we need to twirl.
     if (ldraw_commandline_opts.rotate != 1) 
       exit(0); //quit the program
@@ -7594,7 +7612,7 @@ void myGlutIdle( void )
 	twirl_angle = 0.0;
 	// If we just want the output files then quit when idle.
 	if ((ldraw_commandline_opts.output == 1) ||
-	    (ldraw_commandline_opts.M == 'S')) 
+	    (ldraw_commandline_opts.M == 'S') || (ldraw_commandline_opts.M == 'F'))
 	  exit(0); //quit the program
 	else
 	  return;
@@ -7656,10 +7674,10 @@ void myGlutIdle( void )
   // NOTE:  This does NOT seem to wait till the display() fn is finished.
   // If we just want the output files then quit when idle.
   if ((ldraw_commandline_opts.output == 1) ||
-      (ldraw_commandline_opts.M == 'S')) 
+      (ldraw_commandline_opts.M == 'S') || (ldraw_commandline_opts.M == 'F'))
   {
     // Draw the last step.
-    if (ldraw_commandline_opts.M == 'S')
+    if ((ldraw_commandline_opts.M == 'S') || (ldraw_commandline_opts.M == 'F'))
       platform_step(INT_MAX, 0, -1, NULL);
     // quit the program
     exit(0);
@@ -8040,8 +8058,11 @@ void ParseParams(int *argc, char **argv)
       case 'M':
       case 'm':
 	sscanf(pszParam,"%c%c",&type,&(ldraw_commandline_opts.M));
-	// Uppercase S means save file AND render it offscreen if possible.
+	// Uppercase S = save steps AND render it offscreen if possible.
 	if (ldraw_commandline_opts.M == 'S')
+	  OffScreenRendering = SetOffScreenRendering();
+	// Uppercase F = save final step AND render it offscreen if possible.
+	if (ldraw_commandline_opts.M == 'F')
 	  OffScreenRendering = SetOffScreenRendering();
 	ldraw_commandline_opts.M = toupper(ldraw_commandline_opts.M);
 	if (pszParam[2])
