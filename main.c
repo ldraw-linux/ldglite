@@ -2861,7 +2861,7 @@ int
 main(int argc, char **argv)
 {
   char filename[256];
-  int opts, view, colors;
+  int opts, view, colors, helpmenunum;
   int exitcode;
   char *str;
   
@@ -2988,7 +2988,7 @@ main(int argc, char **argv)
   glutAddMenuEntry("Studs           ", 'f');
   glutAddMenuEntry("Visible spin    ", 'v');
   glutAddMenuEntry("Continuous      ", 'c');
-  glutAddMenuEntry("polling         ", 'g');
+  glutAddMenuEntry("Polling         ", 'g');
   glutAddMenuEntry("                ", '\0');
   glutAddMenuEntry("Zoom out        ", 'z');
   glutAddMenuEntry("Zoom in         ", 'Z');
@@ -3043,6 +3043,10 @@ main(int argc, char **argv)
   glutAddMenuEntry("Page Up            ", 13);
   glutAddMenuEntry("Page Dn            ", 14);
 
+  helpmenunum = glutCreateMenu(menu);
+  glutAddMenuEntry(progname             , '\0');
+  glutAddMenuEntry("Version 0.7.2      ", '\0');
+
   mainmenunum = glutCreateMenu(menu);
   glutAddSubMenu(  "File               ", filemenunum);
   glutAddSubMenu(  "Folder             ", dirmenunum);
@@ -3054,8 +3058,12 @@ main(int argc, char **argv)
   glutAddMenuEntry("                   ", '\0');
   glutAddMenuEntry("Picture            ", 'P');
   glutAddMenuEntry("                   ", '\0');
+  glutAddSubMenu(  "Help               ", helpmenunum);
   glutAddMenuEntry("Quit               ", '\033');
   glutAttachMenu(GLUT_RIGHT_BUTTON);
+
+  view = glutCreateMenu(menu);
+  glutAddMenuEntry("Ldraw Oblique   ", '0');
 
   // Read in the current directories dat filenames.
   dirmenu(15);
