@@ -163,9 +163,15 @@ Command line options (see also the original ldlite docs for more):
 -fh turns on shading mode.
 -fs turns off stud drawing. (l3glite only)
 -fr turns off edge lines (Render mode?  Rough draft?  I don't know what R stands for.)
+-v0 displays in a 320x200 window.
 -v-1 displays in fullscreen with no decorations.
 -v-2 displays in fullscreen gamemode (no menus in gamemode).
+-v7 displays in 1600x1024
+-v8 displays in 1600x1200
+-vX,Y displays in an X wide by Y high window.
 -x displays the x,y,z axis.
+-ms Saves an image for each STEP and quits.
+-mS Does the same, but without opening a window.
 -iN picks output image type. 1 = PNG, 2 = Transparent PNG, 3 = BMP8, 4 = BMP24 
     5 = PPM.  Use -N to turn off output image cropping.
 -eN.NN fixes polyline offset driver errors.  Try -e0.95 if lines look bad.
@@ -312,4 +318,17 @@ the l3 parser so it only has to parse the mpd file once for the multiple
 rendering passes required for the tiles.
 
   ldglite -l3 -i2 -s2 -w2 -u2000,2000 model.mpd
+
+		       -----------------------
+
+Use -mS (uppercase S) to save images without even opening a window.
+This is nice for background rendering processes.  Use this in
+combination with -vX,Y to set the image size.  This currently does NOT
+work in conjunction with the tiled rendering mode, but perhaps by the
+next release.  To get large images with the offscreen MESA driver
+you'll need to edit the MESA config file src/config.h and change
+MAX_WIDTH and MAX_HEIGHT, then recompile MESA.  Linux users can also
+use the X Virtual FrameBuffer (xvfb) to render offscreen.  I suspect
+xvfb may also require the changes to the MESA config file to produce
+large images.
 
