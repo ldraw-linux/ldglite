@@ -4360,6 +4360,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
   float f;
   int i, color;
   char partname[256];
+  char *token;
 
   if (!editing)
     return 0;
@@ -4831,8 +4832,6 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	//sscanf(&(ecommand[1]),"%s", partname);
 	if (partlookup)
 	{
-	  char *token;
-
 	  // Use the part from the lookup list. 
 	  strcpy(&(ecommand[1]), partlistptr[partlookup - 1]);
 	  if (token = strpbrk(&(ecommand[1])," \t"))
@@ -5156,6 +5155,27 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       if (ecommand[0] == 'p')
       {
 	//StashPart0();
+	if (partlookup)
+	{
+	  // Got ? when already looking up part.  Display the selected part?
+	  // Use the part from the lookup list. 
+	  strcpy(&(eresponse[1]), partlistptr[partlookup - 1]);
+	  if (token = strpbrk(&(eresponse[1])," \t"))
+	    *token = 0;
+
+	  for (i = 1; eresponse[i] == ' '; i++); // Strip leading spaces
+	  strcpy(partname, &(eresponse[i]));
+	  CopyStaticBuffer();
+	  movingpiece = curpiece;
+	  if (strrchr(partname, '.') == NULL)
+	    strcat(partname, use_uppercase ? ".DAT" : ".dat");
+	  Swap1Part(curpiece, partname);
+	  DrawMovingPiece();
+	  if (ldraw_commandline_opts.debug_level == 1)
+	    Print1Part(curpiece, stdout);
+	  edit_mode_gui(); // Redisplay the GUI
+	  break;
+	}
 	loadpartlist();
 	if (partlookup)
 	  limitpartlist(&(ecommand[1]));
