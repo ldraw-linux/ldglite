@@ -98,6 +98,8 @@ int cropping = 1;
 int panning = 0;
 GLdouble pan_start_x = 0.0;
 GLdouble pan_start_y = 0.0;
+GLdouble pan_end_x = 0.0;
+GLdouble pan_end_y = 0.0;
 int pan_start_zWire;
 int pan_start_F;
 int pan_visible = 2; // Start with bounding box spin mode.
@@ -1954,8 +1956,8 @@ mouse(int button, int state, int x, int y)
 		 &pan_x, &pan_y, &pan_z);
     pan_y = -pan_y;
 
-    pan_start_x = pan_x;
-    pan_start_y = pan_y;
+    pan_start_x = pan_end_x = pan_x;
+    pan_start_y = pan_end_y = pan_y;
 
     if (ldraw_commandline_opts.debug_level == 1)
       printf("pdn(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
@@ -2106,6 +2108,31 @@ motion(int x, int y)
       pan_start_y = p_y;
 
       glutPostRedisplay();
+    }
+    else
+    {
+      //printf("MOTION(%0.2f, %0.2f, %0.2f)\n", pan_x, -pan_y, pan_z);
+      glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
+      glEnable( GL_COLOR_LOGIC_OP ); 
+      //glEnable( GL_LOGIC_OP_MODE ); 
+      glLogicOp(GL_XOR);
+      glColor3f(1.0, 1.0, 1.0); // white
+      glBegin(GL_LINES);
+      glVertex3f(pan_start_x, pan_start_y, pan_z);
+      glVertex3f(pan_end_x, pan_end_y, pan_z);
+      glEnd();
+      glBegin(GL_LINES);
+      glVertex3f(pan_start_x, pan_start_y, pan_z);
+      glVertex3f(pan_x, pan_y, pan_z);
+      glEnd();
+      glLogicOp(GL_COPY);
+      glEnable( GL_DEPTH_TEST ); 
+      glDisable( GL_COLOR_LOGIC_OP ); 
+      //glDisable( GL_LOGIC_OP_MODE ); 
+      glFlush();
+
+      pan_end_x = pan_x;
+      pan_end_y = pan_y;
     }
   }
 
