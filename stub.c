@@ -34,6 +34,8 @@ extern int dirtyWindow;
 extern int use_quads;
 extern float lineWidth;
 
+extern int LineChecking;
+
 // Ambient and diffusion properties for front and back faces.
 extern GLfloat full_mat[];
 extern GLfloat half_mat[];
@@ -359,6 +361,14 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
 	ZPOINT p1, p2, p3;
 	ZCOLOR zc, zs;
 
+
+#ifdef USE_OPENGL
+	if(LineChecking) {
+	  //disable color updates
+	  glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); 
+	}
+	else
+#endif
 	if(ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) {
 		return;
 	};
@@ -472,6 +482,10 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
     //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
   }
   //glFlush();
+  if(LineChecking) {
+    //disable color updates
+    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); 
+  }
 #endif
 }
 
@@ -498,6 +512,13 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
 	int bowtie_test_1;
 	int bowtie_test_2;
 
+#ifdef USE_OPENGL
+	if(LineChecking) {
+	  //disable color updates
+	  glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); 
+	}
+	else
+#endif
 	if(ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) {
 		return;
 	};
@@ -702,6 +723,10 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
     //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
   }
   //glFlush();
+  if(LineChecking) {
+    //disable color updates
+    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); 
+  }
 #endif
 }
 
