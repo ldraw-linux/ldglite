@@ -250,6 +250,9 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 	vector3d       v3d[4];
 
 #ifdef USE_OPENGL
+	float mm[4][4];
+	float det = 0;
+
 	if ((ldraw_commandline_opts.F & TYPE_F_STUDLINE_MODE) != 0)
 	  if (PartPtr->IsStud)
 	  {
@@ -267,7 +270,10 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 	    else
 	      DrawPartBox(PartPtr, CurColor, m, 0);
 	    return;
-	  }
+	  }	
+
+	  if (PartPtr->IsStud)
+	    det = M3Det(m); // Check the determinant of m to fix mirrored studs.
 #endif
 
 	for (LinePtr = PartPtr->FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
@@ -439,10 +445,23 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			      break;
 			  }
 #endif
-			}
+			}	    
 #endif
 			M4M4Mul(m1,m,LinePtr->v);
 #ifdef USE_OPENGL
+			// Negative determinant means its a mirrored stud.
+			if (det < 0)
+			{
+			  float mirror[4][4] = {
+			    {1.0,0.0,0.0,0.0},
+			    {0.0,1.0,0.0,0.0},
+			    {0.0,0.0,-1.0,0.0},
+			    {0.0,0.0,0.0,1.0}
+			  };
+			  M4M4Mul(mm,m1,mirror);
+			  memcpy(m1,mm,sizeof(m1));
+			}
+			  
 			// implement nesting level counter.
 			include_stack_ptr++;
 			DrawPart(0,LinePtr->PartPtr,Color,m1);
