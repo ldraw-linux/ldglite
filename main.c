@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.0.2      ";
+char ldgliteVersion[] = "Version 1.0.3      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
@@ -227,6 +227,7 @@ int use_stencil_for_XOR = 1;
 int NVIDIA_XOR_HACK = 0;
 int MESA_3_COLOR_FIX = 0;
 
+int show_edit_mode_gui = 1;
 int autoscaling = 0;
 int editing = 0;
 int curpiece = 0;
@@ -1360,6 +1361,8 @@ void clear_edit_mode_gui()
   eprompt[1][0] = 0;
   eprompt[2][0] = 0;
   eprompt[3][0] = 0;
+
+  show_edit_mode_gui |= 2;  // Set the clear gui bit.
 }
 
 /***************************************************************/
@@ -1461,6 +1464,24 @@ int edit_mode_gui()
 	    curpiece, viewstr, ldraw_commandline_opts.S, movestr);
   }
   }
+
+  // If nothing is happening and hiding the LEDIT GUI just return.
+  if (show_edit_mode_gui == 2)
+  {
+    show_edit_mode_gui = 0;
+    // NOTE:  I may be able to just copy from the BACK buffer here.
+    // Is that what happens when dirtyWindow is 0?
+    dirtyWindow = 1;
+    glutPostRedisplay();
+    return;
+  }
+  // If nothing is happening and hiding the LEDIT GUI just return.
+  else if ((show_edit_mode_gui == 0) && (ecommand[0] == 0))
+  {
+    glFlush();
+    return;
+  }
+  show_edit_mode_gui &= 1;  // Clear the clear gui bit (2).
 
   glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
   glDisable(GL_LIGHTING);
@@ -3909,6 +3930,8 @@ void display(void)
 {
   int res;
 
+  show_edit_mode_gui &= 1;  // Clear the clear gui bit (2).
+
 #ifdef PART_BOX_TEST
   extern void Print1PartBox();
 
@@ -5241,6 +5264,12 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	ecommand[1] = 0;
 	edit_mode_gui();
 	break;
+      case 'h':
+	show_edit_mode_gui ^= 1;
+	show_edit_mode_gui |= 2;
+	clear_edit_mode_gui();
+	edit_mode_gui();
+	break;
       case 'q':
 	exit(0);
 	break;
@@ -6036,7 +6065,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
   switch(key) {
   case 27:
   case '/':
-    sprintf(eprompt[0], "File Edit View Turn Rotate Piece Options  Quit");
+    sprintf(eprompt[0], "File Edit View Turn Rotate Piece Options Hide  Quit");
     ecommand[0] = '/';
     ecommand[1] = 0;
     edit_mode_gui();
