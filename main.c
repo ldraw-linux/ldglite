@@ -345,6 +345,93 @@ void printModelMat(char *name)
 }
 
 /***************************************************************/
+void printPOVMatrix()
+{
+  float m[4][4] = {
+    {1.0,0.0,0.0,0.0},
+    {0.0,1.0,0.0,0.0},
+    {0.0,0.0,1.0,0.0},
+    {0.0,0.0,0.0,1.0}
+  };
+  float r[4];
+  float from[4];
+  float toward[4];
+  double dist[4];
+  double angle;
+  int i;
+
+  //NOTE: should convert ldraw_oblique to just plain oblique.
+
+  printf("\ncamera {\n");
+  printf("\t#declare PCT = 0; // Percentage further away\n");
+  printf("\t#declare STEREO = 0; // Normal view\n");
+  printf("\t//#declare STEREO =  degrees(atan2(1,12))/2; // Left view\n");
+  printf("\t//#declare STEREO = -degrees(atan2(1,12))/2; // Right view\n");
+
+  // Use the TRANSPOSE of the opts.A matrix to rotate view point in the
+  // opposite direction than the model would rotate.  This = INVERSE rotation.
+  m[0][0] = ldraw_commandline_opts.A.a;
+  m[1][0] = ldraw_commandline_opts.A.b;
+  m[2][0] = ldraw_commandline_opts.A.c;
+  m[0][1] = ldraw_commandline_opts.A.d;
+  m[1][1] = ldraw_commandline_opts.A.e;
+  m[2][1] = ldraw_commandline_opts.A.f;
+  m[0][2] = ldraw_commandline_opts.A.g;
+  m[1][2] = ldraw_commandline_opts.A.h;
+  m[2][2] = ldraw_commandline_opts.A.i;
+
+  from[0] = projection_fromx;
+  from[1] = projection_fromy;
+  from[2] = projection_fromz;
+  from[1] += (Height/6.0);
+  from[1] = -from[1]; // Switch to ldraw coords
+  from[2] = -from[2]; // Switch to ldraw coords 
+  //printf("\t//location <%g,%g,%g>\n",from[0],from[1],from[2]);
+
+  toward[0] = projection_towardx;
+  toward[1] = projection_towardy;
+  toward[2] = projection_towardz;
+  toward[1] += (Height/6.0);
+  toward[1] = -toward[1]; // Switch to ldraw coords
+  toward[2] = -toward[2]; // Switch to ldraw coords
+  //printf("\t//look_at <%g,%g,%g>\n",toward[0],toward[1],toward[2]);
+
+  for (i = 0; i < 3; i++)
+    dist[i] = from[i] - toward[i];
+  dist[3] = sqrt((dist[0]*dist[0]) + (dist[1]*dist[1]) + (dist[2]*dist[2]));
+
+  M4V3Mul(r,m,from);
+#if 0
+  printf("\tlocation <%g,%g,%g>\n",r[0],r[1],r[2]);
+#else
+  printf("\tlocation <%g,%g,%g> +PCT/100.0*<%g,%g,%g>\n",
+	 r[0],r[1],r[2], dist[0],dist[1],dist[2]);
+  // NOTE: what is the axis to rotate about for l3p STEREO?
+  // Is it the perpendicular bisector at the look_from point?
+  // figure it out and switch to vaxis_rotate() for location.
+#endif
+  printf("\tsky      -y\n");
+  printf("\tright    -4/3*x\n");
+  M4V3Mul(r,m,toward);
+  printf("\tlook_at <%g,%g,%g>\n",r[0],r[1],r[2]);
+
+  if (ldraw_projection_type)
+  {
+    printf("\tangle %g\n",projection_fov);
+    printf("\t//orthographic\n");
+  }
+  else
+  {
+    angle = 2.0 * atan(((double)Width / 2.0) / dist[3]);
+    angle /= PI_180;
+    printf("\tangle %g\n", angle);
+    printf("\torthographic\n");
+  }
+
+  printf("}\n\n");
+}
+
+/***************************************************************/
 void printLdrawMatrix()
 {
   char matrix_string[256];
@@ -395,6 +482,8 @@ void printLdrawMatrix()
 	  ldraw_commandline_opts.A.i);
 
   printf("%s %s %s\n",progname, matrix_string, filename);
+
+  printPOVMatrix();
 }
 
 /***************************************************************/
@@ -1489,6 +1578,9 @@ void rendersetup(void)
   // Original LdLite uses zGetRowsize() and zGetColsize() to do this.
   // I stubbed them to return 0 for OpenGL since its origin is the window
   // center, not the corner.  See LDRAW_COMPATIBLE_CENTER in LdliteVR_main.c.
+
+  // NOTE: I should probably do skip Height/6.0 here and just add Height/6.0
+  // to the y values in the glViewport(0, 0, Width, Height) call in reshape()
   fx = projection_fromx;
   fy = projection_fromy + (Height/6.0);
   fz = projection_fromz;
