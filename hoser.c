@@ -82,6 +82,9 @@ void Bernstein(float r[4], float u, float m[4][4])
 #ifdef TESTING
 char maintext[100000];
 char helper[256];
+#else
+char maintext[256];
+char helper[256];
 #endif
 
 //************************************************************************
@@ -332,6 +335,9 @@ void hoser(float m[4][4], int color, int steps, int drawline,
 #ifdef TESTING
   sprintf(helper,"0 Bezier curve end\n");
   strcat(maintext, helper);
+#else
+  sprintf(maintext, "");
+#endif
 
   if (drawline) 
   {	
@@ -345,15 +351,18 @@ void hoser(float m[4][4], int color, int steps, int drawline,
     strcat(maintext, helper);
   }
 
+#ifdef TESTING
   sprintf(helper,"0\n");
   strcat(maintext, helper);	
 
   hoseout();
+#else
+  if (drawline) 
+    hoseout();
 #endif
 
 }
 
-#ifdef TESTING
 /***************************************************************/
 #include <stdio.h>
 void hoseout(void)
@@ -368,6 +377,7 @@ void hoseout(void)
     printf(maintext);
   }
     
+#ifdef TESTING
 /***************************************************************/
 int 
 main(int argc, char **argv)
