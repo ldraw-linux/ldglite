@@ -1105,7 +1105,7 @@ int Make1Primitive(int partnum, char *str)
 
     struct L3LineS       Data;
     int  n, j;
-    char seps[] = "() ,\t"; // Allow parens and commas for readability.
+    char seps[] = "()[]{}<> ,\t"; // Allow parens and commas for readability.
     char *token;
       
     if (SelectedLinePtr)
