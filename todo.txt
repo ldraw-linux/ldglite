@@ -1,5 +1,20 @@
 ----------------------------------------------------------------------
+Add mklist to the makefile, or at least make instructions for how to
+build it.  Include mklist, glut dlls, plugins, and readme.txt in any
+binary distributions from now on.
 
+----------------------------------------------------------------------
+Think about allowing both the MUI and GLUT menus.  Maybe launch the 
+MUI GUI from the GLUT menu?  If so, fix up the stinky glut menu a bit
+and make the File Open part of the glut menu an optional compilation
+
+----------------------------------------------------------------------
+Figure out another way to highlight a part in Mesa.  It's painfully 
+slow to draw the XOR wireframe, at least it is on the PII-266 I tested
+it on.  It was still slow, even with the stencil buffer turned off.
+Moving parts in SOLID mode was quite reasonable though.
+
+----------------------------------------------------------------------
 Make a portable lddp style plugin.  For example, make a minifig
 modeller in GLUI (or something else that's easy to learn and portable
 to everything including OSX).  Attempt to build a plugin out of it.
