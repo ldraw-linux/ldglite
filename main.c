@@ -5246,6 +5246,13 @@ mouse(int button, int state, int x, int y)
   mouse_state = state;
   mouse_button = button;
   
+#ifdef TEST_MUI_GUI
+  if (button == GLUT_RIGHT_BUTTON) {
+    mui_test();
+    return;
+  }
+#endif
+
   if (button != GLUT_LEFT_BUTTON) {
     return;
   }
@@ -5725,6 +5732,11 @@ void myGlutIdle( void )
     static time_t last_file_time;
     struct stat datstat;
     int ret;
+
+#ifdef WINDOWS
+    sleep(1); // Glut is a CPU hog.  Give back a millisecond.
+    // need to use usleep on other platforms (add to platform.c)
+#endif
 
   /* According to the GLUT specification, the current window is
      undefined during an idle callback.  So we need to explicitly change
@@ -6358,8 +6370,11 @@ int registerGlutCallbacks()
 #ifdef TEST_MUI_GUI
   glutPassiveMotionFunc(NULL);
   glutMenuStateFunc(NULL);
+#if 0
   glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
   glutAttachMenu(GLUT_RIGHT_BUTTON); // And reattach it
+#else
+#endif
 #endif
 }
 
@@ -6628,6 +6643,8 @@ main(int argc, char **argv)
   glutMotionFunc(motion);
   glutIdleFunc(myGlutIdle);
 
+#ifndef TEST_MUI_GUI
+
 #ifndef AGL
 #if (GLUT_XLIB_IMPLEMENTATION >= 13)
 // Rats, no menus in game mode.  Perhaps GLUI or PUI look good again.
@@ -6748,6 +6765,7 @@ main(int argc, char **argv)
   dirmenu(15);
   filemenu(15);
   }
+#endif /* TEST_MUI_GUI */
 
 #ifdef USE_GLFONT
   if (fontname)
