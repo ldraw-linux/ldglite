@@ -1,4 +1,12 @@
 ----------------------------------------------------------------------
+Fix the LEDIT mode File Save command to handle filenames with spaces.
+It currently truncates the filename at the first space.  I think it
+may also truncate filenames in the file if they don't have quotes.
+The l3 parser doesn't handle spaces in the filenames inside an ldraw
+file, but it handles them on the command line.  The ldlite parser 
+seems to handle both.
+
+----------------------------------------------------------------------
 I can't change a type 2 line into a type 1 line in LEDIT mode.  I
 think I have to change it to a comment first (type 0).  This
 is probably also true for other linetypes.  Fix me.
