@@ -329,10 +329,124 @@ char *platform_getenv(const char *var)
 }
 
 /***************************************************************/
+#include <stdio.h>
+
 void platform_comment(char *message, int level)
 {
   if (level == 0)
     printf("comment %s\n", message);
 }
+
+
+/***************************************************************/
+
+#include <sys/file.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#if defined(WINDOWS)
+#  include <windows.h>
+#endif
+
+#if defined(UNIX)
+#include <sys/param.h>
+
+#define PATHSIZE MAXPATHLEN
+#else
+#ifndef MAXNAMLEN
+#define MAXNAMLEN 256
+#endif
+#define PATHSIZE MAXNAMLEN
+#endif
+
+/***********************************************************************/
+long get_file_mode(char *path)
+{
+  struct stat     stats;
+  
+  if ( stat( path, &stats) < 0 ) 
+    return ( -1 );
+  return ( stats.st_mode );
+}
+
+/***********************************************************************/
+/*  Strip off first element of path into buf.  Returns new path. */
+char *getPathElement( path, buf )
+  register char *path;
+  register char *buf;
+{
+  while ( (*buf = *path++) != '\0' ) {
+    if (*buf == ':') {
+      *buf = '\0';
+      return(path);
+    } ++buf;
+  } return(0);
+}
+
+/***********************************************************************/
+int GetExecName(char *argv0, char *buf, int buflen)
+{
+  char    *path;
+  char    *getenv();
+  
+#ifdef WINDOWS
+  GetModuleFileName(NULL, buf, buflen);
+  return(0);
+#else
+  // getexecname() on Solaris??
+
+  // Handle absolute paths.  Easy!
+  if (*argv0 == '/') {
+    strcpy( buf, argv0 );
+    return(0);
+  }
+  
+  // Handle relative paths.  Almost easy.  Work off of getcwd()
+  if (*argv0 == '.' && *(argv0+1) == '/') {
+    strcpy(buf, argv0 + 2);
+    goto found;
+  }
+  if (*argv0 == '.' && *(argv0+1) == '.' && *(argv0+2) == '/' ) {
+    strcpy(buf, argv0);
+    goto found;
+  }
+
+  // Search for the executable in the PATH environment variable.
+  path = getenv("PATH");
+  while(path != 0) {
+    path = getPathElement(path, buf);
+    if (*buf == '\0')
+      continue;  /* ignore empty components (::) */
+    strcat(buf, "/");
+    strcat(buf, argv0);
+    if (access(buf, X_OK) == 0) {
+      /* watch out for directories that happen to match */
+      if((get_file_mode(buf) & S_IFMT) == S_IFDIR) continue;
+      /* Got it.  Now if it is not absolute, just prepend cwd */
+      if (*buf != '/') {
+	char    tmpbuf[PATHSIZE];
+	
+      found:
+	strncpy(tmpbuf, buf, PATHSIZE/sizeof(char));
+	if ( getcwd(buf, (PATHSIZE/sizeof(char))-1) == 0 ) break;
+	strncat(buf, "/", PATHSIZE/sizeof(char));
+	strncat( buf, tmpbuf, PATHSIZE/sizeof(char));
+	
+	if ( realpath(buf, tmpbuf) == NULL)
+	  return 1;
+	
+	strncpy(buf, tmpbuf, PATHSIZE/sizeof(char));
+	return 2;
+      }
+      return(0);
+    }
+  }
+  
+  /* Not found */
+  *buf = 0;
+  return(-1);
+#endif
+}
+
 
 
