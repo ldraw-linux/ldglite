@@ -230,7 +230,7 @@ struct L3StatS
 #ifdef __TURBOC__
 #define MAX_PARTS  880
 #else
-#define MAX_PARTS  2000
+#define MAX_PARTS  8000
 #endif
 extern int           DoCheck;
 extern int           ReadLineTypeMask;
