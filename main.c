@@ -1007,7 +1007,7 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
     else if (preprintstep) {
       // Early stage of Multistage draw.  Do not save bitmap yet.
     }
-    else if (qualityLines && (step != curstep)) {
+    else if (qualityLines && (step != curstep) && (step != INT_MAX)) {
       // qualityLines = Multistage drawing.  Must count steps.
       //	curstep++; // Move on to next step
     }
@@ -1040,6 +1040,8 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
 //        think that will work here since OpenGL does the screen transform.
 //*************************************************************************
 
+      if (zp == NULL) // Avoid NULL ptr crash on 'B' when debug printing.
+	zp = &z;
       if (ldraw_commandline_opts.debug_level == 1)
 	printf("EXTENTS: (%d, %d) -> (%d, %d)\n", 
 	       zp->extent_x1, zp->extent_y1, zp->extent_x2, zp->extent_y2);
