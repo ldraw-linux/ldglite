@@ -6986,6 +6986,7 @@ MsgSubClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     TCHAR szNextFile [MAX_PATH];
     HDROP hdrop = (HDROP) wParam;
     UINT uFile;
+    int iRet;
 
     printf("WM_DROPFILES\n");
 
@@ -7003,6 +7004,21 @@ MsgSubClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     // Free up memory.
     DragFinish ( hdrop );
+
+    // Post a message to GLUT to let it know about the Drop Event.
+
+    //GetKeyState(VK_SHIFT) & 0x80000000;
+    //GetKeyState(VK_CONTROL) & 0x80000000;
+
+#if 1
+    //iRet = PostMessage(hwnd, WM_KEYDOWN, VK_CONTROL, 0x8001);
+    iRet = PostMessage(hwnd, WM_KEYDOWN, 'V', 0x8001);
+    iRet = PostMessage(hwnd, WM_KEYUP, 'V', 0xc001);
+    //iRet = PostMessage(hwnd, WM_KEYUP, VK_CONTROL, 0xc001);
+#else
+    iRet = PostMessage(hwnd, WM_KEYDOWN, VK_ESCAPE, 0x8001);
+    iRet = PostMessage(hwnd, WM_KEYUP, VK_ESCAPE, 0xc001);
+#endif
   }
 
   // Call the original glut window proc.  
