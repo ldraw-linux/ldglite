@@ -17,26 +17,30 @@ OFFSCREEN_LIBS= -lOSMesa
 
 # Comment these out to disable the test GUI made with MUI.
 #
-#GUI_FLAGS=-DTEST_MUI_GUI
-#GUI_SRC=ldglgui.c
-#GUI_LIBS=-lmui
+GUI_FLAGS=-DTEST_MUI_GUI -I./mui/include
+GUI_SRC=ldglgui.c
+GUI_LIBS=-L./mui/lib/mui -lmui
+LIBS = libmui.a
 
 CFLAGS=-g -DUNIX -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 -DNEED_MIN_MAX $(PNG_FLAGS) $(TR_FLAGS) $(OFFSCREEN_FLAGS) $(GUI_FLAGS)
 
 ## This is lame.  I don't know how to do both .c and .cpp for the OBJS line
 ## so I pretend L3*.cpp is L3*.c and make rules for them later.
 #
-SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c lcolors.c y.tab.c lex.yy.c qbuf.c main.c ldglpr.c L3Edit.c L3Math.c L3Input.c L3View.c $(TR_SRC) $(GUI_SRC)
+SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c lcolors.c y.tab.c lex.yy.c qbuf.c main.c ldglpr.c L3Edit.c L3Math.c L3Input.c L3View.c hoser.c ldglmenu.c $(TR_SRC) $(GUI_SRC)
 OBJS = $(SRCS:.c=.o)
 
 all	: ldglite
 
-ldglite:   $(OBJS)
+ldglite:   $(OBJS) $(LIBS)
 	$(CC) $(CFLAGS) $(OBJS) -o ldglite -L/usr/X11R6/lib $(PNG_LIBS) $(OFFSCREEN_LIBS) $(GUI_LIBS) -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
 	rm -rf l3glite
 	ln -s ldglite l3glite
 	rm -rf l3gledit
 	ln -s ldglite l3gledit
+
+libmui.a:
+	if [ -d mui/lib/mui ] ; then cd mui/lib/mui ; $(MAKE) -f Makefile $@ ; fi
 
 l3glite:   ldglite
 
