@@ -390,7 +390,7 @@ void printPOVMatrix()
   bc[0] = zcolor_table_default[i].primary.r / 255.0;
   bc[1] = zcolor_table_default[i].primary.b / 255.0;
   bc[2] = zcolor_table_default[i].primary.g / 255.0;
-  printf("\nbackground { color rgb <%g,%g,%g>}\n", bc[0], bc[1], bc[1]);
+  printf("\nbackground { color rgb <%g,%g,%g>}\n", bc[0], bc[1], bc[2]);
 
   if (1) //(ldraw_projection_type)
   {
@@ -1466,9 +1466,11 @@ void init(void)
     // Disable backface culling since the LDRAW parts arent BFC compliant.
     glDisable(GL_CULL_FACE);
 
-    //glClearColor(0.0, 0.0, 0.0, 0.0);
     // Set the background to white like ldlite.
     glClearColor(1.0, 1.0, 1.0, 0.0);
+    i = dirtyWindow;
+    colormenu(ldraw_commandline_opts.B);
+    dirtyWindow = i;
 
     // Make lines a wider than a pixel so they are not hidden by surfaces.
     // (Not needed because PolygonOffset works so much better)
@@ -2746,6 +2748,49 @@ glPopAttrib();
 #endif
 
 /***************************************************************/
+void CopyColorBuffer(int srcbuffer, int destbuffer)
+{
+  int savedirty;
+
+  if ((srcbuffer == staticbuffer) && (destbuffer == screenbuffer))
+  {
+    if ((buffer_swap_mode == SWAP_TYPE_COPY) ||
+	(buffer_swap_mode == SWAP_TYPE_NODAMAGE))
+    {
+      glutSwapBuffers(); // Found GL_WIN_swap_hint extension
+      return;
+    }
+  }
+
+  // get fresh copy of static data
+  glReadBuffer(srcbuffer); // set pixel source
+  glDrawBuffer(destbuffer); // set pixel destination
+  glDisable( GL_DEPTH_TEST ); // Speed up copying
+  glDisable(GL_LIGHTING);     // Speed up copying
+  glMatrixMode( GL_PROJECTION );
+  glLoadIdentity();
+  gluOrtho2D(0, Width, 0, Height);
+  glMatrixMode( GL_MODELVIEW );
+  glPushMatrix();
+  glLoadIdentity();
+  glRasterPos2i(0, 0);
+  glDepthMask(GL_FALSE); // disable updates to depth buffer
+  glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable color buffer updates
+  glCopyPixels(0, 0, Width, Height, GL_COLOR);
+  glDepthMask(GL_TRUE); // enable updates to depth buffer
+  glPopMatrix();
+  glEnable(GL_LIGHTING);
+  glEnable( GL_DEPTH_TEST ); 
+  glDepthFunc(GL_LESS);
+  glDrawBuffer(screenbuffer); // set pixel destination
+  
+  savedirty = dirtyWindow; 
+  reshape(Width, Height);
+  dirtyWindow = savedirty; 
+  rendersetup();
+}
+      
+/***************************************************************/
 /***************************************************************/
 // CopyStaticBuffer is fairly slow but should always work.
 // I could speed this up with opengl extensions when I get more time
@@ -3058,6 +3103,15 @@ void display(void)
 #endif
     glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
 
+  if (res = glutLayerGet(GLUT_NORMAL_DAMAGED))
+  {
+    if (dirtyWindow == 0)
+    {
+      // If this is just an expose event, then restore from backup.
+      CopyColorBuffer(staticbuffer, screenbuffer);
+      return;
+    }
+  }
 
   if (res = glutLayerGet(GLUT_NORMAL_DAMAGED))
     dirtyWindow = 1;
@@ -3233,6 +3287,7 @@ GLUT_BITMAP_HELVETICA_18
       exit(0); //quit the program
   }
 
+  CopyColorBuffer(screenbuffer, staticbuffer);
 }
 
 /***************************************************************/
@@ -5684,11 +5739,12 @@ void colormenu(int c)
   ZCOLOR zc, zs;
 
   extern ZCOLOR_DEF_TABLE_ENTRY zcolor_table_default[];
+  extern ZCOLOR_TABLE_ENTRY *zcolor_table;
 
   ldraw_commandline_opts.B = c;
 
 #ifdef USE_L3_PARSER
-  if (parsername == L3_PARSER)
+  if ((parsername == L3_PARSER) && (zcolor_table))
     translate_color(c,&zc,&zs);
   else
 #endif
