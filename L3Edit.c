@@ -20,6 +20,8 @@
 #endif
 
 extern int Draw1PartPtr(struct L3LineS *LinePtr, int Color);
+extern struct L3PartS *FindPart(int Internal, char *DatName);
+char                *Strdup(const char *Str);
 
 extern char datfilename[256];
 extern float m_m[4][4];
@@ -443,112 +445,127 @@ int Find1PartMatrix(int partnum, float m[4][4])
 /*****************************************************************************/
 int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
 {
+    float          m[4][4];
+    int            j,k;
+
     if (!LinePtr)
     {
       if (i < 0)
       {
       if (s)
-	sprintf(s,"--START--\n");
+	sprintf(s,"--START--");
       if (f)
 	fprintf(f,"--START--\n");
       }
       else
       {
       if (s)
-	sprintf(s,"--END--\n");
+	sprintf(s,"--END--");
       if (f)
 	fprintf(f,"--END--\n");
       }
       return 0; //partnum not found
     }
-    
+
+    //Round very small numbers to 0.0
+    if (LinePtr->LineType != 0)
+    {
+      memcpy(m, LinePtr->v, sizeof(LinePtr->v));
+      for (k = 0; k < 4; k++)
+	for (j = 0; j < 4; j++)
+	{
+	  if (m[k][j] < 0.000001)
+	    m[k][j] = 0.0;
+	}
+    }
+
     switch (LinePtr->LineType)
     {
     case 0:
       if (s)
-	sprintf(s,"%d %s\n", LinePtr->LineType, LinePtr->Comment);
+	sprintf(s,"%d %s", LinePtr->LineType, LinePtr->Comment);
       if (f)
 	fprintf(f,"%d %s\n", LinePtr->LineType, LinePtr->Comment);
       break;
     case 1:
       if (s)
-	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g %s\n",
+	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g %s",
 		LinePtr->LineType, LinePtr->Color,
-		LinePtr->v[0][3],LinePtr->v[1][3],LinePtr->v[2][3],
-		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
-		LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2],
+		m[0][3],m[1][3],m[2][3],
+		m[0][0],m[0][1],m[0][2],
+		m[1][0],m[1][1],m[1][2],
+		m[2][0],m[2][1],m[2][2],
 		LinePtr->PartPtr->DatName);
       if (f)
 	fprintf(f,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g %s\n",
 		LinePtr->LineType, LinePtr->Color,
-		LinePtr->v[0][3],LinePtr->v[1][3],LinePtr->v[2][3],
-		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
-		LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2],
+		m[0][3],m[1][3],m[2][3],
+		m[0][0],m[0][1],m[0][2],
+		m[1][0],m[1][1],m[1][2],
+		m[2][0],m[2][1],m[2][2],
 		LinePtr->PartPtr->DatName);
       break;
     case 2:
       if (s)
-	sprintf(s,"%d %d %g %g %g %g %g %g\n",
+	sprintf(s,"%d %d %g %g %g %g %g %g",
 		LinePtr->LineType, LinePtr->Color,
-		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2]);
+		m[0][0],m[0][1],m[0][2],
+		m[1][0],m[1][1],m[1][2]);
       if (f)
 	fprintf(f,"%d %d %g %g %g %g %g %g\n",
 		LinePtr->LineType, LinePtr->Color,
-		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2]);
+		m[0][0],m[0][1],m[0][2],
+		m[1][0],m[1][1],m[1][2]);
       break;
     case 3:
       if (s)
-	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g\n",
+	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g",
 		LinePtr->LineType, LinePtr->Color,
-		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
-		LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2]);
+		m[0][0],m[0][1],m[0][2],
+		m[1][0],m[1][1],m[1][2],
+		m[2][0],m[2][1],m[2][2]);
       if (f)
 	fprintf(f,"%d %d %g %g %g %g %g %g %g %g %g\n",
 		LinePtr->LineType, LinePtr->Color,
-		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
-		LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2]);
+		m[0][0],m[0][1],m[0][2],
+		m[1][0],m[1][1],m[1][2],
+		m[2][0],m[2][1],m[2][2]);
       break;
     case 4:
       if (s)
-	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
+	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g",
 		LinePtr->LineType, LinePtr->Color,
-		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
-		LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2],
-		LinePtr->v[3][0],LinePtr->v[3][1],LinePtr->v[3][2]);
+		m[0][0],m[0][1],m[0][2],
+		m[1][0],m[1][1],m[1][2],
+		m[2][0],m[2][1],m[2][2],
+		m[3][0],m[3][1],m[3][2]);
       if (f)
 	fprintf(f,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
 		LinePtr->LineType, LinePtr->Color,
-		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
-		LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2],
-		LinePtr->v[3][0],LinePtr->v[3][1],LinePtr->v[3][2]);
+		m[0][0],m[0][1],m[0][2],
+		m[1][0],m[1][1],m[1][2],
+		m[2][0],m[2][1],m[2][2],
+		m[3][0],m[3][1],m[3][2]);
       break;
     case 5:
       if (s)
-	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
+	sprintf(s,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g",
 		LinePtr->LineType, LinePtr->Color,
-		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
-		LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2],
-		LinePtr->v[3][0],LinePtr->v[3][1],LinePtr->v[3][2]);
+		m[0][0],m[0][1],m[0][2],
+		m[1][0],m[1][1],m[1][2],
+		m[2][0],m[2][1],m[2][2],
+		m[3][0],m[3][1],m[3][2]);
       if (f)
 	fprintf(f,"%d %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
 		LinePtr->LineType, LinePtr->Color,
-		LinePtr->v[0][0],LinePtr->v[0][1],LinePtr->v[0][2],
-		LinePtr->v[1][0],LinePtr->v[1][1],LinePtr->v[1][2],
-		LinePtr->v[2][0],LinePtr->v[2][1],LinePtr->v[2][2],
-		LinePtr->v[3][0],LinePtr->v[3][1],LinePtr->v[3][2]);
+		m[0][0],m[0][1],m[0][2],
+		m[1][0],m[1][1],m[1][2],
+		m[2][0],m[2][1],m[2][2],
+		m[3][0],m[3][1],m[3][2]);
       break;
     default:
       if (s)
-	sprintf(s,"\n");
+	sprintf(s,"");
       if (f)
 	fprintf(f,"\n");
       break;
@@ -864,21 +881,9 @@ int Print1Model(char *filename)
 }
 
 /*****************************************************************************/
-int Comment1Part(int partnum, char *Comment)
+int Comment1LinePtr(struct L3LineS *LinePtr, char *Comment)
 {
-    int            i = 0;
-    struct L3LineS *LinePtr;
     int            Len;
-
-    if (SelectedLinePtr)
-	LinePtr = SelectedLinePtr;
-    else
-    for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
-    {
-	if (i == partnum)
-	    break;	    // Found the part
-	i++;
-    }
 
     if (!LinePtr)
 	return 0; //partnum not found
@@ -887,6 +892,14 @@ int Comment1Part(int partnum, char *Comment)
     {
       //free(LinePtr->PartPtr);
       LinePtr->PartPtr = NULL;
+    }
+
+    if ((LinePtr->LineType == 0) 
+	&& LinePtr->Comment
+	&& (LinePtr->Comment != (char *) LinePtr->v))
+    {
+      free(LinePtr->Comment);
+      LinePtr->Comment = NULL;
     }
 
     LinePtr->LineType = 0;
@@ -909,6 +922,29 @@ int Comment1Part(int partnum, char *Comment)
     }
 
     return 1;
+}
+
+/*****************************************************************************/
+int Comment1Part(int partnum, char *Comment)
+{
+    int            i = 0;
+    struct L3LineS *LinePtr;
+
+    if (SelectedLinePtr)
+	LinePtr = SelectedLinePtr;
+    else
+    for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+    {
+	if (i == partnum)
+	    break;	    // Found the part
+	i++;
+    }
+    
+    if (!LinePtr)
+	return 0; //partnum not found
+    
+    return Comment1LinePtr(LinePtr, Comment);
+
 }
 
 /*****************************************************************************/
@@ -1167,7 +1203,6 @@ int Make1Primitive(int partnum, char *str)
 {
     int            i = 0;
     struct L3LineS *LinePtr;
-    int            Len;
 
     struct L3LineS       Data;
     int  n, j;
@@ -1238,4 +1273,156 @@ int Make1Primitive(int partnum, char *str)
 
     return 1;
 }
+
+/*****************************************************************************/
+int Inline1Part(int partnum)
+{
+    int            i = 0;
+    int            n, Color, CurColor;
+    struct L3LineS *LinePtr;
+    struct L3LineS *PrevPtr;
+    struct L3LineS *NextPtr;
+    struct L3LineS *FirstPtr;
+    struct L3PartS *PartPtr;
+    float          r[4];
+    float          m[4][4];
+    float          m1[4][4];
+    char           Comment[256];
+
+    if (SelectedLinePtr)
+	LinePtr = SelectedLinePtr;
+    else
+    for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+    {
+	if (i == partnum)
+	    break;	    // Found the part
+	i++;
+    }
+
+    if (!LinePtr)
+	return -1; //partnum not found
+    
+    if (LinePtr->LineType != 1)
+      return i;
+
+    // Keep the color, matrix, and first LinePtr of the LinePtr.
+    CurColor = LinePtr->Color;
+    memcpy(m, LinePtr->v, sizeof(LinePtr->v));
+    if (LinePtr->PartPtr)
+      FirstPtr = LinePtr->PartPtr->FirstLine;
+    else 
+      FirstPtr = NULL;
+    
+    // Convert LinePtr into comments.
+    strcpy(Comment, "Inlined: ");
+    n = strlen(Comment);
+    Print1LinePtr(LinePtr, i, &(Comment[n]), NULL);
+
+    //Start the inlined part with a blank comment.
+    Comment1LinePtr(LinePtr, " "); 
+
+    //Make 3 more comments.
+    NextPtr = LinePtr; 
+    for (i=0; i<3; i++)
+    {
+      LinePtr = NextPtr; 
+      NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+      memcpy(NextPtr, LinePtr, sizeof(struct L3LineS));
+      NextPtr->Comment = NULL;
+      if (i == 0) //Then add the "Inlined" comment.
+	Comment1LinePtr(NextPtr, Comment);
+      else
+	Comment1LinePtr(NextPtr, " ");
+      LinePtr->NextLine = NextPtr; 
+    }
+
+    // Insert the inlined part between the last two comment lines.
+    PrevPtr = LinePtr;
+    for (LinePtr = FirstPtr; LinePtr; LinePtr = LinePtr->NextLine)
+    {
+      NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
+      memcpy(NextPtr, LinePtr, sizeof(struct L3LineS));
+
+      switch (LinePtr->Color)
+      {
+      case 16:
+	Color = CurColor;
+	break;
+      case 24:
+	if (0 <= CurColor  &&  CurColor <= 15)
+	  Color = edge_color(CurColor);
+	else
+	  Color = 0;
+	break;
+      default:
+	Color = LinePtr->Color;
+	break;
+      }
+      NextPtr->Color = Color;
+      switch (LinePtr->LineType)
+      {
+      case 0:
+	NextPtr->Color = LinePtr->Color;
+	/* Reuse the 64 bytes of float v[4][4] if possible.  Else strdup*/
+	if (LinePtr->Comment != (char *) LinePtr->v)
+	{
+	  NextPtr->Comment = Strdup(LinePtr->Comment);
+	  if (!NextPtr->Comment)
+	  {
+	    // Uh Oh!  Out of memory!  Time to panic...
+	  }
+	}
+	break;
+      case 1:
+	M4M4Mul(m1,m,LinePtr->v);
+	memcpy(NextPtr->v, m1, sizeof(LinePtr->v));
+	PartPtr = (struct L3PartS *) calloc(sizeof(struct L3PartS), 1);
+	memcpy(PartPtr, LinePtr->PartPtr, sizeof(struct L3PartS));
+	NextPtr->PartPtr = PartPtr;
+	break;
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+	n = LinePtr->LineType;
+	if (n > 4)
+	  n = 4;
+	for (i=0; i<n; i++)
+	{
+	  M4V3Mul(r,m,LinePtr->v[i]);
+	  NextPtr->v[i][0] = r[0];
+	  NextPtr->v[i][1] = r[1];
+	  NextPtr->v[i][2] = r[2];
+	}
+      }
+
+      // Insert the next inlined thing into top level linked list.
+      NextPtr->NextLine = PrevPtr->NextLine;
+      PrevPtr->NextLine = NextPtr;
+      PrevPtr = NextPtr;
+    }
+}
+
+/*****************************************************************************/
+int GetCurLineType(int partnum)
+{
+    int            i = 0;
+    struct L3LineS *LinePtr;
+
+    if (SelectedLinePtr)
+	LinePtr = SelectedLinePtr;
+    else
+    for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+    {
+	if (i == partnum)
+	    break;	    // Found the part
+	i++;
+    }
+
+    if (!LinePtr)
+	return -1; //partnum not found
+    
+    return LinePtr->LineType;
+}
+
 
