@@ -523,7 +523,9 @@ void write_png(char *filename)
 #ifdef WINDOWS
 #define USE_BMP8 1
 #else
+#ifndef AGL
 #define USE_BMP8 1
+#endif
 #endif
 
 #ifdef USE_BMP8
