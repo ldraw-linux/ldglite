@@ -120,7 +120,7 @@ int  minfilenum    = 0;
 char progname[256];
 char dirfilepath[256];
 char dirpattern[256] = "*";
-char filepattern[256] = "*";
+char filepattern[256] = "*.dat";
 
 int drawAxis = 0;
 
@@ -1188,6 +1188,11 @@ void display(void)
   int client_rect_right;
   int client_rect_bottom;
   int res;
+
+  if (zShading)
+    glEnable(GL_LIGHTING);
+  else
+    glDisable(GL_LIGHTING);
 
   glCurColorIndex = -1;
 
@@ -2551,6 +2556,9 @@ void ParseParams(int *argc, char **argv)
 	    ldraw_commandline_opts.F = 2;
 	    zWire = 1;
 	    break;
+	  case 'N':
+	    zShading = 0; // mnemonic = normal (no shading)
+	    break;
 	  }
 	}
 	break;
@@ -2684,7 +2692,8 @@ int GetProfileInt(char *appName, char *appVar, int varDefault)
 int InitInstance()
 {
   // Probably should use basename(argv[0]) instead of "ldlite"
-  zShading = GetProfileInt("ldlite","shading",0);
+  // Big switch from ldlite.  Turn shading is on by default.
+  zShading = GetProfileInt("ldlite","shading",1);
   //	zDetailLevel = TYPE_PART; // should checkmark the menu item later!
   zDetailLevel = GetProfileInt("ldlite","detail",TYPE_PART);
   zWire = GetProfileInt("ldlite","wireframe",0);
@@ -2900,7 +2909,7 @@ main(int argc, char **argv)
   mainmenunum = glutCreateMenu(menu);
   glutAddSubMenu(  "File               ", filemenunum);
   glutAddSubMenu(  "Folder             ", dirmenunum);
-  glutAddMenuEntry("Filter - *.dat     ", 1);
+  glutAddMenuEntry("Filter - All Files ", 1);
   glutAddMenuEntry("                   ", '\0');
   glutAddSubMenu(  "View               ", view);
   glutAddSubMenu(  "Options            ", opts);
