@@ -2,8 +2,8 @@ CC=gcc
 
 # Comment these out to disable PNG output if no PNG lib is available.
 #
-PNG_FLAGS=-DUSE_PNG
-PNG_LIBS=-L. -lpng -lz
+PNG_FLAGS=-DUSE_PNG -I./win
+PNG_LIBS=-L./win -lpng -lz
 
 # Comment these out to disable tile rendering option.
 #
