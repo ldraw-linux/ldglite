@@ -1690,6 +1690,36 @@ int Hose1Part(int partnum, int steps)
     else
     {
       // Default to the names of the ribbed hose parts.
+      /*
+	Consider automatically locating the technic pin ends on these parts.
+	6048.DAT      Arm Piece with Pin and 2 Fingers
+	6217.DAT      Arm Piece with Pin and 3 Fingers
+	30526.dat     Brick  1 x  2 with 2 Pins
+	2458.DAT      Brick  1 x  2 with Pin
+	4729.DAT      Brick  2 x  2 no Studs with Pin
+	4730.DAT      Brick  2 x  2 with Pin
+	6232.DAT      Brick  2 x  2 with Pin and Axlehole
+	30000.DAT     Brick  2 x  2 with Pins and Axlehole
+	30592.DAT     Brick  2 x  2 with Vertical Pin and  1 x  2 Side Plates
+	6249.DAT      Brick  2 x  4 with Pins
+	2476.DAT      Plate  2 x  2 with Pin
+	30157.DAT     Plate  2 x  4 with Pins
+	3749.DAT      Technic Axle Pin
+	50.DAT        Technic Friction Pin with Towball
+	3673.DAT      Technic Pin
+	32136.DAT     Technic Pin  3L Double
+	4274.DAT      Technic Pin 1/2
+	32002.DAT     Technic Pin 3/4
+	6558.DAT      Technic Pin Long with Friction
+	32054.DAT     Technic Pin Long with Stop Bush
+	4459.DAT      Technic Pin with Friction
+	2780.dat      Technic Pin with Friction and Slots
+
+	p/connect.dat  Technic Pin with Base Collar
+	p/connect2.dat Technic Pin
+	p/connect3.dat Technic Pin 1/2 with Base Collar
+	p/connect4.dat Technic Pin 1/2
+       */
       firstparttext = strdup("79.dat");
       FixDatName(firstparttext);
       parttext = strdup("80.dat");
