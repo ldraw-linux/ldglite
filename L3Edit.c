@@ -1260,6 +1260,7 @@ int Inline1Part(int partnum)
 
     // Keep the color, matrix, and first LinePtr of the LinePtr.
     CurColor = LinePtr->Color;
+    printf("CurColor = %d\n", CurColor);
     memcpy(m, LinePtr->v, sizeof(LinePtr->v));
     if (LinePtr->PartPtr)
       FirstPtr = LinePtr->PartPtr->FirstLine;
@@ -1296,21 +1297,37 @@ int Inline1Part(int partnum)
       NextPtr = (struct L3LineS *) calloc(sizeof(struct L3LineS), 1);
       memcpy(NextPtr, LinePtr, sizeof(struct L3LineS));
 
+      printf("LineptrColor = %d\n", LinePtr->Color);
       switch (LinePtr->Color)
       {
       case 16:
 	Color = CurColor;
 	break;
       case 24:
+#if 0
 	if (0 <= CurColor  &&  CurColor <= 15)
 	  Color = edge_color(CurColor);
 	else
 	  Color = 0;
+#else
+	// I dont know why L3View.cpp checks for less than 15,
+	// but it breaks the inliner on edges so skip it.
+	// NOTE: I should probably remove ALL of these checks
+	// and let edge_color handle it.  I think it does.
+	// Also, why is edge_color for 16 and 24 set to 0 in lcolors.c
+	if (CurColor == 16)
+	  Color = 24;
+	else if (CurColor == 24)
+	  Color = 24;
+	else
+	  Color = edge_color(CurColor);
+#endif
 	break;
       default:
 	Color = LinePtr->Color;
 	break;
       }
+      printf("NextptrColor = %d\n", Color);
       NextPtr->Color = Color;
       switch (LinePtr->LineType)
       {
