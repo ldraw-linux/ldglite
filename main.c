@@ -347,6 +347,13 @@ int edit_mode_fnkeys(int key, int x, int y);
 void mouse(int button, int state, int x, int y);
 
 /***************************************************************/
+static char *partlistbuf = NULL;
+static int partlookup = 0;
+static char **partlistptr = NULL;
+static int partlistsize = 0;
+static int partlistmax = 0;
+
+/***************************************************************/
 char *pastelist = NULL;
 
 /***************************************************************/
@@ -1093,6 +1100,30 @@ int edit_mode_gui()
   char *viewstr;
   char *movestr;
 
+  if (partlookup)
+  {
+    int i = partlookup - 2; // Subtract 2 to start list with first part red.
+
+    if ((i < partlistsize) && (i >= 0))
+      strcpy(eline[1], partlistptr[i]);
+    else
+      strcpy(eline[1], "");
+    i++;
+    if (i < partlistsize)
+      strcpy(eline[2], partlistptr[i]);
+    else
+      strcpy(eline[2], "");
+    i++;
+    if (i < partlistsize)
+      strcpy(eline[3], partlistptr[i]);
+    else
+      strcpy(eline[3], "");
+
+    strcpy(eline[0], eprompt[0]);
+    strcat(eline[0], &(ecommand[1]));
+  }
+  else
+  {
   Print3Parts(curpiece, eline[1], eline[2], eline[3]);
 
   if (strlen(ecommand))
@@ -1134,6 +1165,7 @@ int edit_mode_gui()
 
     sprintf(eline[0],"Line: %d  View: %s  Zoom: x%.3f  Move: %s",
 	    curpiece, viewstr, ldraw_commandline_opts.S, movestr);
+  }
   }
 
   glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
@@ -3859,6 +3891,74 @@ void saveasdatfile(char *datpath, char *datfile)
 }
 
 /***************************************************************/
+char *loadpartlist(void)
+{
+  char filename[256];
+  FILE *fp;
+  long filesize, n, nparsed;
+  char *buffer;
+  unsigned char *s;
+  int i;
+  unsigned char c;
+  char seps[] = "\r\n"; 
+  
+  if (partlistbuf)
+    return(partlistbuf);
+  
+  concat_path(pathname, use_uppercase ? "PARTS.LST" : "parts.lst", filename);
+  fp = fopen(filename, "rb");
+  if (!fp)
+  {
+    printf("Could not open %s\n", filename);
+    return(NULL);
+  }
+
+  // How big is the file.
+  fseek (fp , 0 , SEEK_END);
+  filesize = ftell (fp);
+  rewind (fp);
+
+  // allocate enough memory to read the entire file.
+  filesize++; // add an extra NULL char to the end just in case.
+  buffer = (char*) malloc (filesize);
+  if (!buffer) 
+    return(NULL);
+
+  fread (buffer,1,filesize,fp);
+  fclose (fp);
+  
+  buffer[filesize-1] = 0;
+
+  partlistmax = 2000;
+  partlistptr = (char **) calloc(sizeof (char *), partlistmax);
+
+  // Save a pointer to each line
+  for (i = 0, s = strtok( buffer, seps );
+       s != NULL;
+       s = strtok( NULL, seps ), i++ )
+  {
+    if (i >= partlistmax)
+    {
+      partlistmax += 1000;
+      partlistptr = realloc(partlistptr, partlistmax * sizeof(char *));
+    }
+    partlistptr[i] = s;
+  }
+  partlistsize = i;
+
+  printf("Found %d parts\n", i);
+
+  if (partlistsize == 0)
+  {
+    free(buffer);
+    buffer = NULL;
+  }
+
+  partlistbuf = buffer;
+  return(partlistbuf);
+}
+
+/***************************************************************/
 move1matrix(float m[4][4], float dx, float dy, float dz)
 {
 #if 0
@@ -3982,6 +4082,46 @@ int edit_mode_fnkeys(int key, int x, int y)
   // If we have a command going then work on that.
   if (i = strlen(ecommand))
   {
+    if (partlookup)
+    {
+      switch(key) {
+      case GLUT_KEY_PAGE_UP:
+	partlookup -= 20;
+	if (partlookup < 1)
+	  partlookup = 1;
+	printf("partlookup = %d\n", partlookup);
+	edit_mode_gui(); // Redisplay the GUI
+	break;
+      case GLUT_KEY_PAGE_DOWN:
+	partlookup += 20;
+	if (partlookup > partlistsize)
+	  partlookup = partlistsize;
+	printf("partlookup = %d\n", partlookup);
+	edit_mode_gui(); // Redisplay the GUI
+	break;
+      case GLUT_KEY_UP:
+	partlookup -= 1;
+	if (partlookup < 1)
+	  partlookup = 1;
+	printf("partlookup = %d\n", partlookup);
+	edit_mode_gui(); // Redisplay the GUI
+	break;
+      case GLUT_KEY_DOWN:
+	partlookup += 1;
+	if (partlookup > partlistsize)
+	  partlookup = partlistsize;
+	printf("partlookup = %d\n", partlookup);
+	edit_mode_gui(); // Redisplay the GUI
+	break;
+      default:
+	if (ldraw_commandline_opts.debug_level == 1)
+	  printf("fnkey = %d = '%c'\n",key,key);
+	edit_mode_gui(); // Redisplay the GUI
+	break;
+      }
+    return 1;
+    }
+
     switch(key) {
     default:
       if (ldraw_commandline_opts.debug_level == 1)
@@ -4159,6 +4299,7 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
     {
       // Abort the command
       ecommand[0] = 0;
+      partlookup = 0;
       clear_edit_mode_gui();
       edit_mode_gui();
       return 1;
@@ -4616,6 +4757,17 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	break;
       case 'p':
 	//sscanf(&(ecommand[1]),"%s", partname);
+	if (partlookup)
+	{
+	  if (!strlen(&(ecommand[1])))
+	  {
+	    char *token;
+	    strcpy(&(ecommand[1]), partlistptr[partlookup - 1]);
+	    if (token = strpbrk(&(ecommand[1])," \t"))
+	      *token = 0;
+	  }
+	  partlookup = 0;
+	}
 	for (i = 1; ecommand[i] == ' '; i++); // Strip leading spaces
 	strcpy(partname, &(ecommand[i]));
 	CopyStaticBuffer();
@@ -4915,6 +5067,15 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
 	ecommand[i-1] = 0;
       edit_mode_gui(); // Redisplay the GUI
       break;
+    case '?': // Part lookup?
+      if (ecommand[0] == 'p')
+      {
+	//StashPart0();
+	loadpartlist();
+	partlookup = 1;
+	edit_mode_gui(); // Redisplay the GUI
+	break;
+      }
     default:
       // printf("key = %d = '%c'\n",key,key);
       // Just add to the command
