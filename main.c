@@ -553,7 +553,9 @@ int edit_mode_gui()
       NewColorPrompt();
   else
       DoRasterString( charwidth, Height - lineheight*2.0, eline[1] );
+  glColor4f( 0.5, 0.0, 0.0, 1.0 );		/* Current line is dark red */
   DoRasterString( charwidth, Height - lineheight*3.0, eline[2] );
+  glColor4f( 0.0, 0.0, 0.0, 1.0 );		/* black  	*/
   DoRasterString( charwidth, Height - lineheight*4.0, eline[3] );
   glPopMatrix();
   glMatrixMode( GL_PROJECTION );
