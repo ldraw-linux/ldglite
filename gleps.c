@@ -11,6 +11,8 @@
 
 /* Compile: cc -o rendereps rendereps.c -lglut -lGLU -lGL -lXmu -lXext -lX11 -lm */
 
+#define LDRAW_EPS	1
+
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -523,46 +525,46 @@ spewWireFrameEPS(FILE * file, int doSort, GLint size, GLfloat * buffer, char *cr
   // Call a t3 macro for polys with 3 vertices.
   // Call a q4 macro for polys with 4 vertices.
   // Track the current color and call t3c or q4c when it changes.
-  fputs("% Compact macros for LDRAW quads and tris.\n");
-  fputs("/t3c %called as: x0 y0 x1 y1 x2 y2 r g b t3c\n");
-  fputs("{\n");
+  fputs("% Compact macros for LDRAW quads and tris.\n", file);
+  fputs("/t3c %called as: x0 y0 x1 y1 x2 y2 r g b t3c\n", file);
+  fputs("{\n", file);
   fprintf(file, "newpath\n");
   fprintf(file, "setrgbcolor\n");
-  fputs("moveto\n");
-  fputs("lineto\n");
-  fputs("lineto\n");
-  fputs("closepath fill\n}\n");
-  fputs(" bind def\n");
+  fputs("moveto\n", file);
+  fputs("lineto\n", file);
+  fputs("lineto\n", file);
+  fputs("closepath fill\n}\n", file);
+  fputs(" bind def\n", file);
 
-  fputs("/t3 %called as: x0 y0 x1 y1 x2 y2 t3\n");
-  fputs("{\n");
+  fputs("/t3 %called as: x0 y0 x1 y1 x2 y2 t3\n", file);
+  fputs("{\n", file);
   fprintf(file, "newpath\n");
-  fputs("moveto\n");
-  fputs("lineto\n");
-  fputs("lineto\n");
-  fputs("closepath fill\n}\n");
-  fputs(" bind def\n");
+  fputs("moveto\n", file);
+  fputs("lineto\n", file);
+  fputs("lineto\n", file);
+  fputs("closepath fill\n}\n", file);
+  fputs(" bind def\n", file);
 
-  fputs("/q4c %called as: x0 y0 x1 y1 x2 y2 x3 y3 r g b q4c\n");
-  fputs("{\n");
+  fputs("/q4c %called as: x0 y0 x1 y1 x2 y2 x3 y3 r g b q4c\n", file);
+  fputs("{\n", file);
   fprintf(file, "newpath\n");
   fprintf(file, "setrgbcolor\n");
-  fputs("moveto\n");
-  fputs("lineto\n");
-  fputs("lineto\n");
-  fputs("lineto\n");
-  fputs("closepath fill\n}\n");
-  fputs(" bind def\n");
+  fputs("moveto\n", file);
+  fputs("lineto\n", file);
+  fputs("lineto\n", file);
+  fputs("lineto\n", file);
+  fputs("closepath fill\n}\n", file);
+  fputs(" bind def\n", file);
 
-  fputs("/q4 %called as: x0 y0 x1 y1 x2 y2 x3 y3 q4\n");
-  fputs("{\n");
+  fputs("/q4 %called as: x0 y0 x1 y1 x2 y2 x3 y3 q4\n", file);
+  fputs("{\n", file);
   fprintf(file, "newpath\n");
-  fputs("moveto\n");
-  fputs("lineto\n");
-  fputs("lineto\n");
-  fputs("lineto\n");
-  fputs("closepath fill\n}\n");
-  fputs(" bind def\n");
+  fputs("moveto\n", file);
+  fputs("lineto\n", file);
+  fputs("lineto\n", file);
+  fputs("lineto\n", file);
+  fputs("closepath fill\n}\n", file);
+  fputs(" bind def\n", file);
 #endif
 
   fprintf(file, "\n%g setlinewidth\n", lineWidth);
