@@ -1,3 +1,5 @@
+#include "platform.h"
+#include "plugins.h"
 
 // UNIX stubs for now.
 
