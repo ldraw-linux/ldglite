@@ -313,6 +313,12 @@ void render_line(vector3d *vp1, vector3d *vp2, int c)
     if (stepcount > curstep)
       return;  // Do NOT render since we have not reached this step yet.
   }
+  if (hardcolor && qualityLines)
+  {
+    // Drawing a printed poly.  Use thin antialiased lines.
+    glLineWidth( 1.0 );
+    printf("Edging color %d\n", c);
+  }
 #endif
 
 	p1.x = (int)(0.5+vp1->x);
@@ -427,6 +433,10 @@ void render_line(vector3d *vp1, vector3d *vp2, int c)
   glEnd();
   //glDepthFunc(GL_LESS);
 
+  // Done Drawing a printed poly antialiased edges.  Fix lineWidth.
+  if (hardcolor && qualityLines)
+    glLineWidth( lineWidth );
+
   //glFlush();
 #endif
 }
@@ -446,7 +456,9 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
 #endif
 	if(ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) {
 	  if (!(hardcolor && qualityLines))
-		return;
+	    return;
+	  // Drawing a printed poly.  Use thin antialiased lines.
+	  glLineWidth( 1.0 );
 	};
 
 #ifdef USE_OPENGL
@@ -600,6 +612,12 @@ void render_triangle(vector3d *vp1, vector3d *vp2, vector3d *vp3, int c)
     glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, no_shininess);
     //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
   }
+
+  // Done Drawing a printed poly antialiased edges.  Fix lineWidth.
+  if ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) &&
+      (hardcolor && qualityLines))
+    glLineWidth( lineWidth );
+
   //glFlush();
   if(LineChecking) {
     //disable color updates
@@ -640,7 +658,9 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
 #endif
 	if(ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) {
 	  if (!(hardcolor && qualityLines))
-		return;
+	    return;
+	  // Drawing a printed poly.  Use thin antialiased lines.
+	  glLineWidth( 1.0 );
 	};
 
 #ifdef USE_OPENGL
@@ -893,6 +913,12 @@ void render_quad(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
     glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, no_shininess);
     //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_mat);
   }
+
+  // Done Drawing a printed poly antialiased edges.  Fix lineWidth.
+  if ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) &&
+      (hardcolor && qualityLines))
+    glLineWidth( lineWidth );
+
   //glFlush();
   if(LineChecking) {
     //disable color updates
