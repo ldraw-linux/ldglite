@@ -58,7 +58,7 @@ echo "APPLLdGL" > ldglite.app/Contents/PkgInfo
 
 cp ldglite ldglite.app/Contents/MacOS
 cp ldglite.icns ldglite.app/Contents/Resources
-cat <<DONE > ldglite.app/Contents/Contents/MacOS/ldgliteWrapper.command
+cat <<DONE > ldglite.app/Contents/MacOS/ldgliteWrapper.command
 #!/bin/sh
 pwd
 ldglite -l3 -v4 $@
