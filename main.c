@@ -141,6 +141,7 @@ extern int Delete1Part(int partnum);
 extern int Swap1Part(int partnum, char *SubPartDatName);
 extern int Print1Part(int partnum, FILE *f);
 extern int Print1Model(char *filename);
+extern int Print3Parts(int partnum, char *s1, char *s2, char *s3);
 
 int use_quads = 0;
 int curstep = 0;
@@ -205,6 +206,8 @@ float fXRot = 0.0;
 float fYRot = 0.0;
 float fZRot = 0.0;
 
+void reshape(int width, int height);
+
 /***************************************************************/
 void draw_string(void *font, const char* string) 
 {
@@ -234,6 +237,48 @@ DoRasterString( float x, float y, char *s )
   {
     glutBitmapCharacter( GLUT_BITMAP_HELVETICA_12, c );
   }
+}
+
+/***************************************************************/
+int edit_mode_gui()
+{
+  static char eline[3][100];
+  int savedirty;
+  int lineheight = 14.0;
+  int charwidth = 14.0;
+
+  Print3Parts(curpiece, eline[0], eline[1], eline[2]);
+
+  glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
+
+  glMatrixMode( GL_PROJECTION );
+  glPushMatrix();
+  glLoadIdentity();
+  gluOrtho2D( 0., Width, 0., Height );
+  glMatrixMode( GL_MODELVIEW );
+  glPushMatrix();
+  glLoadIdentity();
+  glColor4f( 0.5, 0.5, 0.5, 1.0 );		/* grey  	*/
+  glBegin(GL_QUADS);
+  glVertex2f(0.0, Height);
+  glVertex2f(Width, Height);
+  glVertex2f(Width, Height-(lineheight*4.0));
+  glVertex2f(0.0, Height-(lineheight*4.0));
+  glEnd();
+  glColor4f( 0.0, 0.0, 0.0, 1.0 );		/* black  	*/
+  DoRasterString( charwidth, Height - lineheight, eline[0] );
+  DoRasterString( charwidth, Height - lineheight*2.0, eline[1] );
+  DoRasterString( charwidth, Height - lineheight*3.0, eline[2] );
+  glPopMatrix();
+  glMatrixMode( GL_PROJECTION );
+  glPopMatrix();
+
+  glEnable( GL_DEPTH_TEST ); 
+
+  // Reset the projection matrix.
+  savedirty = dirtyWindow; 
+  reshape(Width, Height);
+  dirtyWindow = savedirty; 
 }
 
 /***************************************************************/
@@ -839,8 +884,6 @@ void write_bmp8(char *filename)
   free(data);
 }
 #endif
-
-void reshape(int width, int height);
 
 /***************************************************************/
 int platform_write_step_comment(char *comment_string)
@@ -2141,6 +2184,8 @@ void display(void)
 	}
 	XORcurPiece();
       }
+      if (!panning)
+	edit_mode_gui();
     }
 
 #if 0 // This doesn't work for some reason
@@ -2347,6 +2392,8 @@ int XORcurPiece()
   glDisable( GL_DEPTH_TEST ); // don't test for depth -- just put in front
   glEnable( GL_COLOR_LOGIC_OP ); 
   glLogicOp(GL_XOR);
+  glColor3f(1.0, 1.0, 1.0); // white
+  glCurColorIndex = -1;
   retval = Draw1Part(curpiece, 15);
   glLogicOp(GL_COPY);
   glEnable( GL_DEPTH_TEST ); 
@@ -2574,6 +2621,7 @@ void fnkeys(int key, int x, int y)
 	    curpiece--;
 	    Print1Part(curpiece, stdout);
 	  }
+	  edit_mode_gui();
 	  return;
 	}
 	else
@@ -2587,6 +2635,7 @@ void fnkeys(int key, int x, int y)
       }
       XORcurPiece();
       Print1Part(curpiece, stdout);
+      edit_mode_gui();
       break;
     case GLUT_KEY_PAGE_DOWN:
       EraseCurPiece();
@@ -2603,6 +2652,7 @@ void fnkeys(int key, int x, int y)
 	    curpiece--;
 	    Print1Part(curpiece, stdout);
 	  }
+	  edit_mode_gui();
 	  return;
 	}
 	else
@@ -2620,6 +2670,7 @@ void fnkeys(int key, int x, int y)
 	XORcurPiece();
       }
       Print1Part(curpiece, stdout);
+      edit_mode_gui();
       break;
     case GLUT_KEY_RIGHT:
       CopyStaticBuffer();
@@ -2628,6 +2679,7 @@ void fnkeys(int key, int x, int y)
       movingpiece = curpiece;
       DrawMovingPiece();
       Print1Part(curpiece, stdout);
+      edit_mode_gui();
       break;
     case GLUT_KEY_LEFT:
       CopyStaticBuffer();
@@ -2636,6 +2688,7 @@ void fnkeys(int key, int x, int y)
       Translate1Part(curpiece, m);
       DrawMovingPiece();
       Print1Part(curpiece, stdout);
+      edit_mode_gui();
       break;
     case GLUT_KEY_UP:
       CopyStaticBuffer();
@@ -2644,6 +2697,7 @@ void fnkeys(int key, int x, int y)
       Translate1Part(curpiece, m);
       DrawMovingPiece();
       Print1Part(curpiece, stdout);
+      edit_mode_gui();
       break;
     case GLUT_KEY_DOWN:
       CopyStaticBuffer();
@@ -2652,6 +2706,7 @@ void fnkeys(int key, int x, int y)
       Translate1Part(curpiece, m);
       DrawMovingPiece();
       Print1Part(curpiece, stdout);
+      edit_mode_gui();
       break;
     case GLUT_KEY_HOME:
       CopyStaticBuffer();
@@ -2660,6 +2715,7 @@ void fnkeys(int key, int x, int y)
       Translate1Part(curpiece, m);
       DrawMovingPiece();
       Print1Part(curpiece, stdout);
+      edit_mode_gui();
       break;
     case GLUT_KEY_END:
       CopyStaticBuffer();
@@ -2668,6 +2724,7 @@ void fnkeys(int key, int x, int y)
       Translate1Part(curpiece, m);
       DrawMovingPiece();
       Print1Part(curpiece, stdout);
+      edit_mode_gui();
       break;
     default:
       return;
@@ -2723,6 +2780,7 @@ void fnkeys(int key, int x, int y)
     {
       XORcurPiece();
       Print1Part(curpiece, stdout);
+      edit_mode_gui();
     }
     return;
     break;
@@ -2886,6 +2944,7 @@ void keyboard(unsigned char key, int x, int y)
       Move1Part(curpiece, m);
       DrawMovingPiece();
       Print1Part(curpiece, stdout);
+      edit_mode_gui();
       return;
     case 'i':
       if (movingpiece >= 0)
@@ -2913,6 +2972,7 @@ void keyboard(unsigned char key, int x, int y)
       movingpiece = curpiece;
       DrawMovingPiece();
       Print1Part(curpiece, stdout);
+      edit_mode_gui();
       return;
     case 'c':
       CopyStaticBuffer(); // It would be nice to recolor without "moving" it.
@@ -2922,6 +2982,7 @@ void keyboard(unsigned char key, int x, int y)
       Color1Part(curpiece, color);
       DrawMovingPiece();
       Print1Part(curpiece, stdout);
+      edit_mode_gui();
       return;
     case 'p':
       CopyStaticBuffer();
@@ -2931,6 +2992,7 @@ void keyboard(unsigned char key, int x, int y)
       Swap1Part(curpiece, partname);
       DrawMovingPiece();
       Print1Part(curpiece, stdout);
+      edit_mode_gui();
       return;
     case 'o':
       Print1Model(datfilename);
@@ -2949,6 +3011,7 @@ void keyboard(unsigned char key, int x, int y)
       if (curpiece < 0) curpiece = 0;
       XORcurPiece();
       Print1Part(curpiece, stdout);
+      edit_mode_gui();
       return;
     }
   }
