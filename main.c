@@ -55,10 +55,11 @@ extern char modelspath[256];
 extern char datfilepath[256];
 
 #ifdef USE_L3_PARSER
+#define UNKNOWN_PARSER -1
 #define LDLITE_PARSER 0
 #define L3_PARSER     1
 
-int parsername = LDLITE_PARSER;
+int parsername = UNKNOWN_PARSER;
 #endif
 
 char datfilename[256];
@@ -122,6 +123,7 @@ GLdouble pan_end_y = 0.0;
 int pan_start_zWire;
 int pan_start_F;
 int pan_visible = BBOX_MODE | WIREFRAME_MODE; // Bounding Box spin mode.
+int glutModifiers;
 
 //#define USE_QUATERNION 1
 #ifdef USE_QUATERNION
@@ -1398,14 +1400,28 @@ void display(void)
   }
   if (ldraw_commandline_opts.debug_level == 1)
     printf("DrawModel %s\n", datfilename);
+#ifdef ONE_BIG_DISPLAY_LIST
+  // Displays in 1/3 less time, but does not allow other views
+  // except when using opengl to move camera.  (arrow keys)
+  // Type 5 lines should be excluded from display list (or drawn afterwards).
+  if (list_made < 2)
+  {
+    glNewList(1, GL_COMPILE);
+    DrawModel();
+    glEndList();
+    list_made = 2;
+  }
+  glCallList(1);
+#else
   DrawModel();
+#endif
   }
   else
 #endif
 
   {
 #ifdef ONE_BIG_DISPLAY_LIST
-  // Nice speedup: Displays in 1/3 time, but does allow other views.
+  // Nice speedup: Displays in 1/3 time, but does not allow other views.
   if (!list_made)
   {
     glNewList(1, GL_COMPILE);
@@ -2079,6 +2095,8 @@ mouse(int button, int state, int x, int y)
   GLint view[4];
   GLdouble pan_x, pan_y, pan_z, x_angle, y_angle, angle, depth;
 
+  glutModifiers = glutGetModifiers(); // Glut doesn't like this in motion() fn.
+
   mouse_state = state;
   mouse_button = button;
   
@@ -2191,6 +2209,7 @@ motion(int x, int y)
   GLint view[4];
   GLdouble pan_x, pan_y, pan_z, x_angle, y_angle, angle, depth;
   GLdouble p_x, p_y;
+  //int glutModifiers;  // Glut doesn't like this here!
 
   if (mouse_state == GLUT_DOWN && mouse_button == GLUT_LEFT_BUTTON) {
     glGetDoublev(GL_MODELVIEW_MATRIX, model);
@@ -2217,8 +2236,9 @@ motion(int x, int y)
       // Should I use -1.0 for the z coord to get the front plane?
       if((fabs(pan_x -pan_start_x) < 4) && (fabs(pan_y -pan_start_y) < 4))
       {
-	printf("hysteresis = %0.2f, %0.2f\n", 
-	       fabs(pan_x -pan_start_x), fabs(pan_y -pan_start_y));
+	if (ldraw_commandline_opts.debug_level == 1)
+	  printf("hysteresis = %0.2f, %0.2f\n", 
+		 fabs(pan_x -pan_start_x), fabs(pan_y -pan_start_y));
 	return;
       }
       // Save draw modes, then switch to wireframe and turn off studs.
@@ -2231,7 +2251,17 @@ motion(int x, int y)
     glutSetCursor(GLUT_CURSOR_NONE);
     panning = 1;
 
-    if (pan_visible & INVISIBLE_MODE) // Draw the rubberband line
+    // Check for shift or ctrl mouse drag changes on the fly.
+    //glutModifiers = glutGetModifiers(); // Glut doesn't like this here!
+    if (glutModifiers & GLUT_ACTIVE_CTRL)
+	ldraw_commandline_opts.F = (STUDLESS_MODE | SHADED_MODE);
+    else if (glutModifiers & GLUT_ACTIVE_SHIFT)
+	ldraw_commandline_opts.F = (BBOX_MODE | SHADED_MODE);
+    else 
+      ldraw_commandline_opts.F = pan_visible; 
+    zWire = (ldraw_commandline_opts.F & WIREFRAME_MODE);
+
+    if (ldraw_commandline_opts.F & INVISIBLE_MODE) // Draw the rubberband line
     {
       //printf("MOTION(%0.2f, %0.2f, %0.2f)\n", pan_x, -pan_y, pan_z);
       glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
@@ -2745,7 +2775,13 @@ void ParseParams(int *argc, char **argv)
 	break;
       case 'L':
       case 'l':
-	ldraw_commandline_opts.log_output = 1;
+	// -l3 forces l3 parser, -ld forces ldlite parser, -l sets logging.
+	if (pszParam[1] == '3')
+	  parsername = L3_PARSER;
+	else if ((pszParam[1] == 'd') || (pszParam[1] == 'D'))
+	  parsername = LDLITE_PARSER;
+	else 
+	  ldraw_commandline_opts.log_output = 1;
 	break;
       case 'M':
       case 'm':
@@ -2931,14 +2967,20 @@ main(int argc, char **argv)
     sprintf(title, "%s - %s", progname, filename);
 
 #ifdef USE_L3_PARSER
-  if (stricmp("l3glite", basename(progname)) == 0)
+  // If the parser type is not specified on the commandline 
+  // then set it here based on the program name.  
+  if (parsername == UNKNOWN_PARSER)
   {
-    parsername = L3_PARSER;
+    parsername = LDLITE_PARSER; // default to ldlite parser.
+    if (stricmp("l3glite", basename(progname)) == 0)
+    {
+      parsername = L3_PARSER;
 
-    // The L3 parser fixes bowtie quads once during parsing.
-    // and (I hope) turns concave quads into 2 triangles?
-    // So I don't need my slow 3 triangle hack.
-    use_quads = 1;
+      // The L3 parser fixes bowtie quads once during parsing.
+      // and (I hope) turns concave quads into 2 triangles?
+      // So I don't need my slow 3 triangle hack.
+      use_quads = 1;
+    }
   }
 #endif
 
