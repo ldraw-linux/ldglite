@@ -3576,6 +3576,21 @@ int XORcurPiece()
   int retval = 0;
   int drawmode = ldraw_commandline_opts.F;
 
+#ifdef MESA_XOR_TEST
+  if (buffer_swap_mode == SWAP_TYPE_NODAMAGE) // Mesa
+  {
+    // Gotta fix Mesa to render to back buffer.  
+    // Its 2x faster for normal drawing.  10x faster for XOR and BLEND.
+    if (!panning) // Panning already draws in the BACK buffer.
+      CopyColorBuffer(screenbuffer, staticbuffer);
+    // NOTE: we must CopyBuffer way up here *before* we mess with rendersetup.
+    // NOTE: Copybuffer at 1280x1024 on WinGeneric takes .5 to .8 seconds (slow)
+    // NOTE: CopyBuffer seems to lose the block under the cursor in the
+    //       Windows Generic driver (at least when alpha blended cursor is on).
+    glDrawBuffer(staticbuffer); 
+  }
+#endif
+
   // Draw only edge lines.  No polygon faces.
   ldraw_commandline_opts.F = TYPE_F_NO_POLYGONS;
 
@@ -3660,11 +3675,6 @@ int XORcurPiece()
   ldraw_commandline_opts.F |= TYPE_F_XOR_MODE;
   glColor3f(1.0, 1.0, 1.0); // white
   glCurColorIndex = -2;
-
-#ifdef MESA_XOR_TEST
-  if (buffer_swap_mode == SWAP_TYPE_NODAMAGE) // Mesa
-    glDrawBuffer(staticbuffer); 
-#endif
 
   retval = Draw1Part(curpiece, 15);
   glFlush(); // Force display now.  For OSX, this copies BACK to FRONT.
