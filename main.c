@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.1.3      ";
+char ldgliteVersion[] = "Version 1.1.4      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -2041,6 +2041,35 @@ void platform_setpath()
 
   concat_path(userpath, use_uppercase ? "MODELS" : "models", modelspath);
   concat_path(userpath, use_uppercase ? "BITMAP" : "bitmap", bitmappath);
+}
+
+/***************************************************************/
+void platform_sethome()
+{
+  char *env_str;
+  char newpath[256];
+
+  // If no filename and not using stdin (--) go home?
+  if (!strcmp(datfilename,  " "))
+  {
+    // if LDRAWUSER != LDRAWDIR, go to MODELS dir in LDRAWUSER path.
+    if (strcmp(userpath, pathname))
+    {
+      printf("chdir(%s)\n", modelspath);
+      chdir(modelspath);
+    }
+    else if (env_str = platform_getenv("USERPROFILE"))
+    {
+      concat_path(env_str, use_uppercase ? "MY DOCUMENTS" : "My Documents", newpath);
+      printf("chdir(%s)\n", newpath);
+      chdir(newpath);
+    }
+    else if (env_str = platform_getenv("HOME"))
+    {
+      printf("chdir(%s)\n", env_str);
+      chdir(env_str);
+    }
+  }
 }
 
 /***************************************************************/
@@ -8957,6 +8986,8 @@ main(int argc, char **argv)
 #endif
 
   ParseParams(&argc, argv);
+
+  platform_sethome();
 
 #if !defined(MAC)
 #  ifndef MACOS_X
