@@ -1,0 +1,46 @@
+
+You should now be able to build an offscreen rendering only version of
+ldglite for use on a headless server box.  The MESA Offscreen library
+(OSMesa) doesn't use X and should build without it.  Here's how:
+
+Grab the latest ldglite sources from CVS.  This gets you a new
+makefile makefile.osmesa and a file osmglut.c containing stubs for the
+unused glut functions.
+
+  cvs -z3 -d:pserver:anonymous@cvs.ldglite.sourceforge.net:/cvsroot/ldglite
+checkout ldglite
+
+Grab the latest mesa sources and install it in the ldglite/Mesa-5.0.1
+directory.
+
+Cd into the Mesa directory and configure it to build without X and
+include static versions of the libraries.
+
+  cd Mesa-5.0.1
+  ./configure --without-x --enable-static
+
+Build the GL OSMesa and GLU libraries.
+
+  cd src
+  make
+  cd ../src-glu
+  make
+
+Drop down into the ldglite directory and build it with OSMesa.  Strip
+the executable to reduce the size down to about 2.5 MB.
+
+  cd ../..
+  make -f makefile.osmesa
+  strip ldglite
+
+I tried this method on a linux box and it seemed to work for offscreen
+rendering.  BSD should be just about the same, although you may need
+to manually add -L/usr/local/lib -L/usr/local/lib/pth to the CFLAGS
+line to pull in the PNG and ZLIB libraries?  Since it's all software
+rendering, an OSX build should not be much different from a BSD build.
+
+If you want to use dynamic libs you'll have to edit the makefile and
+remove the -static linker directive.  You'll probably have to install
+the shared libraries by following the instructions in the
+Mesa-5.0.1/doc/INSTALL file.
+
