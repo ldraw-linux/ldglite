@@ -639,6 +639,13 @@ void pasteCommand(int x, int y)
 }
 #endif
 
+#ifdef WINTIMER
+#include <mmsystem.h>
+int starttime, finishtime, elapsedtime;
+
+#pragma comment (lib, "winmm.lib")       /* link with Windows MultiMedia lib */
+#endif
+
 /***************************************************************/
 void CopyColorBuffer(int srcbuffer, int destbuffer)
 {
@@ -653,6 +660,10 @@ void CopyColorBuffer(int srcbuffer, int destbuffer)
       return;
     }
   }
+
+#ifdef WINTIMER
+  starttime = timeGetTime();
+#endif
 
   glPushAttrib(GL_COLOR_BUFFER_BIT|GL_CURRENT_BIT|GL_DEPTH_BUFFER_BIT|
 	       GL_FOG_BIT|GL_LIGHTING_BIT|GL_VIEWPORT_BIT);
@@ -682,6 +693,11 @@ void CopyColorBuffer(int srcbuffer, int destbuffer)
 
   glPopAttrib();
   
+#ifdef WINTIMER
+  finishtime = timeGetTime();
+  printf("Copy Color Elapsed = %d\n", finishtime-starttime);
+#endif
+
   savedirty = dirtyWindow; 
   reshape(Width, Height);
   dirtyWindow = savedirty; 
@@ -3043,13 +3059,6 @@ int NukeSavedDepthBuffer(void)
     zbufdata = NULL;
   }
 }
-
-#ifdef WINTIMER
-#include <mmsystem.h>
-int starttime, finishtime, elapsedtime;
-
-#pragma comment (lib, "winmm.lib")       /* link with Windows MultiMedia lib */
-#endif
 
 /***************************************************************/
 void SaveDepthBuffer(void)
