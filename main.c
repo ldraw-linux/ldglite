@@ -309,6 +309,31 @@ float fZRot = 0.0;
 void reshape(int width, int height);
 void rendersetup(void);
 
+#define USE_GLFONT 1
+#ifdef USE_GLFONT
+/***************************************************************/
+/*
+  For speed I want to try using a texture mapped font instead of GLUT.
+  This uses the glfont package by Brad Fish.  Details available here:
+  http://www.netxs.net/bfish/Glfont.html
+  mailto:bfish@netxs.net
+
+  I should probably just pick a font and convert it to C code.
+  Then I can just compile it in as arielfnt.c or somesuch name,
+  so there will be no problem finding the font at runtime.
+*/
+/***************************************************************/
+#include "glfont.h"
+
+GLFONT Font;
+int FontTex = 1;
+char *fontname = NULL;
+float fontheight = 1.0;
+float fontwidth = 1.0;
+
+/***************************************************************/
+#endif
+
 /***************************************************************/
 void draw_string(void *font, const char* string) 
 {
@@ -332,6 +357,30 @@ void
 DoRasterString( float x, float y, char *s )
 {
   char c;			/* one character to print		*/
+
+#ifdef USE_GLFONT
+  if (fontname)
+  {
+    glScalef(fontwidth, fontwidth, 1.0f);
+
+    glEnable(GL_TEXTURE_2D);
+    glAlphaFunc(GL_GEQUAL, 0.0625);
+    glEnable(GL_ALPHA_TEST);
+    glEnable( GL_BLEND );
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glFontBegin (&Font); //Needs to be called before text output
+    glFontTextOut (s, x/fontwidth, y/fontwidth+2, 1);
+    glFontEnd (); //Needs to be called after text output
+
+    glDisable( GL_BLEND );
+    glDisable(GL_ALPHA_TEST);
+    glDisable(GL_TEXTURE_2D);
+    //glLoadIdentity();
+    glScalef(1.0/fontwidth, 1.0/fontwidth, 1.0f);
+    return;
+  }
+#endif
   
   glRasterPos2f( x, y );
   for( ; ( c = *s ) != '\0'; s++ )
@@ -494,6 +543,8 @@ int edit_mode_gui()
   // I Should probably call glPushAttrib() and glPopAttrib() instead of
   // reshape() and rendersetup().
   rendersetup();
+
+  glFlush();
 }
 
 /***************************************************************/
@@ -5788,7 +5839,20 @@ void ParseParams(int *argc, char **argv)
 	break;
       case 'G':
       case 'g':
-	ldraw_commandline_opts.debug_level = 1;
+#ifdef USE_GLFONT
+	if (toupper(pszParam[1]) == 'F') // Glfont file name
+	{
+	  if (pszParam[2])
+	  {
+	    fontname = strdup(&pszParam[2]);
+	    printf("Loading glfont %s\n", fontname);
+	  }
+	  else
+	    fontname = strdup("ariel.glf");
+	}
+	else
+#endif
+	  ldraw_commandline_opts.debug_level = 1;
 	break;
       case 'i':
       case 'I':
@@ -6353,6 +6417,39 @@ main(int argc, char **argv)
   dirmenu(15);
   filemenu(15);
   }
+
+#ifdef USE_GLFONT
+  if (fontname)
+  {
+    int n = 0;
+
+    glFontCreate (&Font, fontname, FontTex); //Creates a glFont
+    // void glFontDestroy (Font); //Deletes a glFont
+    
+    fontheight = Font.Char[0].ty2 * Font.TexHeight;
+    fontwidth = fontheight/Font.Char[0].dy;
+
+    printf("Loaded glfont %s (%g, %g) (%d, %d, %d, %d)\n", fontname,
+	   fontwidth, fontheight,
+	   Font.TexWidth, Font.TexHeight, Font.IntStart, Font.IntEnd);
+#if 0
+    // dy/dx = ratio of height to width of each char
+    // dy is always the same number (the ratio of height to the avg char)
+    // dx varies depending on the width of the char.  It averages 1.
+    for (n = 0; n < Font.IntEnd-Font.IntStart; n++)
+    {
+    printf("(%g, %g) (%g, %g, %g, %g)\n", Font.Char[n].dx, Font.Char[n].dy,
+	   Font.Char[n].tx1, Font.Char[n].ty1, 
+	   Font.Char[n].tx2, Font.Char[n].ty2);
+    }
+#else
+    printf("(%g, %g) (%g, %g, %g, %g)\n", Font.Char[n].dx, Font.Char[n].dy,
+	   Font.Char[n].tx1, Font.Char[n].ty1, 
+	   Font.Char[n].tx2, Font.Char[n].ty2);
+#endif
+
+  }
+#endif
 
   initCamera();
   init();
