@@ -66,6 +66,100 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 	struct L3LineS *LinePtr;
 	vector3d       v3d[4];
 
+#ifdef USE_OPENGL
+	// Draw only bounding boxes of top level parts if in fast spin mode.
+	if (ldraw_commandline_opts.F == 2) 
+	  if (PartPtr->FromPARTS) // (!IsModel)
+	  {
+	    float      r2[4];
+            vector3d   bb3d[8];
+
+            if (0 <= CurColor  &&  CurColor <= 15)
+              Color = edge_color(CurColor);
+            else
+              Color = 0;
+
+	    Color = CurColor;
+#if 0	    
+	    printf("IsModel = %d  FromPARTS = %d  color = %d\n",
+		   IsModel, PartPtr->FromPARTS, Color);
+	    printf("BBox = (%0.2f,%0.2f,%0.2f) (%0.2f,%0.2f,%0.2f)\n",
+		   PartPtr->BBox[0][0],PartPtr->BBox[0][1],PartPtr->BBox[0][2],
+		   PartPtr->BBox[1][0],PartPtr->BBox[1][1],PartPtr->BBox[1][2]);
+#endif
+	    r2[0]=PartPtr->BBox[0][0]; //bb[0]
+	    r2[1]=PartPtr->BBox[0][1];
+	    r2[2]=PartPtr->BBox[0][2];
+	    M4V3Mul(r,m,r2);
+	    bb3d[0].x=r[0];
+	    bb3d[0].y=r[1];
+	    bb3d[0].z=r[2];
+	    r2[0]=PartPtr->BBox[0][0]; //bb[1]
+	    r2[1]=PartPtr->BBox[1][1];
+	    r2[2]=PartPtr->BBox[0][2];
+	    M4V3Mul(r,m,r2);
+	    bb3d[1].x=r[0];
+	    bb3d[1].y=r[1];
+	    bb3d[1].z=r[2];
+	    r2[0]=PartPtr->BBox[1][0]; //bb[2]
+	    r2[1]=PartPtr->BBox[1][1];
+	    r2[2]=PartPtr->BBox[0][2];
+	    M4V3Mul(r,m,r2);
+	    bb3d[2].x=r[0];
+	    bb3d[2].y=r[1];
+	    bb3d[2].z=r[2];
+	    r2[0]=PartPtr->BBox[1][0]; //bb[3]
+	    r2[1]=PartPtr->BBox[0][1];
+	    r2[2]=PartPtr->BBox[0][2];
+	    M4V3Mul(r,m,r2);
+	    bb3d[3].x=r[0];
+	    bb3d[3].y=r[1];
+	    bb3d[3].z=r[2];
+	    r2[0]=PartPtr->BBox[0][0]; //bb[4]
+	    r2[1]=PartPtr->BBox[0][1];
+	    r2[2]=PartPtr->BBox[1][2];
+	    M4V3Mul(r,m,r2);
+	    bb3d[4].x=r[0];
+	    bb3d[4].y=r[1];
+	    bb3d[4].z=r[2];
+	    r2[0]=PartPtr->BBox[0][0]; //bb[5]
+	    r2[1]=PartPtr->BBox[1][1];
+	    r2[2]=PartPtr->BBox[1][2];
+	    M4V3Mul(r,m,r2);
+	    bb3d[5].x=r[0];
+	    bb3d[5].y=r[1];
+	    bb3d[5].z=r[2];
+	    r2[0]=PartPtr->BBox[1][0]; //bb[6]
+	    r2[1]=PartPtr->BBox[1][1];
+	    r2[2]=PartPtr->BBox[1][2];
+	    M4V3Mul(r,m,r2);
+	    bb3d[6].x=r[0];
+	    bb3d[6].y=r[1];
+	    bb3d[6].z=r[2];
+	    r2[0]=PartPtr->BBox[1][0]; //bb[7]
+	    r2[1]=PartPtr->BBox[0][1];
+	    r2[2]=PartPtr->BBox[1][2];
+	    M4V3Mul(r,m,r2);
+	    bb3d[7].x=r[0];
+	    bb3d[7].y=r[1];
+	    bb3d[7].z=r[2];
+
+	    render_line(&bb3d[0],&bb3d[1],Color);
+	    render_line(&bb3d[1],&bb3d[2],Color);
+	    render_line(&bb3d[2],&bb3d[3],Color);
+	    render_line(&bb3d[3],&bb3d[0],Color);
+	    render_line(&bb3d[4],&bb3d[5],Color);
+	    render_line(&bb3d[5],&bb3d[6],Color);
+	    render_line(&bb3d[6],&bb3d[7],Color);
+	    render_line(&bb3d[7],&bb3d[4],Color);
+	    render_line(&bb3d[0],&bb3d[4],Color);
+	    render_line(&bb3d[1],&bb3d[5],Color);
+	    render_line(&bb3d[2],&bb3d[6],Color);
+	    render_line(&bb3d[3],&bb3d[7],Color);
+
+	    return;
+	  }
+#endif
 
 	for (LinePtr = PartPtr->FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
 	{

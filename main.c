@@ -100,7 +100,7 @@ GLdouble pan_start_x = 0.0;
 GLdouble pan_start_y = 0.0;
 int pan_start_zWire;
 int pan_start_F;
-int pan_visible = 1;
+int pan_visible = 2; // Start with bounding box spin mode.
 
 //#define USE_QUATERNION 1
 #ifdef USE_QUATERNION
@@ -1714,7 +1714,9 @@ void keyboard(unsigned char key, int x, int y)
       ldraw_commandline_opts.M = c;
       return;
     case 'v':
-      pan_visible ^= 1;
+      if (pan_visible < 1) 
+        pan_visible = 3;
+      pan_visible--;
       return;
     case 27:
 	exit(0);
@@ -2060,9 +2062,10 @@ motion(int x, int y)
     {
       // Save draw modes, then switch to wireframe and turn off studs.
       pan_start_zWire = zWire;
+
       pan_start_F = ldraw_commandline_opts.F;
       zWire = 1;
-      ldraw_commandline_opts.F = 1; 
+      ldraw_commandline_opts.F = pan_visible; 
     }
     panning = 1;
 
