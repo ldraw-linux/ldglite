@@ -58,7 +58,7 @@ HGLRC hGLRC;
 HBITMAP m_dibSection;           // memory DIB for offscreen rendering
 #endif
 #ifdef AGL_OFFSCREEN_OPTION
-#include "agl.h"
+#include <AGL/agl.h>
 void *OSbuffer = NULL;
 AGLContext ctx;
 // NOTE:  Apple currently lists aglSetOffScreen() as unsupported by Carbon.
