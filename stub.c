@@ -28,6 +28,8 @@
 
 extern int curstep;
 extern int cropping;
+extern int panning;
+extern int dirtyWindow;
 extern int use_quads;
 extern float lineWidth;
 extern int zSolid;
@@ -726,13 +728,17 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
   if (ldraw_commandline_opts.M == 'P')
   {
     // Non-continuous output stop after each step.
-#ifdef IGNORE_DIRTY
+#ifndef ALWAYS_REDRAW
+   if (dirtyWindow == 0)
+   {  
     if (stepcount != curstep) // (Or (dirty and stepcount < curstep))
+     if ((panning == 0) || (stepcount > curstep))
       return;  // Do NOT render since we have not reached this step yet.
-#else
+   }
+   else
+#endif
     if (stepcount > curstep)
       return;  // Do NOT render since we have not reached this step yet.
-#endif
   }
 #endif
 
@@ -838,13 +844,17 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
   if (ldraw_commandline_opts.M == 'P')
   {
     // Non-continuous output stop after each step.
-#ifdef IGNORE_DIRTY
+#ifndef ALWAYS_REDRAW
+   if (dirtyWindow == 0)
+   {  
     if (stepcount != curstep) // (Or (dirty and stepcount < curstep))
+     if ((panning == 0) || (stepcount > curstep))
       return;  // Do NOT render since we have not reached this step yet.
-#else
+   }
+   else
+#endif
     if (stepcount > curstep)
       return;  // Do NOT render since we have not reached this step yet.
-#endif
   }
 #endif
 
@@ -943,13 +953,17 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
   if (ldraw_commandline_opts.M == 'P')
   {
     // Non-continuous output stop after each step.
-#ifdef IGNORE_DIRTY
+#ifndef ALWAYS_REDRAW
+   if (dirtyWindow == 0)
+   {  
     if (stepcount != curstep) // (Or (dirty and stepcount < curstep))
+     if ((panning == 0) || (stepcount > curstep))
       return;  // Do NOT render since we have not reached this step yet.
-#else
+   }
+   else
+#endif
     if (stepcount > curstep)
       return;  // Do NOT render since we have not reached this step yet.
-#endif
   }
 #endif
 
@@ -1132,13 +1146,17 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
   if (ldraw_commandline_opts.M == 'P')
   {
     // Non-continuous output stop after each step.
-#ifdef IGNORE_DIRTY
+#ifndef ALWAYS_REDRAW
+   if (dirtyWindow == 0)
+   {  
     if (stepcount != curstep) // (Or (dirty and stepcount < curstep))
+     if ((panning == 0) || (stepcount > curstep))
       return;  // Do NOT render since we have not reached this step yet.
-#else
+   }
+   else
+#endif
     if (stepcount > curstep)
       return;  // Do NOT render since we have not reached this step yet.
-#endif
   }
 #endif
 

@@ -120,7 +120,7 @@ int use_quads = 0;
 int curstep = 0;
 int cropping = 1;
 int panning = 0;
-int not_stepping = 0;
+int dirtyWindow = 0;
 GLdouble pan_start_x = 0.0;
 GLdouble pan_start_y = 0.0;
 GLdouble pan_end_x = 0.0;
@@ -129,6 +129,10 @@ int pan_start_zWire;
 int pan_start_F;
 int pan_visible = BBOX_MODE | WIREFRAME_MODE; // Bounding Box spin mode.
 int glutModifiers;
+int z_extent_x1;
+int z_extent_x2;
+int z_extent_y1;
+int z_extent_y2;
 
 //#define USE_QUATERNION 1
 #ifdef USE_QUATERNION
@@ -700,9 +704,15 @@ void write_bmp8(char *filename)
 void reshape(int width, int height);
 
 /***************************************************************/
-int platform_step_comment(char *comment_string)
+int platform_write_step_comment(char *comment_string)
 {
-  printf("%s\n", comment_string);
+  int savedirty;
+
+#ifndef ALWAYS_REDRAW
+  glEnable( GL_COLOR_LOGIC_OP ); 
+  //glEnable( GL_LOGIC_OP_MODE ); 
+  glLogicOp(GL_XOR);
+#endif
 
   glMatrixMode( GL_PROJECTION );
   glLoadIdentity();
@@ -710,14 +720,33 @@ int platform_step_comment(char *comment_string)
   glMatrixMode( GL_MODELVIEW );
   glPushMatrix();
   glLoadIdentity();
+#ifndef ALWAYS_REDRAW
+  glColor3f(1.0, 1.0, 1.0); // white
+#else
   glColor4f( 0.3, 0.3, 0.3, 0.5 );		/* grey  	*/
+#endif
   glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
   DoRasterString( 1.0, 1.0, comment_string );
   glEnable( GL_DEPTH_TEST ); 
   glPopMatrix();
 
+#ifndef ALWAYS_REDRAW
+  glLogicOp(GL_COPY);
+  glEnable( GL_DEPTH_TEST ); 
+  glDisable( GL_COLOR_LOGIC_OP ); 
+#endif
+
   // Reset the projection matrix.
+  savedirty = dirtyWindow; 
   reshape(Width, Height);
+  dirtyWindow = savedirty; 
+}
+
+/***************************************************************/
+int platform_step_comment(char *comment_string)
+{
+  printf("%s\n", comment_string);
+  platform_write_step_comment(comment_string);
 }
 
 /***************************************************************/
@@ -739,7 +768,7 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
       printf("Finished\n");
   } 
   else 	if (step >= 0) {
-    //platform_step_comment(buf)
+    //platform_step_commentbuf)
   } 
   else {
     // step == -1 means a redraw partway through a step
@@ -1304,6 +1333,8 @@ void reshape(int width, int height)
 
     
     //glTranslatef(0.0, 0.0, -200.0 + zoom);
+
+    dirtyWindow = 1; 
 }
 
 #define USE_F00_CAMERA 1
@@ -1336,18 +1367,49 @@ void display(void)
   client_rect_right = Width;
   client_rect_bottom = Height;
 
+  
+  if (res = glutLayerGet(GLUT_NORMAL_DAMAGED))
+    dirtyWindow = 1;
+
   //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-#ifdef IGNORE_DIRTY
-  // I cannot really do this until I can also redraw the whole image 
-  // (up to the current step) on demand when window gets dirty.
+
+  // Non-continuous output stop after each step.
   if (ldraw_commandline_opts.M == 'P')
   {
-    // Non-continuous output stop after each step.
-    if (curstep == 0) // (Or dirty)
+    // Do not increment step right after (or during) panning.
+    if (panning || dirtyWindow)
+    {
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+    else
+    {
+      if (stepcount == curstep)
+      {
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	curstep = 0; // Reset to first step
+      }
+      else
+      {
+#ifndef ALWAYS_REDRAW
+	// XOR erase the previous comment.
+	sprintf(buf,"Step %d of %d.  ",curstep+1, stepcount+1);
+	strcat(buf, "Click on drawing to continue.");
+	platform_write_step_comment(buf);
+
+	// Save the cropping extents from the previous step
+	// so I can restore them after zReset().
+	z_extent_x1 = z.extent_x1;
+	z_extent_x2 = z.extent_x2;
+	z_extent_y1 = z.extent_y1;
+	z_extent_y2 = z.extent_y2;
+#else
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+#endif
+	curstep++; // Move on to next step
+      }
+    }
   }
   else
-#endif
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   glColor3f(1.0, 1.0, 1.0); // White.
@@ -1597,6 +1659,8 @@ void display(void)
     }
     zWire = 0;
   }
+  //if (ldraw_commandline_opts.output != 1) zStep(INT_MAX, 0);
+  zStep(stepcount,0);
 #endif
   }
 
@@ -1648,26 +1712,29 @@ GLUT_BITMAP_HELVETICA_18
   //int glutStrokeLength(void *font, const unsigned char *string);
 #endif
 
-  // Do not increment step right after (or during) panning.
-  if (not_stepping)
-    not_stepping = 0;
-  else if (!panning)
+  // Non-continuous output stop after each step.
+  if (ldraw_commandline_opts.M == 'P')
   {
-    if (ldraw_commandline_opts.M == 'P')
+    // Do not display step comment during panning.
+    if (!panning)
     {
       sprintf(buf,"Step %d of %d.  ",curstep+1, stepcount+1);
-      // Non-continuous output stop after each step.
       if (stepcount == curstep)
-      {
 	strcat(buf, "Finished.");
-	curstep = 0; // Reset to first step
-      }
       else 
-      {
 	strcat(buf, "Click on drawing to continue.");
-	curstep++; // Move on to next step
-      }
       platform_step_comment(buf);
+      
+#ifndef ALWAYS_REDRAW
+      // Restore the cropping extents from the previous step if needed.
+      if (curstep > 0)
+      {
+	z.extent_x1 = min(z_extent_x1, z.extent_x1);
+	z.extent_x2 = max(z_extent_x2, z.extent_x2);
+	z.extent_y1 = min(z_extent_y1, z.extent_y1);
+	z.extent_y2 = max(z_extent_y2, z.extent_y2);
+      }
+#endif
     }
   }
 
@@ -1682,6 +1749,8 @@ GLUT_BITMAP_HELVETICA_18
   if (panning)
     glutSwapBuffers();
 #endif
+
+  dirtyWindow = 0;  // The window is nice and squeaky clean now.
 
   // If we just want the output files then quit when idle.
   if ((ldraw_commandline_opts.output == 1) ||
@@ -1846,6 +1915,7 @@ void fnkeys(int key, int x, int y)
     parse_view(m_viewMatrix);
   }
 
+  dirtyWindow = 1;
   glutPostRedisplay();
 
   /*
@@ -1909,19 +1979,19 @@ void keyboard(unsigned char key, int x, int y)
 #endif
     case 'z':
         ldraw_commandline_opts.S *= 0.9;
-	//reshape(Width, Height);
+	dirtyWindow = 1; //reshape(Width, Height);
 	break;
     case 'Z':
         ldraw_commandline_opts.S *= (1.0 / 0.9);
-	//reshape(Width, Height);
+	dirtyWindow = 1; //reshape(Width, Height);
 	break;
     case 's':
         ldraw_commandline_opts.S *= 0.5;
-	//reshape(Width, Height);
+	dirtyWindow = 1; //reshape(Width, Height);
 	break;
     case 'S':
         ldraw_commandline_opts.S *= (1.0 / 0.5);
-	//reshape(Width, Height);
+	dirtyWindow = 1; //reshape(Width, Height);
 	break;
     case '0':
       m_viewMatrix = LdrawOblique;
@@ -2045,6 +2115,7 @@ void keyboard(unsigned char key, int x, int y)
 	//glutChangeToMenuEntry(3, "Pause              ", 'c');
       }
       curstep = 0; // Reset to first step
+      dirtyWindow = 1;
       return;
     case 'g':
       ldraw_commandline_opts.poll ^= 1;
@@ -2071,6 +2142,10 @@ void keyboard(unsigned char key, int x, int y)
 	  glLineWidth( 1.0 );
 	glEnable( GL_BLEND );
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	//glEnable(GL_POLYGON_SMOOTH);
+	//glBlendFunc(GL_SRC_ALPHA_SATURATE, GL_ONE);
+	//glEnable(GL_BLEND); 
       }
       else
       {
@@ -2397,7 +2472,7 @@ mouse(int button, int state, int x, int y)
 #endif
 
     panning = 0;
-    not_stepping = 1;  // Do not increment step counter on post pan redraw.
+    dirtyWindow = 1;  // Do not increment step counter on post pan redraw.
     glutSetCursor(GLUT_CURSOR_INHERIT);
     glutWarpPointer(Width/2, Height/2);
   }
