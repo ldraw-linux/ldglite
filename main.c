@@ -8743,36 +8743,6 @@ main(int argc, char **argv)
     getcwd(cwdpath, 512);
     glutInit(&argc, argv);
     chdir(cwdpath); // problem with chdir to dir with spaces in win32.
-
-#ifdef __APPLE__
-    {
-      typedef struct
-      {
-	int  lo;
-	int  hi;
-      } PSN;
-    
-      extern "C" {
-	short CPSGetCurrentProcess(PSN *psn);
-	short CPSSetProcessName (PSN *psn, char *processname);
-	short CPSEnableForegroundOperation(PSN *psn, int _arg2, int _arg3, int _arg4, int _arg5);
-	short CPSSetFrontProcess(PSN *psn);
-      };
-
-      // PSN = Process serial number.  If I get something in argv like
-      // -psn_****** then I was launched from the finder (not cmdline.)
-      // This is a valuable hint that I need to use OSX to get the filename.
-      // Watch out though because glutinit() (above) removes this from argv.
-      PSN psn;  
-
-      // Keyboard focus hack (borrowed from FlightGear)
-      CPSGetCurrentProcess(&psn);
-      //CPSSetProcessName(&psn, argv[0]);
-      CPSEnableForegroundOperation(&psn,0x03,0x3C,0x2C,0x1103);
-      CPSSetFrontProcess(&psn);
-    }
-#endif
-
   }
 #  endif
 #endif
