@@ -117,6 +117,13 @@ int viewchoice = 0;
 int projchoice = 0;
 int panchoice = 0;
 
+void makefileui(char *);
+void makeviewui(void);
+void makemainui(void);
+void makedrawui(void);
+void makeoptsui(void);
+void makebackui(void);
+
 /***************************************************************/
 void muiHide(muiObject *obj, int state)
 {
@@ -194,12 +201,6 @@ void mui_cleanup(void)
 void bcallback(muiObject *obj, enum muiReturnValue r)
 {
   int i = 0;
-  void makefileui(char *);
-  void makeviewui(void);
-  void makemainui(void);
-  void makedrawui(void);
-  void makeoptsui(void);
-  void makebackui(void);
 
   muiHide(obj, 0);
 
@@ -236,6 +237,12 @@ void bcallback(muiObject *obj, enum muiReturnValue r)
     muiHideAll(muiGetUIList(obj), 1);
     break;
   case 8:
+    muiSetActiveUIList(MAIN_UILIST);
+    mui_cleanup();
+    exit(0);
+    break;
+  case 13:
+  case 14:
     muiSetActiveUIList(MAIN_UILIST);
     mui_cleanup();
     break;
@@ -383,6 +390,16 @@ void makemainui(void)
     //l1 = muiNewBoldLabel(ow+60+dw/2-35, oh+dh/2+18, "LdGLite");
     l1 = muiNewLabel(ow+60+dw/2-35, oh+dh/2+18, "LdGLite");
     l2 = muiNewLabel(ow+60+dw/2-55, oh+dh/2-18, "Version 0.9.6");
+
+    b13 = muiNewButton(ow+dw-60, ow+dw-34, oh+2, oh+27);
+    muiLoadButton(b13, "Ok");
+    muiSetCallback(b13, bcallback);
+    muiSetID(b13, 13);
+
+    b14 = muiNewButton(ow+dw-30, ow+dw-4, oh+2, oh+27);
+    muiLoadButton(b14, "X");
+    muiSetCallback(b14, bcallback);
+    muiSetID(b14, 14);
 
     muiSetNonMUIcallback(nonmuicallback);
   }
@@ -1530,9 +1547,9 @@ void writeoutputfile(char *dir, char *file)
       saveasdatfile(dir, file);
     else
       loadnewdatfile(dir, file);
+
+    mui_cleanup();
   }
-  
-  mui_cleanup();
 }
 
 /***************************************************************/
@@ -1624,8 +1641,9 @@ void handlecancel(muiObject *obj, enum muiReturnValue value)
 {
     if (value != MUI_BUTTON_PRESS) return;
     writeoutputfile(directory, 0);
-    return; //exit(0);
-    obj = 0;	/* for lint's sake */
+
+    muiHideAll(muiGetUIList(obj), 0);
+    makemainui();
 }
 
 /***************************************************************/
@@ -1868,8 +1886,11 @@ void mui_test()
   // use MUI in singlebuffered mode, then copy back to front buffer when done.
 
   glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
+#if 0
+  // Dont bother with this anymore since we replace the GLUT menu with MUI.
   glutSetMenu(mainmenunum); // Reset the current menu to the main menu.
   glutDetachMenu(GLUT_RIGHT_BUTTON); // Detach menu before starting MUI.
+#endif
 
 #ifdef SINGLE_BUFFER_MUI
   // Single buffered MUI is flickery.  You see the redraws, back to front.
