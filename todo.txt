@@ -1,4 +1,24 @@
 ----------------------------------------------------------------------
+Figure out how to display stud logos so they're never mirrored.
+Multiply the transformation matrix for each stud by it's determinant.
+Or traverse Parts[0..nParts] looking for PartPtr->FromPARTS.  Then
+traverse its subparts looking for PartPtr->IsStud with a negative
+determinant.  Perhaps duplicate the part and mirror the bad studs.
+Use Paul Easter's logo studs to test this.
+
+----------------------------------------------------------------------
+Make lddp plugins work with ldglite.  They should use the same sort
+of code to select a plugin as the PARTS.LST lookup with one plugin
+per line and searching for plugin names allowed.  
+
+Figure out how to deal with plugins that require a selection.  It
+might be nice to have a hint as to how many lines they require.  Maybe
+I should code specific selections for known plugins, or just ask how
+many previous (and/or subsequent) lines to include in the selection.
+
+Make a plugin wrapper around Paul Easter's spring generator program?
+
+----------------------------------------------------------------------
 
 Add a parts.lst lookup.  This could use the current 4 line display to
 show a search string and 3 lines from parts.lst.  Start the lookup on
