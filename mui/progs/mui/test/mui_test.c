@@ -39,6 +39,8 @@
 #include <GL/glut.h>
 #include <mui/mui.h>
 
+#include <windows.h>
+
 extern int mui_singlebuffered;
 
 char *strs[] = { "Line 1", "Line 2", "Longer line 3", "Very, very, very long line number four", 

@@ -93,7 +93,12 @@ void	uiVyLtGray(void)
 
 void	uiTerraCotta(void)
 {
+#if 0
 	glColor3f(198.0/255.0, 113.0/255.0, 113.0/255.0);
+#else
+	// Replace hideous terracotta text box with white.
+	glColor3f(1.0, 1.0, 1.0);
+#endif
 }
 
 void	uiYellow(void)

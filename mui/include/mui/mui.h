@@ -44,7 +44,8 @@ extern "C" {
 
 enum muiObjType { MUI_BUTTON, MUI_LABEL, MUI_BOLDLABEL, MUI_TEXTBOX, 
 		  MUI_VSLIDER, MUI_TEXTLIST, MUI_RADIOBUTTON, 
-		  MUI_TINYRADIOBUTTON, MUI_PULLDOWN, MUI_HSLIDER };
+		  MUI_TINYRADIOBUTTON, MUI_PULLDOWN, MUI_HSLIDER,
+		  MUI_RSLIDER };
 
 /* MUI Return Values: */
 
@@ -135,6 +136,13 @@ muiObject   *muiNewHSlider(int xmin, int ymin, int xmax, int scenter, int shalf)
 float	    muiGetHSVal(muiObject *obj);
 void	    muiSetHSValue(muiObject *obj, float val);
 void	    muiSetHSArrowDelta(muiObject *obj, int newd);
+
+/* Range Slider Routines */
+
+muiObject   *muiNewRSlider(int xmin, int ymin, int xmax, int scenter, int shalf);
+void	    muiGetRSVal(muiObject *obj, float *vmin, float *vmax );
+void	    muiSetRSValue(muiObject *obj, float vmin, float vmax );
+void	    muiSetRSArrowDelta(muiObject *obj, int newd);
 
 /* Text List Routines */
 

@@ -45,7 +45,9 @@ extern int menuinuse;
 
 static muiObject *newmuiobj(void)
 {
-    muiObject *newobj = (muiObject *)malloc(sizeof(muiObject));
+    //muiObject *newobj = (muiObject *)malloc(sizeof(muiObject));
+    // Fix bug in muiFastHitInList() with random label xmax, ymax vals.
+    muiObject *newobj = (muiObject *)calloc(sizeof(muiObject),1);
     newobj->active = 0;
     newobj->enable = 1;
     newobj->select = 0;
@@ -533,6 +535,15 @@ void muiHandleEvent(int event, int value, int x, int y)
     if (obj && (obj->type == MUI_VSLIDER || obj->type == MUI_HSLIDER)
 					    && event == MUI_DEVICE_PRESS)
 							    ActiveSlider = obj;
+
+    if (event == MUI_DEVICE_DOWN && obj != 0 && LocatedObj == 0 &&
+	SelectedObj == obj)
+      {
+	LocatedObj = obj;
+	muiSetLocate(LocatedObj, 1);
+	muiDrawObject(LocatedObj);
+      }
+
     if (obj == 0) {
 	if (ActiveSlider) {
 	    retval = (ActiveSlider->handler)(ActiveSlider, event, value, x, y);
@@ -562,7 +573,15 @@ void muiHandleEvent(int event, int value, int x, int y)
 /* ARGSUSED2 */
 enum muiReturnValue buttonhandler(muiObject *obj, int event, int value, int x, int y)
 {
-    if (!muiGetEnable(obj) || !muiGetVisible(obj)) return MUI_NO_ACTION;
+    if (!muiGetEnable(obj) || !muiGetVisible(obj)) 
+      {
+	if( event == MUI_DEVICE_RELEASE && SelectedObj )
+	  {
+	    muiSetSelect(SelectedObj, 0);
+	    muiSetLocate(SelectedObj, 0);
+	  }
+	return MUI_NO_ACTION;
+      }
 
     switch (event) {
 	case MUI_DEVICE_DOWN:
@@ -586,12 +605,15 @@ enum muiReturnValue buttonhandler(muiObject *obj, int event, int value, int x, i
 	    return MUI_NO_ACTION;
 	case MUI_DEVICE_RELEASE:
 	    if (SelectedObj != obj) {
-		muiSetSelect(SelectedObj, 0);
-		muiSetLocate(SelectedObj, 0);
-		muiDrawObject(SelectedObj);
-		muiSetLocate(obj, 1);
-		LocatedObj = obj;
-		muiDrawObject(obj);
+		if(SelectedObj)
+		  {
+    		    muiSetSelect(SelectedObj, 0);
+		    muiSetLocate(SelectedObj, 0);
+		    muiDrawObject(SelectedObj);
+	     	    muiSetLocate(obj, 1);
+		    LocatedObj = obj;
+		    muiDrawObject(obj);
+		  }
 		return MUI_NO_ACTION;
 	    }
 	    if (obj->type == MUI_RADIOBUTTON || obj->type == MUI_TINYRADIOBUTTON) {

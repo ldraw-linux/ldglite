@@ -7,11 +7,9 @@ TOP = ../..
 include $(TOP)/glutdefs
 include $(ROOT)/usr/include/make/commondefs
 
-LD_QUICKSTART_INFO=
-
 OPTIMIZER = -g
 
-TARGETS = mui_test multi_test
+TARGETS = mui_test
 
 RM = -rm -rf
 

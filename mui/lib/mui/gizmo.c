@@ -143,8 +143,10 @@ void drawpushbut(muiObject *b)
 {
     Button *but = (Button *)b->object;
 
+    if(!muiGetVisible(b)) return;
+    
     drawbuttonbackground(b);
-    uiBlack();
+    if (muiGetEnable(b)) uiBlack(); else uiDkGray();
     uicmov2i(b->xmin+ (b->xmax - b->xmin - strwidth(but->str))/2 + 1, b->ymin+9);
     uicharstr(but->str, UI_FONT_NORMAL);
 }
