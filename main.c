@@ -359,11 +359,14 @@ void CopyColorBuffer(int srcbuffer, int destbuffer)
     }
   }
 
-  // get fresh copy of static data
+  glPushAttrib(GL_COLOR_BUFFER_BIT|GL_CURRENT_BIT|GL_DEPTH_BUFFER_BIT|
+	       GL_FOG_BIT|GL_LIGHTING_BIT|GL_VIEWPORT_BIT);
+
   glReadBuffer(srcbuffer); // set pixel source
   glDrawBuffer(destbuffer); // set pixel destination
   glDisable( GL_DEPTH_TEST ); // Speed up copying
   glDisable(GL_LIGHTING);     // Speed up copying
+  glDisable(GL_BLEND);        // Speed up copying
   glMatrixMode( GL_PROJECTION );
   glLoadIdentity();
   gluOrtho2D(0, Width, 0, Height);
@@ -380,6 +383,8 @@ void CopyColorBuffer(int srcbuffer, int destbuffer)
   glEnable( GL_DEPTH_TEST ); 
   glDepthFunc(GL_LESS);
   glDrawBuffer(renderbuffer); // set pixel destination to the render buffer.
+
+  glPopAttrib();
   
   savedirty = dirtyWindow; 
   reshape(Width, Height);
