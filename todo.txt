@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------
 
+Convert offscreen rendering functions into shared library/DLL 
+functions.  Add entries to the makefile for DLL targets using
+dlltool and and the like.  Probably need to compile special versions
+of main.c and ldglpr.c for this.
+
+----------------------------------------------------------------------
+
 Implement some sort of part spreading algorithm for drag and drop
 of multiple parts.
 
