@@ -2782,23 +2782,18 @@ int ldlite_parse_with_rc(char *filename)
 }
 
 /***************************************************************/
-// NOTE: this assumes cropping == 1 (which may not be true)
-// I should really just get a bounding sphere
-// and scale it to fit in the view frustrum.
-// Calculate a bounding sphere from the bounding box of the model?
-void autoscale(void)
-{
-  int width = Width;
-  int height = Height;
-  float xs, ys;
-  
+#define USE_L3_PARSER_AND_BBOX
 #ifdef USE_L3_PARSER_AND_BBOX
+
 #include "L3Def.h"
+
+void getextents(void)
+{
   struct L3LineS       Data;
   int sc[4];
   int n;
 
-  void GetPartBox(struct L3LineS *LinePtr, int sc[4]);
+  void GetPartBox(struct L3LineS *LinePtr, int sc[4], int clip);
 
   if (parsername == L3_PARSER)
   {
@@ -2810,29 +2805,43 @@ void autoscale(void)
                  &Data.v[1][0], &Data.v[1][1], &Data.v[1][2],
                  &Data.v[2][0], &Data.v[2][1], &Data.v[2][2],
                  &Data.v[3][0], &Data.v[3][1], &Data.v[3][2]);
+    Data.v[3][3] = 1;
     Data.PartPtr = &Parts[0];
 
-    GetPartBox(&Data, sc);
+    GetPartBox(&Data, sc, 0);  // Skip clipping in GetPartBox().
+
     printf("sbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
 
-    width = sc[2];
-    height = sc[3];
+    z.extent_x2 = sc[2];
+    z.extent_x1 = sc[0];
+    z.extent_y2 = sc[3];
+    z.extent_y1 = sc[1];
   }
-  else
+}
 #endif  
-  {
+
+/***************************************************************/
+// NOTE: this assumes cropping == 1 (which may not be true)
+// I should really just get a bounding sphere
+// and scale it to fit in the view frustrum.
+// Calculate a bounding sphere from the bounding box of the model?
+void autoscale(void)
+{
+  int width = Width;
+  int height = Height;
+  float xs, ys;
+  
   width = z.extent_x2 - z.extent_x1;
   height = z.extent_y2 - z.extent_y1;
-  }
 
   // NOTE: gluProject() seems to clip coords at the window edges
   // so this will not scale down
-  printf("%d, %d\n", width, height);
+  printf("W,H = %d, %d\n", width, height);
   if ((width <= 0) || (height <= 0)) return; //break;
   xs = (float) (Width) / (float) width;
   ys = (float) (Height) / (float) height;
   
-  printf("%0.3f, %0.3f\n", xs, ys);
+  printf("X,Y = %0.3f, %0.3f\n", xs, ys);
   // scale up by the smaller amount so it fits both ways.
   if (xs > ys)
     xs = ys;
@@ -2841,6 +2850,8 @@ void autoscale(void)
   // If its off center then center it.  Does not work too well.
   fCamX -= (float)(z.extent_x2 - Width + z.extent_x1) / 2.0;
   fCamY -= (float)(z.extent_y2 - Height + z.extent_y1) / 2.0;
+
+  printf("S,cX,cY = %0.3f, %0.3f, %0.3f\n", xs, fCamX, fCamY);
 }
   
 /***************************************************************/
@@ -2914,10 +2925,13 @@ render(void)
     // printf("LoadModel: %d",ttt);
     list_made = 1;
   }
-#if 0
+#if 1
   if (autoscaling)
   {
     autoscaling = 0;
+    InitViewMatrix();
+    //reshape(Width, Height);
+    getextents();
     autoscale();
   }
 #endif
