@@ -22,12 +22,6 @@
 #include "math.h"
 #include "string.h"
 
-#ifdef USE_OPENGL
-#include "platform.h"
-
-extern char datfilepath[256];
-#endif
-
 char *part_name = NULL; 
 vector3d flip_scale;
 extern FILE *yyin;
@@ -122,24 +116,20 @@ void rotate_model()
 	free(v_temp);
 }
 
-void ldlite_parse(char *filename, char *ldraw_lines)
+void ldlite_parse(char *ldraw_lines)
 {
-  FILE *fp;
   vector3d *v1;
   matrix3d *m1;
   static int init=0;
-#ifdef USE_OPENGL
-  char filenamepath[256];
-#endif
 
   if (!init) {
 	  init = 1;
 #ifdef USE_QBUF_MALLOC
-	    vector_pool = qbufCreate(16*1024,sizeof(vector3d),
+	    vector_pool = qbufCreate(32*1024,sizeof(vector3d),
 			QBUF_FIFO_ALLOCATION_POLICY);
-	    matrix_pool = qbufCreate(16*1024,sizeof(matrix3d),
+	    matrix_pool = qbufCreate(32*1024,sizeof(matrix3d),
 			QBUF_FIFO_ALLOCATION_POLICY);
-	    word_pool = qbufCreate(16*1024,128,
+	    word_pool = qbufCreate(32*1024,128,
 			QBUF_FIFO_ALLOCATION_POLICY);
 #endif
   } 
@@ -154,30 +144,33 @@ void ldlite_parse(char *filename, char *ldraw_lines)
   // v1 = savevec(0.0, 0.0, 0.0);
 #endif
   if (ldraw_commandline_opts.output == 1) {
-  v1 = savevec(0.0,
-		0.0,
-		0.0);
-  m1 = savemat(
-    1.0, 
-	0.0,
-	0.0,
-    0.0, 
-	1.0, 
-	0.0,
-    0.0, 
-	0.0, 
-	1.0);
+	  v1 = savevec(0.0,
+		  0.0,
+		  0.0);
+	  m1 = savemat(
+		  1.0, 
+		  0.0,
+		  0.0,
+		  0.0, 
+		  1.0, 
+		  0.0,
+		  0.0, 
+		  0.0, 
+		  1.0);
   } else {
-#ifdef LDRAW_COMPATIBLE_CENTER
-  v1 = savevec(ldraw_commandline_opts.O.x+(zGetRowsize()/2),
-		ldraw_commandline_opts.O.y+(2*zGetColsize()/3),
-		ldraw_commandline_opts.O.z+(float)0.0);
-#else
-  v1 = savevec(ldraw_commandline_opts.O.x+(zGetRowsize()/2),
-		ldraw_commandline_opts.O.y+(zGetColsize()/2),
-		ldraw_commandline_opts.O.z+0.0);
-#endif
-#ifdef USE_GL_TWIRL
+	  if (ldraw_commandline_opts.center_at_origin==0)
+	  {
+		  v1 = savevec(ldraw_commandline_opts.O.x+(zGetRowsize()/2),
+			  ldraw_commandline_opts.O.y+(2*zGetColsize()/3),
+			  ldraw_commandline_opts.O.z+(float)0.0);
+	  }
+	  else
+	  {
+		  v1 = savevec(ldraw_commandline_opts.O.x+(zGetRowsize()/2),
+			  ldraw_commandline_opts.O.y+(zGetColsize()/2),
+			  ldraw_commandline_opts.O.z+(float)0.0);
+	  }
+#if defined(USE_OPENGL) && defined(USE_GL_TWIRL)
   m1 = savemat(1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0);
 #else
   m1 = savemat(
@@ -201,70 +194,24 @@ void ldlite_parse(char *filename, char *ldraw_lines)
   } else {
 	  log_output_file = NULL;
   }
-  if (filename==NULL) {
-	  if (ldraw_commandline_opts.output > 0) {
-		  if ((output_file = fopen(output_file_name,"w+"))==NULL) {
-			  ldraw_commandline_opts.output = 0;
-		  }
+  if (ldraw_commandline_opts.output != 0) {
+	  if ((output_file = fopen(output_file_name,"w+"))==NULL) {
+		  ldraw_commandline_opts.output = 0;
 	  }
-	  {
-		  void *buffer_state;
-		  void * yy_scan_string(char *ldraw_lines);
-		  void yy_delete_buffer(void *buffer_state);
-
-		  yyin=NULL;
-		  buffer_state = yy_scan_string(ldraw_lines);
-		  yyparse();
-		  yy_delete_buffer(buffer_state);
-	  }
-	  if (output_file != NULL) {
-		  fclose(output_file);
-		  output_file = NULL;
-	  }
-  } else {
-#ifdef USE_OPENGL
-	  if (!strcmp(filename, ""))
-	  {
-	    strcpy(filenamepath,"-");
-	    filename = filenamepath;
-	    fp = stdin; 
-	  }
-	  else
-	  {
-	    concat_path(datfilepath, filename, filenamepath);
-	    fp = fopen( filenamepath, "r" );
-	  }
-#else
-	  fp = fopen( filename, "r" );
-#endif
-	  if (fp != NULL) {
-		  if (ldraw_commandline_opts.output > 0) {
-			  if ((output_file = fopen(output_file_name,"w+"))==NULL) {
-				  ldraw_commandline_opts.output = 0;
-			  }
-		  }
-		  yyin = fp;
-#ifdef USE_OPENGL
-		  // Weak attempt to fix crash on MPD redraw when yy_current_buffer = 0;
-		  if (init > 1)
-		  {
-		    void yyrestart( FILE *input_file );
-		    yyrestart( yyin );
-		  }
-		  else
-		    init = 2;
-#endif
-		  yyparse();
-		  fclose(fp);
-		  if (output_file != NULL) {
-			  fclose(output_file);
-			  output_file = NULL;
-		  }
-	  } else {
-		  static char buf[256];
-		  sprintf(buf,"Error: Cannot open file \"%s\"",filename);
-		  zWrite(buf);
-	  }
+  }
+  {
+	  void *buffer_state;
+	  void * yy_scan_string(char *ldraw_lines);
+	  void yy_delete_buffer(void *buffer_state);
+	  
+	  yyin=NULL;
+	  buffer_state = yy_scan_string(ldraw_lines);
+	  yyparse();
+	  yy_delete_buffer(buffer_state);
+  }
+  if (output_file != NULL) {
+	  fclose(output_file);
+	  output_file = NULL;
   }
   if (log_output_file != NULL) {
 	  fclose(log_output_file);

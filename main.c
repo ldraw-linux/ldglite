@@ -46,7 +46,8 @@ extern void          LoadModelPost(void);
 extern void          DrawModel(void);
 #endif
 
-extern void ldlite_parse(char *filename, char *ldraw_lines);
+//extern void ldlite_parse(char *filename, char *ldraw_lines);
+extern void ldlite_parse(char *ldraw_lines);
 
 extern char pathname[256];
 extern char primitivepath[256];
@@ -1503,7 +1504,9 @@ render(void)
   {
     glNewList(1, GL_COMPILE);
     znamelist_push();
-    ldlite_parse(datfilename, buf);
+    //ldlite_parse(datfilename, buf);
+    sprintf(buf,"1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n", datfilename);
+    ldlite_parse(buf);
     znamelist_pop();
     glEndList();
     list_made = 1;
@@ -1517,8 +1520,9 @@ render(void)
   linequalitysetup();
   mpd_subfile_name = NULL; // potential memory leak
   znamelist_push();
-  ldlite_parse(datfilename, buf);
-  znamelist_pop();
+  //ldlite_parse(datfilename, buf);
+  sprintf(buf,"1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n", datfilename);
+  ldlite_parse(buf);
   if (mpd_subfile_name != NULL) 
   {
     // set file name to first subfile
@@ -1547,7 +1551,8 @@ render(void)
     //**********************************************************************
     //ldlite_parse(mpd_subfile_name,NULL);
     sprintf(buf,"1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n", mpd_subfile_name);
-    ldlite_parse(NULL,buf);
+    //ldlite_parse(NULL,buf);
+    ldlite_parse(buf);
     znamelist_pop();
   }
   if (qualityLines && ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) == 0))
@@ -1568,7 +1573,9 @@ render(void)
 
     mpd_subfile_name = NULL; // potential memory leak
     znamelist_push();
-    ldlite_parse(datfilename, buf);
+    //ldlite_parse(datfilename, buf);
+    sprintf(buf,"1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n", datfilename);
+    ldlite_parse(buf);
     znamelist_pop();
     if (mpd_subfile_name != NULL) 
     {
@@ -1586,7 +1593,8 @@ render(void)
 
       znamelist_push();
       sprintf(buf,"1 16 0 0 0 1 0 0 0 1 0 0 0 1 %s\n", mpd_subfile_name);
-      ldlite_parse(NULL,buf);
+      //ldlite_parse(NULL,buf);
+      ldlite_parse(buf);
       znamelist_pop();
     }
 
