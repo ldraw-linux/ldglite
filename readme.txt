@@ -1,3 +1,4 @@
+
                                 LdGLite
                (a platform independent version of LdLite)
 
@@ -6,6 +7,7 @@ Contents of readme.txt:
   LdGLite for Windows README
   LdGLite for linux README
   LdGLite for DOS README
+  LdGLite for MacOS README
   Extra Stuff
     Command line options
     Hot Keys
@@ -19,27 +21,31 @@ Contents of readme.txt:
 
 			     Introduction
 
-LdLite is an LDRAW file viewer for Windows.  You can use it to view
-DAT and MPD files containing models made with everyone's favorite 
-construction bricks.
+Ldglite is a program that lets you create, edit, and view Lego brick
+models stored in LDRAW format. It was created by connecting the LDLite
+DAT file parser to an OpenGL rendering engine and the GLUT toolkit,
+making it portable to many operating systems.  It currently runs in
+Windows, Linux, and MacOS, DOS, and BSD unix, and operates in several
+compatibility modes.
 
-LdGLite is a platform independent version of LdLite.  It achieves this
-by using the OpenGL graphics interface and the GLUT toolkit.  It 
-currently runs in Windows, Linux, and MacOS.  It does not yet provide
-all of the functionality of LdLite.  However it does have a few small
-goodies not yet available in LdLite.
+The default is the viewer mode which is compatible with LDLite and
+ldraw, but also contains many added features such as the ability to
+function as a cheesy scene modeler for l3p and POV.
 
-L3Glite is ldglite except it uses the L3 parser.  Actually the executables
-are identical, the program decides which parser to use based on the name
-of the program.  On linux you can softlink l3glite to ldglite.  You can
-also force the program to use a specific parser with a -ld or -l3 command
-line option.
+Ldglite contains an LEdit emulation mode which gives you the ability
+to create and edit models.  If you rename the program something with
+"ledit" in it such as ldgledit or l3gledit it will start up
+automatically in LEDIT emulation mode.  This can also be accomplished
+with the -le or -lE command line option.  In editing mode ldglite
+can be configured to use plugins from the LDDP project to generate
+hoses, pose minifigs, create train track layouts, etc.
 
-As of version 0.9.1 if you call the program something with "ledit" in
-it such as ldgledit or l3gledit it will start up automatically in
-LEDIT emulation mode.  This can also be accomplished with the -le or -lE
-command line option.  Currently LEDIT emulation mode always uses the
-l3 parser.
+Several internet sites use ldglite as a scripted offscreen renderer,
+generating many pictures of LDRAW parts for inventory lists and
+such. 
+
+Possibly the most important feature of ldglite is that all of the
+source code is available.
 
 
                         LdGLite for Windows README
@@ -202,6 +208,13 @@ some garbage at the top of the screen.
 
     ldglite -l3 -v3 myfile.dat >messages.txt
 
+
+
+                        LdGLite for MacOS README
+
+Installation instructions are online at http://ldglite.sourceforge.net.
+Scroll down to the installation section and follow the link to the 
+instructions for your flavor of MacOS.
 
 
 
