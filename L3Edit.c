@@ -6,6 +6,29 @@ extern float m_m[4][4];
 static struct L3LineS *SelectedLinePtr = NULL;
 
 /*****************************************************************************/
+int Find1Part(int partnum)
+{
+    int            i = 0;
+    struct L3LineS *LinePtr;
+
+    if (partnum <= 0)
+      return 0;
+
+    for (LinePtr = Parts[0].FirstLine; LinePtr; LinePtr = LinePtr->NextLine)
+    {
+	if (i == partnum)
+	    return i;
+	i++;
+    }
+    i--; // not found, return last piece in list.
+      
+    if (i < 0)
+      i = 0;
+
+    return i;
+}
+
+/*****************************************************************************/
 int Select1Part(int partnum)
 {
     int            i = 0;
@@ -244,17 +267,17 @@ int Print1LinePtr(struct L3LineS *LinePtr, int i, char *s, FILE *f)
     {
       if (i < 0)
       {
-	if (s)
-	  sprintf(s,"\n");
-	if (f)
-	  fprintf(f,"\n");
+      if (s)
+	sprintf(s,"--START--\n");
+      if (f)
+	fprintf(f,"--START--\n");
       }
       else
       {
-	if (s)
-	  sprintf(s,"Line %5d:  EOF\n", i);
-	if (f)
-	  fprintf(f,"Line %d:  EOF\n", i);
+      if (s)
+	sprintf(s,"Line %5d:  --END--\n", i);
+      if (f)
+	fprintf(f,"Line %d:  --END--\n", i);
       }
       return 0; //partnum not found
     }
@@ -512,7 +535,17 @@ int Add1Part(int partnum)
     LinePtr->LineNo = i;
 #endif
     if (PrevPtr)
-	LinePtr->v = PrevPtr->v;
+    {
+#ifdef REUSE_ORIENTATION
+        LinePtr->v = PrevPtr->v;
+#else
+	LinePtr->v = m;
+        // Just copy the position, but not the orientation.
+	LinePtr->v[0][3] += PrevPtr->v[0][3];
+	LinePtr->v[1][3] += PrevPtr->v[1][3];
+	LinePtr->v[2][3] += PrevPtr->v[2][3];
+#endif
+    }
     else
 	LinePtr->v = m;
     LinePtr->PartPtr = PartPtr;
