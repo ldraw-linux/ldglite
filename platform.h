@@ -57,6 +57,9 @@
 
 // glut 3.7 no longer includes windows.h
 #if (GLUT_XLIB_IMPLEMENTATION >= 13)
+# ifdef CALLBACK
+#  undef CALLBACK
+# endif
 #include <windows.h>
 #endif
 
