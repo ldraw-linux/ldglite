@@ -612,7 +612,7 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
 		  zcp->r = (unsigned char) (((int)zcp->r + (int)zcs->r) / 2);
 		  zcp->g = (unsigned char) (((int)zcp->g + (int)zcs->g) / 2);
 		  zcp->b = (unsigned char) (((int)zcp->b + (int)zcs->b) / 2);
-		  zcs = zcp;
+		  //zcs = zcp;
 		}
 #endif
 	} else if ((c >= 0x4000000)&&(c<=0x7ffffff)) {
