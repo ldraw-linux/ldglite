@@ -944,6 +944,17 @@ void GetPartBox(struct L3LineS *LinePtr, int sc[4])
   GLdouble s1x, s1y, s1z;
   GLdouble s2x, s2y, s2z;
 
+  // NOTE:  Must eventually add support for primitives.
+  //if (LinePtr->LineType == 0)
+  if (LinePtr->LineType != 1)
+  {
+    sc[0] = 0;
+    sc[1] = 0;
+    sc[2] = 1;
+    sc[3] = 1;
+    return;
+  }
+   
   M4M4Mul(m,m_m,LinePtr->v); // Adjust center point of part by view matrix.
   MakePartBox(PartPtr, m, bb3d);
 
