@@ -104,42 +104,18 @@ truckCamera( GLfloat truckBy, bool truckX, bool truckY, bool truckZ )
 
 #pragma argsused
 // We trap 'special' keystrokes here.
-void
+int
 specialFunc( int key, int x, int y )
 {
+  int retval = 1;
+
   int glutModifiers = glutGetModifiers();
 
-  // Ctrl Arrow keys truck left, right, up, down.
-  if (glutModifiers & GLUT_ACTIVE_CTRL)
-  switch( key )
-  {
-  // Move forwards.
-  case GLUT_KEY_PAGE_UP:
-    truckCamera( -DEF_truckStepSize, false, false, true );
-    break;
-  // Move backwards.
-  case GLUT_KEY_PAGE_DOWN:
-    truckCamera( DEF_truckStepSize, false, false, true );
-    break;
-  // Strafe left.
-  case GLUT_KEY_LEFT:
-    truckCamera( -DEF_truckStepSize, true, false, false );
-    break;
-  // Strafe right.
-  case GLUT_KEY_RIGHT:
-    truckCamera( DEF_truckStepSize, true, false, false );
-    break;
-  // Strafe up.
-  case GLUT_KEY_UP:
-    truckCamera( DEF_truckStepSize, false, true, false );
-    break;
-  // Strafe down.
-  case GLUT_KEY_DOWN:
-    truckCamera( -DEF_truckStepSize, false, true, false );
-    break;
-  }
-  // Alt Arrow keys roll left, right, up, down.
-  else if (glutModifiers & GLUT_ACTIVE_ALT)
+  if ((glutModifiers & GLUT_ACTIVE_CTRL) == 0)
+    return 0;
+    
+  // Ctrl-Alt Arrow keys roll left, right, up, down.
+  if (glutModifiers & GLUT_ACTIVE_ALT)
   switch( key )
   {
   // Move forwards.
@@ -166,8 +142,11 @@ specialFunc( int key, int x, int y )
   case GLUT_KEY_DOWN:
     f00Quat_postMult_3( &camOrient, -DEF_keyboardAngleStep, 0.0, 0.0 );
     break;
+  default:
+    retval = 0; // Didn't find a key
   }
-  else
+  // Ctrl-Shift Arrow keys turn left, right, up, down.
+  else if (glutModifiers & GLUT_ACTIVE_SHIFT)
   switch( key )
   {
   // Move forwards.
@@ -194,7 +173,42 @@ specialFunc( int key, int x, int y )
   case GLUT_KEY_DOWN:
     f00Quat_postMult_3( &camOrient, -DEF_keyboardAngleStep, 0.0, 0.0 );
     break;
+  default:
+    retval = 0; // Didn't find a key
   }
+  // Ctrl Arrow keys truck left, right, up, down.
+  else
+  switch( key )
+  {
+  // Move forwards.
+  case GLUT_KEY_PAGE_UP:
+    truckCamera( -DEF_truckStepSize, false, false, true );
+    break;
+  // Move backwards.
+  case GLUT_KEY_PAGE_DOWN:
+    truckCamera( DEF_truckStepSize, false, false, true );
+    break;
+  // Strafe left.
+  case GLUT_KEY_LEFT:
+    truckCamera( -DEF_truckStepSize, true, false, false );
+    break;
+  // Strafe right.
+  case GLUT_KEY_RIGHT:
+    truckCamera( DEF_truckStepSize, true, false, false );
+    break;
+  // Strafe up.
+  case GLUT_KEY_UP:
+    truckCamera( DEF_truckStepSize, false, true, false );
+    break;
+  // Strafe down.
+  case GLUT_KEY_DOWN:
+    truckCamera( -DEF_truckStepSize, false, true, false );
+    break;
+  default:
+    retval = 0; // Didn't find a key
+  }
+
+  return retval;
 }
 
 
