@@ -117,6 +117,7 @@ static int list_made = 0;
 #define BBOX_MODE 	0x0008
 #define INVISIBLE_MODE 	0x0010
 #define STUDONLY_MODE 	0x0020
+#define STUDLINE_MODE 	0x0040
 
 #define USE_DOUBLE_BUFFER
 #define USE_OPENGL_STENCIL
@@ -2440,6 +2441,8 @@ int XORcurPiece()
   //ldraw_commandline_opts.F |= STUDLESS_MODE;
   //ldraw_commandline_opts.F = (WIREFRAME_MODE | STUDLESS_MODE);
   ldraw_commandline_opts.F = WIREFRAME_MODE;
+  if ((drawmode & STUDLINE_MODE) != 0)
+    ldraw_commandline_opts.F |= STUDLINE_MODE;
   zWire = 1;
   zShading = 0;
 
@@ -2718,6 +2721,8 @@ void DrawTNTPiece(void)
   //ldraw_commandline_opts.F |= STUDLESS_MODE;
   //ldraw_commandline_opts.F = (WIREFRAME_MODE | STUDLESS_MODE);
   ldraw_commandline_opts.F = WIREFRAME_MODE;
+  if ((drawmode & STUDLINE_MODE) != 0)
+    ldraw_commandline_opts.F |= STUDLINE_MODE;
   zWire = 1;
   zShading = 0;
 
@@ -2777,7 +2782,7 @@ void DrawMovingPiece(void)
       glEnable(GL_LIGHTING);
     else
       glDisable(GL_LIGHTING);
-    if (NVIDIA_XOR_HACK)
+    if (SOLID_EDIT_MODE == NVIDIA_XOR_HACK)
       DrawTNTPiece();
     else
       DrawCurPart(-1);
@@ -3294,6 +3299,12 @@ int edit_mode_fnkeys(int key, int x, int y)
       SOLID_EDIT_MODE = 1;
     else 
       SOLID_EDIT_MODE = NVIDIA_XOR_HACK; // 0
+    if ((glutModifiers & GLUT_ACTIVE_ALT) != 0)
+    {
+      //ldraw_commandline_opts.F |= STUDLESS_MODE;
+      ldraw_commandline_opts.F |= STUDLINE_MODE;
+      DrawToCurPiece = 1;
+    }
     editing ^= 1;
     // if (ldraw_commandline_opts.debug_level == 1)
     printf("Editing mode =  %d{%d}\n", editing, SOLID_EDIT_MODE);
@@ -3359,6 +3370,7 @@ int edit_mode_fnkeys(int key, int x, int y)
     XORcurPiece(); // Erase the previous piece
     
     // Restore previous continuous mode.
+    ldraw_commandline_opts.F &= (!STUDLINE_MODE);
     ldraw_commandline_opts.M = editingprevmode;
     dirtyWindow = 1;
     glutPostRedisplay();
@@ -5471,11 +5483,23 @@ void ParseParams(int *argc, char **argv)
 	{
 	  SOLID_EDIT_MODE = 0;
 	  editing = 1;
+	  _strlwr(pszParam);
+	  if (strstr(pszParam, "ledit"))
+	  {
+	    ldraw_commandline_opts.F |= STUDLINE_MODE;
+	    DrawToCurPiece = 1;
+	  }
 	}
 	else if (pszParam[1] == 'E')
 	{
 	  SOLID_EDIT_MODE = 1;
 	  editing = 1;
+	  _strlwr(pszParam);
+	  if (strstr(pszParam, "ledit"))
+	  {
+	    ldraw_commandline_opts.F |= STUDLINE_MODE;
+	    DrawToCurPiece = 1;
+	  }
 	}
 	else 
 	  ldraw_commandline_opts.log_output = 1;
@@ -5797,8 +5821,9 @@ main(int argc, char **argv)
 
     if (buffer_swap_mode == SWAP_TYPE_KTX)
     {
-      NVIDIA_XOR_HACK = 1;
-      SOLID_EDIT_MODE = NVIDIA_XOR_HACK;
+      NVIDIA_XOR_HACK = 2;
+      if (SOLID_EDIT_MODE == 0)
+	SOLID_EDIT_MODE = NVIDIA_XOR_HACK;
     }
   }
 #endif
