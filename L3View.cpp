@@ -71,6 +71,7 @@ extern int Init1LineCounter(void);
 #define STUDONLY_MODE 	0x0020
 #define STUDLINE_MODE 	0x0040
 #define XOR_MODE 	0x0080
+#define XOR_PRIMITIVE 	0x0100
 
 //************************************************************************
 void MakePartBox(struct L3PartS *PartPtr,float m[4][4], vector3d bb3d[8])
@@ -373,6 +374,16 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 				v3d[i].y=r[1];
 				v3d[i].z=r[2];
 			}
+#ifdef USE_OPENGL
+			// Try to render solid Primitives visibly when in XOR wire mode.
+			if (ldraw_commandline_opts.F & XOR_PRIMITIVE)
+			{
+			    render_line(&v3d[0],&v3d[1],Color);
+			    render_line(&v3d[1],&v3d[2],Color);
+			    render_line(&v3d[2],&v3d[0],Color);
+			    break;
+			}
+#endif
 			render_triangle(&v3d[0],&v3d[1],&v3d[2],Color);
 			break;
 		case 4:
@@ -388,6 +399,17 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 				v3d[i].y=r[1];
 				v3d[i].z=r[2];
 			}
+#ifdef USE_OPENGL
+			// Try to render solid Primitives visibly when in XOR wire mode.
+			if (ldraw_commandline_opts.F & XOR_PRIMITIVE)
+			{
+			    render_line(&v3d[0],&v3d[1],Color);
+			    render_line(&v3d[1],&v3d[2],Color);
+			    render_line(&v3d[2],&v3d[3],Color);
+			    render_line(&v3d[3],&v3d[0],Color);
+			    break;
+			}
+#endif
 			render_quad(&v3d[0],&v3d[1],&v3d[2],&v3d[3],Color);
 			break;
 		case 5:
@@ -500,70 +522,79 @@ int Draw1PartPtr(struct L3LineS *LinePtr, int Color)
 	    break;
 	case 1:
 	    M4M4Mul(m1,m_m,LinePtr->v);
+	    if ((ldraw_commandline_opts.F & XOR_MODE) && (LinePtr->PartPtr->FromP))
+	    {
+		// This is a primitive and may render invisibly in XOR_MODE
+		// if it contains no edges.
+		ldraw_commandline_opts.F |= XOR_PRIMITIVE;
+		DrawPart(0,LinePtr->PartPtr,Color,m1);
+		ldraw_commandline_opts.F &= ~(XOR_PRIMITIVE);
+		break;
+	    }
 	    DrawPart(0,LinePtr->PartPtr,Color,m1);
 	    break;
-		case 2:
-			for (i=0; i<LinePtr->LineType; i++)
-			{
-				M4V3Mul(r,m_m,LinePtr->v[i]);
-				v3d[i].x=r[0];
-				v3d[i].y=r[1];
-				v3d[i].z=r[2];
-			}
-			render_line(&v3d[0],&v3d[1],Color);
-			break;
-		case 3:
-			for (i=0; i<LinePtr->LineType; i++)
-			{
-				M4V3Mul(r,m_m,LinePtr->v[i]);
-				v3d[i].x=r[0];
-				v3d[i].y=r[1];
-				v3d[i].z=r[2];
-			}
-		        if (zWire)
-			{
-			    render_line(&v3d[0],&v3d[1],Color);
-			    render_line(&v3d[1],&v3d[2],Color);
-			    render_line(&v3d[2],&v3d[0],Color);
-			    break;
-			}
-			render_triangle(&v3d[0],&v3d[1],&v3d[2],Color);
-			break;
-		case 4:
-			for (i=0; i<LinePtr->LineType; i++)
-			{
-				M4V3Mul(r,m_m,LinePtr->v[i]);
-				v3d[i].x=r[0];
-				v3d[i].y=r[1];
-				v3d[i].z=r[2];
-			}
-		        if (zWire)
-			{
-			    render_line(&v3d[0],&v3d[1],Color);
-			    render_line(&v3d[1],&v3d[2],Color);
-			    render_line(&v3d[2],&v3d[3],Color);
-			    render_line(&v3d[3],&v3d[0],Color);
-			    break;
-			}
-			render_quad(&v3d[0],&v3d[1],&v3d[2],&v3d[3],Color);
-			break;
-		case 5:
-			for (i=0; i<4; i++)
-			{
-				M4V3Mul(r,m_m,LinePtr->v[i]);
-				v3d[i].x=r[0];
-				v3d[i].y=r[1];
-				v3d[i].z=r[2];
-			}
-			if (ldraw_commandline_opts.F & XOR_MODE)
-			{
-			    render_line(&v3d[0],&v3d[1],Color);
-			    render_line(&v3d[0],&v3d[2],Color);
-			    render_line(&v3d[1],&v3d[3],Color);
-			    break;
-			}
-			render_five(&v3d[0],&v3d[1],&v3d[2],&v3d[3],Color);
-			break;
+	case 2:
+	    for (i=0; i<LinePtr->LineType; i++)
+	    {
+		M4V3Mul(r,m_m,LinePtr->v[i]);
+		v3d[i].x=r[0];
+		v3d[i].y=r[1];
+		v3d[i].z=r[2];
+	    }
+	    render_line(&v3d[0],&v3d[1],Color);
+	    break;
+	case 3:
+	    for (i=0; i<LinePtr->LineType; i++)
+	    {
+		M4V3Mul(r,m_m,LinePtr->v[i]);
+		v3d[i].x=r[0];
+		v3d[i].y=r[1];
+		v3d[i].z=r[2];
+	    }
+	    if (zWire)
+	    {
+		render_line(&v3d[0],&v3d[1],Color);
+		render_line(&v3d[1],&v3d[2],Color);
+		render_line(&v3d[2],&v3d[0],Color);
+		break;
+	    }
+	    render_triangle(&v3d[0],&v3d[1],&v3d[2],Color);
+	    break;
+	case 4:
+	    for (i=0; i<LinePtr->LineType; i++)
+	    {
+		M4V3Mul(r,m_m,LinePtr->v[i]);
+		v3d[i].x=r[0];
+		v3d[i].y=r[1];
+		v3d[i].z=r[2];
+	    }
+	    if (zWire)
+	    {
+		render_line(&v3d[0],&v3d[1],Color);
+		render_line(&v3d[1],&v3d[2],Color);
+		render_line(&v3d[2],&v3d[3],Color);
+		render_line(&v3d[3],&v3d[0],Color);
+		break;
+	    }
+	    render_quad(&v3d[0],&v3d[1],&v3d[2],&v3d[3],Color);
+	    break;
+	case 5:
+	    for (i=0; i<4; i++)
+	    {
+		M4V3Mul(r,m_m,LinePtr->v[i]);
+		v3d[i].x=r[0];
+		v3d[i].y=r[1];
+		v3d[i].z=r[2];
+	    }
+	    if (ldraw_commandline_opts.F & XOR_MODE)
+	    {
+		render_line(&v3d[0],&v3d[1],Color);
+		render_line(&v3d[0],&v3d[2],Color);
+		render_line(&v3d[1],&v3d[3],Color);
+		break;
+	    }
+	    render_five(&v3d[0],&v3d[1],&v3d[2],&v3d[3],Color);
+	    break;
 	default:
 	    break;
 	}
