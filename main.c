@@ -5016,12 +5016,14 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
   case 127: // Delete
     DelCurPiece();
     return 1;
+#ifdef WINDOWS
   case 22: // Paste on Windows (CTRL-V) 
     edit_mode_keyboard('i', x, y);
     edit_mode_keyboard('p', x, y);
     pasteCommand(x, y);
     edit_mode_keyboard('\n', x, y);
     return 1;
+#endif
   }
 
   return 0;
@@ -5508,6 +5510,7 @@ void keyboard(unsigned char key, int x, int y)
     case '\r':
     case ' ':
 	break;
+#ifdef WINDOWS
     case 22: // Paste on Windows (CTRL-V)
       // Consider doing something special here if they drag in multiple files.
       // Perhaps I could make an MPD file out of it?
@@ -5518,6 +5521,7 @@ void keyboard(unsigned char key, int x, int y)
 	loadnewdatfile(dirname(ecommand+1),basename(ecommand+1));
       ecommand[0] = 0;
       break;
+#endif
     default:
 	return;
     }

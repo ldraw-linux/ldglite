@@ -11,7 +11,7 @@ TR_FLAGS=-DTILE_RENDER_OPTION
 TR_SRC=tr.c
 
 # UnComment this to build in support for Mesa Offscreen rendering
-OFFSCREEN_FLAGS=-DOSMESA_OPTION -IMesa-5.0.1
+OFFSCREEN_FLAGS=-DOSMESA_OPTION -IMesa-5.0.1/include
 OFFSCREEN_LIBS= -LMesa-5.0.1/src/.libs -LMesa-5.0.1/src-glu/.libs -LMesa-5.0.1/src/OSmesa/.libs -lOSMesa
 # NOTE: Mesa Offscreen lib is not required in some older? version of Mesa?
 
@@ -26,13 +26,13 @@ CFLAGS=-g -DUNIX -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 -DNEED_MIN_MAX $(PNG_FL
 ## This is lame.  I don't know how to do both .c and .cpp for the OBJS line
 ## so I pretend L3*.cpp is L3*.c and make rules for them later.
 #
-SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c lcolors.c y.tab.c lex.yy.c qbuf.c main.c ldglpr.c L3Edit.c L3Math.c L3Input.c L3View.c $(TR_SRC) $(GUI_SRC) osmglut.c
+SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c lcolors.c y.tab.c lex.yy.c qbuf.c main.c ldglpr.c L3Edit.c L3Math.c L3Input.c L3View.c hoser.c $(TR_SRC) $(GUI_SRC) osmglut.c
 OBJS = $(SRCS:.c=.o)
 
 all	: ldglite
 
 ldglite:   $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o ldglite -L/usr/X11R6/lib $(PNG_LIBS) -static $(OFFSCREEN_LIBS) $(GUI_LIBS) -lGLU -lGL -dynamic -lpthread -lm
+	$(CC) $(CFLAGS) $(OBJS) -o ldglite $(PNG_LIBS) -static $(OFFSCREEN_LIBS) $(GUI_LIBS) -lGLU -lGL -dynamic -lpthread -lm
 	rm -rf l3glite
 	ln -s ldglite l3glite
 	rm -rf l3gledit

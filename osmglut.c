@@ -1,3 +1,11 @@
+/***** Stuff from ldglmenu.c (no need for menus offscreen) *****/
+char dirfilepath[256];
+
+int initializeMenus()
+{ return 0; }
+
+/***** Stuff from glut lib *****/
+
 int glutInit()
 { 
   extern int SetOffScreenRendering();
@@ -83,3 +91,12 @@ int glutMotionFunc()
 { printf("glutMotionFunc\n"); return 0; }
 int glutIdleFunc()
 { printf("glutIdleFunc\n"); return 0; }
+
+int glutPassiveMotionFunc()
+{ printf("glutPassiveMotionFunc\n"); return 0; }
+int glutWindowStatusFunc()
+{ printf("glutWindowStatusFunc\n"); return 0; }
+glutVisibilityFunc()
+{ printf("glutVisibilityFunc\n"); return 0; }
+
+
