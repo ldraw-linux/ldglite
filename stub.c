@@ -955,7 +955,7 @@ int init_zimage(ZIMAGE *zp, int rows, int cols)
 		zp->zbuffer = NULL;
 #endif
 		if (zp->dib != NULL) free (zp->dib);
-#ifdef USE_OPENGL_NOT
+#ifdef USE_OPENGL
 		// Hmmm, why do I malloc the whole dib?  I SHOULD only need the header...
 		// Well, actually the header and bytes 40-42 used below...
 		// Since I have it, I should use this for printing, especially BMP8.
