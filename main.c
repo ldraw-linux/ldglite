@@ -73,6 +73,8 @@ int use_uppercase = 0;
 #define IMAGE_TYPE_BMP8 3
 #define IMAGE_TYPE_BMP 4
 
+int use_png_alpha = 1;
+
 int ldraw_projection_type = 0;  // 1 = perspective, 0 = orthographic.
 int ldraw_image_type = IMAGE_TYPE_BMP8;
 
@@ -320,7 +322,7 @@ void write_bmp(char *filename)
   {
     glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, buf);
     p = buf;
-    for (j = 0; j < width; j++) // RBG -> BRG
+    for (j = 0; j < width; j++) // RGB -> BGR
     {
       c = p[0];
       p[0] = p[2];
@@ -349,7 +351,6 @@ static void png_warning_fn(png_structp png_ptr, const char *warn_msg)
 	return;
 }
 
-#define USE_PNG_ALPHA 1
 /***************************************************************/
 void write_png(char *filename)
 {
@@ -360,9 +361,7 @@ void write_png(char *filename)
   png_infop info_ptr;
   jmp_buf jbuf;
   png_text text_ptr[1];
-#ifdef USE_PNG_ALPHA
   png_color_16 background;
-#endif
   FILE *fp;
 
   int width = Width;
@@ -420,28 +419,30 @@ void write_png(char *filename)
   
   png_init_io(png_ptr, fp);
 
-#ifdef USE_PNG_ALPHA
-  // Set the default background for transparent image to white.
-  // I should just store the current background color in a global and use it.
-  // I should also make this a menu option/command line opt.
-  // Perhaps ctl-p for the hot key.  
- // Perhaps I need to create 4 image types.  bmp24, bmp8, png, png-alpha
-  // and menu/hotkey/cmdline support for cropping modifier.
-  background.red = 0xffff;
-  background.green = 0xffff;
-  background.blue = 0xffff;
+  if ( use_png_alpha )
+  {
+    // Set the default background for transparent image to white.
+    // I should just store the current background color in a global and use it.
+    // I should also make this a menu option/command line opt.
+    // Perhaps ctl-p for the hot key.  
+    // Perhaps I need to create 4 image types.  bmp24, bmp8, png, png-alpha
+    // and menu/hotkey/cmdline support for cropping modifier.
+    background.red = 0xffff;
+    background.green = 0xffff;
+    background.blue = 0xffff;
 
-  png_set_IHDR(png_ptr, info_ptr, width, height, 8, 
-	       PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE,
-	       PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+    png_set_IHDR(png_ptr, info_ptr, width, height, 8, 
+		 PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE,
+		 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
-  png_set_bKGD(png_ptr, info_ptr, &background);
-
-#else
-  png_set_IHDR(png_ptr, info_ptr, width, height, 8, 
-	       PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
-	       PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-#endif
+    png_set_bKGD(png_ptr, info_ptr, &background);
+  }
+  else
+  {
+    png_set_IHDR(png_ptr, info_ptr, width, height, 8, 
+		 PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
+		 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+  }
 
   // png_set_bgr(png_ptr);
   // png_set_pHYs(png_ptr, info_ptr, resolution_x, resolution_y, 1);
@@ -453,11 +454,11 @@ void write_png(char *filename)
   //png_write_image(png_ptr, row_pointers);
   for (i = height-1; i >= 0; i--)
   {
-#ifdef USE_PNG_ALPHA
-    glReadPixels(xoff, i+yoff, width, 1, GL_RGBA, GL_UNSIGNED_BYTE, buf);
-#else
-    glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, buf);
-#endif
+    if (use_png_alpha)
+      glReadPixels(xoff, i+yoff, width, 1, GL_RGBA, GL_UNSIGNED_BYTE, buf);
+    else
+      glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, buf);
+
     png_write_row(png_ptr, buf);
   }
 
@@ -760,12 +761,39 @@ int platform_step_comment(char *comment_string)
 }
 
 /***************************************************************/
-void platform_step(int step, int level, int pause, ZIMAGE *zp)
+void platform_step_filename(int step, char *filename)
 {
-  char filename[256];
   char filepath[256];
   char filenum[32];
   char *dotptr;
+
+  concat_path(pathname, use_uppercase ? "BITMAP" : "bitmap", filepath);
+  if (ldraw_commandline_opts.rotate == 1) 
+  {
+    sprintf(filenum,"rot_%0dd",(int)twirl_angle);
+    concat_path(filepath, filenum, filename);
+#ifdef WINDOWS
+    mkdir(filename);
+#else
+    mkdir(filename,0755);
+#endif
+    strcpy(filepath, filename);
+  }
+  concat_path(filepath, datfilename, filename);
+  if ((dotptr = strrchr(filename, '.')) != NULL)
+    *dotptr = 0;
+  if (step != INT_MAX)
+  {
+    sprintf(filenum,"%0d",step+1);
+    strcat(filename,filenum);
+  }
+  strcat(filename, use_uppercase ? ".BMP" : ".bmp");
+}
+
+/***************************************************************/
+void platform_step(int step, int level, int pause, ZIMAGE *zp)
+{
+  char filename[256];
 
   if (ldraw_commandline_opts.debug_level == 1)
     printf("platform_step(%d, %d, %d)\n", step, level, pause);
@@ -792,27 +820,7 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
     } 
     else {
       // save bitmap
-      concat_path(pathname, use_uppercase ? "BITMAP" : "bitmap", filepath);
-      if (ldraw_commandline_opts.rotate == 1) 
-      {
-	sprintf(filenum,"rot_%0dd",(int)twirl_angle);
-	concat_path(filepath, filenum, filename);
-#ifdef WINDOWS
-	mkdir(filename);
-#else
-	mkdir(filename,0755);
-#endif
-	strcpy(filepath, filename);
-      }
-      concat_path(filepath, datfilename, filename);
-      if ((dotptr = strrchr(filename, '.')) != NULL)
-	*dotptr = 0;
-      if (step != INT_MAX)
-      {
-	sprintf(filenum,"%0d",step+1);
-	strcat(filename,filenum);
-      }
-      strcat(filename, use_uppercase ? ".BMP" : ".bmp");
+      platform_step_filename(step, filename);
 
 //*************************************************************************
 //NOTE: Write a fn to calc zp->extents_* by checking zbuf a line at a time.
@@ -829,9 +837,15 @@ void platform_step(int step, int level, int pause, ZIMAGE *zp)
 
 #ifdef USE_PNG
       if (ldraw_image_type == IMAGE_TYPE_PNG_RGB)
+      {
+	use_png_alpha = 0;
 	write_png(filename);
+      }
       else if (ldraw_image_type == IMAGE_TYPE_PNG_RGBA)
+      {
+	use_png_alpha = 1;
 	write_png(filename);
+      }
       else
 #endif
 #ifdef USE_BMP8
@@ -1635,6 +1649,24 @@ render(void)
 
 #ifdef TILE_RENDER_OPTION
 /***************************************************************/
+void DrawScene(void)
+{
+#if 0
+  glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
+#endif
+
+  dirtyWindow = 1; //ALWAYS_REDRAW
+
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  render();
+
+  glFlush();
+
+  dirtyWindow = 0;  // The window is nice and squeaky clean now.
+}
+
+/***************************************************************/
 void TiledDisplay(void)
 {
    TRcontext *tr;
@@ -1643,8 +1675,33 @@ void TiledDisplay(void)
    FILE *f;
    int more;
    int i;
+   char *p;
+   char filename[256];
 
-   char filename[32] = "tileimg.ppm";
+   GLdouble left, right, top, bottom, aspect;
+   GLdouble width, height;
+
+   width = TILE_IMAGE_WIDTH;
+   height = TILE_IMAGE_HEIGHT;
+
+   aspect = ((GLdouble)width/(GLdouble)height);
+   left = (GLdouble)-width / 2.0;
+   right = left + (GLdouble)width;
+   bottom = (GLdouble)-height / 2.0;
+   top = bottom + (GLdouble)height;
+    
+   TILE_WIDTH = Width;
+   TILE_HEIGHT = Height;
+
+   // Set Width, Height to total bitmap size for calculations in render().
+   Width = TILE_IMAGE_WIDTH;
+   Height = TILE_IMAGE_HEIGHT;
+
+   // We must use borders on the tiles if using wide lines.
+   if (lineWidth > 1.0)
+     TILE_BORDER = (int) floor(lineWidth + 0.5);
+   else 
+     TILE_BORDER = 0;
 
    printf("Generating %d by %d image file...\n", TILE_IMAGE_WIDTH, TILE_IMAGE_HEIGHT);
 
@@ -1667,30 +1724,103 @@ void TiledDisplay(void)
    tr = trNew();
    trTileSize(tr, TILE_WIDTH, TILE_HEIGHT, TILE_BORDER);
    trTileBuffer(tr, GL_RGB, GL_UNSIGNED_BYTE, tile);
-   trImageSize(tr, IMAGE_WIDTH, IMAGE_HEIGHT);
+   trImageSize(tr, TILE_IMAGE_WIDTH, TILE_IMAGE_HEIGHT);
    trRowOrder(tr, TR_TOP_TO_BOTTOM);
 
-   if (Perspective)
-      trFrustum(tr, -1.0, 1.0, -1.0, 1.0, 5.0, 25.0);
+   if (ldraw_projection_type)
+   {
+     // fov, aspect, near, far
+     // try to get better resolution in depth buffer.  Move near, far.
+#if WIDE_ANGLE_VIEW
+     trPerspective(tr, 45.0, aspect, 1.0, 2000.0);
+#else
+     trPerspective(tr, 20.0, aspect, 100.0, 4000.0);
+#endif
+     //glDepthRange(0.0, 1.0); // I do NOT understand this fn.
+   }
    else
-      trOrtho(tr, -3.0, 3.0, -3.0, 3.0, -3.0, 3.0);
+   {
+     // left, right, bottom, top, near, far
+#if WIDE_ANGLE_VIEW
+     trOrtho(tr, left, right, bottom, top, 1.0, 2000.0);
+#else
+     trOrtho(tr, left, right, bottom, top, 100.0, 4000.0);
+#endif
+   }
 
-   /* Prepare ppm output file */
-   f = fopen(FILENAME, "w");
+   /*************************************************************/
+   // NOTE: For now switch to continuous ('C') mode .
+   // Pause ('P') mode would only draw the first step and then exit.
+   // Save ('S') mode would save EVERY TILE for every step in platform_step().
+   // This is bad since we need to finish ALL tiles and THEN save the step.
+   // We *should* put it in 'P' mode to loop through all steps (and twirls).
+   // Then figure out how to save different formats at the end of this fn.
+   // We just need to automate the next step at the end TiledDisplay().
+   // I don't think stepping and/or twirling in myGlutIdle() is good for tiles.
+#define TILE_STEPPING 1
+#ifdef TILE_STEPPING
+   ldraw_commandline_opts.M = 'P'; 
+#else
+   ldraw_commandline_opts.M = 'C'; 
+#endif
+
+   // NOTE: For now disable cropping.
+   // I suspect the image extents would be mangled in tiled mode.
+   // We would need to fixup the extents after each tile,
+   // and clear them before each step.
+   // Plus, cropping is *most* useful for *small* pics like parts.
+   cropping = 0;
+   /*************************************************************/
+
+
+   /****************** Prepare ppm output file ******************/
+   platform_step_filename(curstep, filename);
+
+#ifdef USE_PNG
+      if (ldraw_image_type == IMAGE_TYPE_PNG_RGB)
+      {
+	use_png_alpha = 0;
+	//write_png(filename);
+      }
+      else if (ldraw_image_type == IMAGE_TYPE_PNG_RGBA)
+      {
+	// use_png_alpha = 1; 
+	use_png_alpha = 0; // Tiled renderer does not support alpha channel.
+	//write_png(filename);
+      }
+      else
+#endif
+#ifdef USE_BMP8
+      if (ldraw_image_type == IMAGE_TYPE_BMP8)
+      {
+	//write_bmp8(filename);
+      }
+      else
+#endif
+      {
+	//write_bmp(filename);
+      }
+
+   if ((p = strrchr(filename, '.')) != NULL)
+     *p = 0;
+   strcat(filename, use_uppercase ? ".PPM" : ".ppm");
+   
+   f = fopen(filename, "wb");  // open in binary mode (to use unix \n chars)
    if (!f) {
-      printf("Couldn't open image file: %s\n", FILENAME);
+      printf("Couldn't open image file: %s\n", filename);
       return;
    }
    fprintf(f,"P6\n");
    fprintf(f,"# ppm-file created by %s\n", "trdemo2");
-   fprintf(f,"%i %i\n", IMAGE_WIDTH, IMAGE_HEIGHT);
-   fprintf(f,"255\n");
+   fprintf(f,"%i %i\n", TILE_IMAGE_WIDTH, TILE_IMAGE_HEIGHT);
+   fprintf(f,"255\n"); // need unix \n here for some ppm interpreters.
    fclose(f);
-   f = fopen(FILENAME, "ab");  /* now append binary data */
+   f = fopen(filename, "ab");  /* now append binary data */
    if (!f) {
-      printf("Couldn't append to image file: %s\n", FILENAME);
+      printf("Couldn't append to image file: %s\n", filename);
       return;
    }
+   /*************************************************************/
 
    /* just to be safe... */
    glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -1707,7 +1837,7 @@ void TiledDisplay(void)
       /* save tile into tile row buffer*/
       {
 	 int curTileWidth = trGet(tr, TR_CURRENT_TILE_WIDTH);
-	 int bytesPerImageRow = IMAGE_WIDTH*3*sizeof(GLubyte);
+	 int bytesPerImageRow = TILE_IMAGE_WIDTH*3*sizeof(GLubyte);
 	 int bytesPerTileRow = (TILE_WIDTH-2*TILE_BORDER) * 3*sizeof(GLubyte);
 	 int xOffset = curColumn * bytesPerTileRow;
 	 int bytesPerCurrentTileRow = (curTileWidth-2*TILE_BORDER)*3*sizeof(GLubyte);
@@ -1720,38 +1850,71 @@ void TiledDisplay(void)
       }
       
       if (curColumn == trGet(tr, TR_COLUMNS)-1) {
-	 /* write this buffered row of tiles to the file */
-	 int curTileHeight = trGet(tr, TR_CURRENT_TILE_HEIGHT);
-	 int bytesPerImageRow = IMAGE_WIDTH*3*sizeof(GLubyte);
-	 int i;
-	 GLubyte *rowPtr;
-	 for (i=0;i<curTileHeight;i++) {
-	    /* Remember, OpenGL images are bottom to top.  Have to reverse. */
-	    rowPtr = buffer + (curTileHeight-1-i) * bytesPerImageRow;
-	    fwrite(rowPtr, 1, IMAGE_WIDTH*3, f);
-	 }
+	/* write this buffered row of tiles to the file */
+	int curTileHeight = trGet(tr, TR_CURRENT_TILE_HEIGHT);
+	int bytesPerImageRow = TILE_IMAGE_WIDTH*3*sizeof(GLubyte);
+	int i;
+	GLubyte *rowPtr;
+
+	// NOTE: This works, but appears to be off by a single pixel on 
+	// the horizontal seams.  (even when TILE_BORDER is 0)
+	// It looks like we're getting 1 extra row of pixels.
+	for (i=TILE_BORDER*2;i<curTileHeight;i++) {
+	  /* Remember, OpenGL images are bottom to top.  Have to reverse. */
+	  rowPtr = buffer + (curTileHeight-1-i) * bytesPerImageRow;
+
+	  /************* Save a row to the ppm output file *************/
+	  // NOTE: We will have to disable ALPHA (just use RGB) for png files.
+	  fwrite(rowPtr, 1, TILE_IMAGE_WIDTH*3, f);
+	  /*************************************************************/
+	}
       }
 
    }
    trDelete(tr);
 
+   /************* Finish and close ppm output file **************/
    fclose(f);
-   printf("%s complete.\n", FILENAME);
+   printf("%s complete.\n", filename);
+   /*************************************************************/
 
    free(tile);
    free(buffer);
 
-   exit(0);
+   // Restore Width, Height to window (tile) size just in case.
+   Width = TILE_WIDTH;
+   Height = TILE_HEIGHT;
+
+#ifndef TILE_STEPPING
+   exit(0); //NOTE: Gotta handle multiple steps.  Exit only after last step.
+#endif
+
+   fprintf(stdout, "Step %d of %d.  ",curstep+1, stepcount+1);
+   if (stepcount == curstep)
+   {
+     // NOTE: What about twirl?
+     exit(0);
+   }
+   else
+   {
+     curstep++; // Move on to next step
+     glutPostRedisplay();
+   }
 }
 #endif
 
 /***************************************************************/
 void display(void)
 {
-  int rc;
-  int client_rect_right;
-  int client_rect_bottom;
   int res;
+
+#ifdef TILE_RENDER_OPTION
+  if (tiledRendering == 1)
+  {
+    TiledDisplay();
+    return;
+  }
+#endif
 
   if (panning)
     glDrawBuffer(GL_BACK);  // Enable double buffer for spin mode.
@@ -3526,6 +3689,11 @@ main(int argc, char **argv)
 
   //glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL);
 #ifdef USE_DOUBLE_BUFFER
+#ifdef TILE_RENDER_OPTION
+  if (tiledRendering)
+    glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH);
+  else
+#endif
   glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
 #else
   glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH);
@@ -3566,7 +3734,10 @@ main(int argc, char **argv)
 #ifdef USE_DOUBLE_BUFFER
   // NOTE: Mesa segfaults if I do this BEFORE CreateWindow/EnterGameMode
   //glDrawBuffer(GL_FRONT_AND_BACK); // Hmm, why did I want FRONT_AND_BACK? 
-  glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
+#ifdef TILE_RENDER_OPTION
+  if (tiledRendering == 0)
+#endif
+    glDrawBuffer(GL_FRONT);  // Effectively disable double buffer.
 #endif
 
   glutDisplayFunc(display);
