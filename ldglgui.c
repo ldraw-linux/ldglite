@@ -91,6 +91,8 @@ int oh = 0;
 #define BACK_UILIST	6
 #define HELP_UILIST	7
 
+int fileOpenSave = 0;
+
 /***************************************************************/
 void muiHide(muiObject *obj, int state)
 {
@@ -232,11 +234,55 @@ void bcallback(muiObject *obj, enum muiReturnValue r)
   printf("Button callback %d, %d\n", i, r);
 }
 
+#if 0
+/***************************************************************/
+void muiPrintObject(muiCons *mcons)
+{
+  muiObject *obj = mcons->object;
+
+  switch (mcons->object->type) {
+  case MUI_BUTTON:
+    printf("MUI_BUTTON(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+    break;
+  case MUI_TEXTBOX:
+    printf("MUI_TEXTBOX(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+    break;
+  case MUI_VSLIDER:
+    printf("MUI_VSLIDER(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+    break;
+  case MUI_HSLIDER:
+    printf("MUI_HSLIDER(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+    break;
+  case MUI_TEXTLIST:
+    printf("MUI_TEXTLIST(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+    break;
+  case MUI_RADIOBUTTON:
+    printf("MUI_RADIOBUTTON(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+    break;
+  case MUI_TINYRADIOBUTTON:
+    printf("MUI_TINYRADIOBUTTON(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+    break;
+  case MUI_PULLDOWN:
+    printf("MUI_PULLDOWN(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+    break;
+  case MUI_LABEL:
+    printf("MUI_LABEL(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+    break;
+  case MUI_BOLDLABEL:
+    printf("MUI_BOLDLABEL(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+    break;
+  default:
+    printf("MUI_UNKNOWN(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
+    break;
+  }
+}
+#endif
+
+/***************************************************************/
 static void nonmuicallback(int x, int y)
 {
   int i;
   muiCons *mcons;
-  muiObject *obj = NULL;
 
   extern int muiInObject(muiObject *obj, int x, int y);
 
@@ -246,45 +292,12 @@ static void nonmuicallback(int x, int y)
   //ActiveCons = muiGetListCons(ActiveUIList);
   //obj = muiFastHitInList(ActiveCons, x, y);
   i = muiGetActiveUIList();
-  mcons = muiGetListCons(i);
-    while (mcons) {
-      obj =  mcons->object;
-      switch (mcons->object->type) {
-      case MUI_BUTTON:
-	printf("MUI_BUTTON(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
-	break;
-      case MUI_TEXTBOX:
-	printf("MUI_TEXTBOX(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
-	break;
-      case MUI_VSLIDER:
-	printf("MUI_VSLIDER(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
-	break;
-      case MUI_HSLIDER:
-	printf("MUI_HSLIDER(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
-	break;
-      case MUI_TEXTLIST:
-	printf("MUI_TEXTLIST(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
-	break;
-      case MUI_RADIOBUTTON:
-	printf("MUI_RADIOBUTTON(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
-	break;
-      case MUI_TINYRADIOBUTTON:
-	printf("MUI_TINYRADIOBUTTON(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
-	break;
-      case MUI_PULLDOWN:
-	printf("MUI_PULLDOWN(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
-	break;
-      case MUI_LABEL:
-	printf("MUI_LABEL(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
-	break;
-      case MUI_BOLDLABEL:
-	printf("MUI_BOLDLABEL(%p): %d,%d  %d,%d\n", obj, obj->xmin, obj->ymin, obj->xmax, obj->ymax);
-	break;
-      }
-      if (muiInObject(mcons->object, x, y))
-	break;
-      mcons = mcons->next;
-    }
+  for (mcons = muiGetListCons(i); mcons; mcons = mcons->next)
+  {
+    muiPrintObject(mcons);
+    if (muiInObject(mcons->object, x, y))
+      break;
+  }
 
   if (mcons)
     printf("Should have found  %p\n",obj);
@@ -651,6 +664,9 @@ int pwd(void)
 #ifndef UNIX
   getcwd(directory, MAXNAMLEN);
 #else
+#ifdef AGL
+  getcwd(directory, MAXNAMLEN);
+#else
   for(off = 0;;) {
     if(stat(dot, &d) < 0) {
       fprintf(stderr, "pwd: cannot stat .!\n");
@@ -699,6 +715,7 @@ int pwd(void)
       return(0);
     }
   }
+#endif
 #endif
       return(0);
 }
@@ -813,16 +830,23 @@ int cd(char *s)
 /***************************************************************/
 void writeoutputfile(char *dir, char *file)
 {
-    printf("D:%s\n", dir);
-    if (file)
-	printf("F:%s\n", file);
+  extern void loadnewdatfile(char *datpath, char *datfile);
+  extern void saveasdatfile(char *datpath, char *datfile);
 
-    if (dir && file)
-    {
-      //Got a dir and file.  Do something with it.
-    }
-
-    mui_cleanup();
+  printf("D:%s\n", dir);
+  if (file)
+    printf("F:%s\n", file);
+  
+  if (dir && file)
+  {
+    //Got a dir and file.  Do something with it.
+    if (fileOpenSave)
+      saveasdatfile(dir, file);
+    else
+      loadnewdatfile(dir, file);
+  }
+  
+  mui_cleanup();
 }
 
 /***************************************************************/
@@ -997,12 +1021,16 @@ void makefileui(char *s)
   {
     muiSetActiveUIList(FILE_UILIST);
     muiHideAll(muiGetUIList(l1), 1);
+    muiClearTBString(t1);
   }
   MUIstarted = 1;
 
   muiAttachUIList(FILE_UILIST);
 
   muiChangeLabel(l1, s);
+  fileOpenSave = strcmp(s, "Open:");
+
+  muiClearTBString(t1);  // Clear out the text box
 
   strcpy(directory, ".");
   cd(directory);
@@ -1110,6 +1138,7 @@ void unMUI_viewport()
 
   glEnable(GL_SCISSOR_TEST);
   glScissor(ow, oh, dw, dh); // x,y,width,height
+  printf("glScissor(%d, %d, %d, %d)\n",ow, oh, dw, dh); // x,y,width,height
 }
 
 /***************************************************************/
