@@ -337,7 +337,7 @@ float fZRot = 0.0;
 void reshape(int width, int height);
 void rendersetup(void);
 
-#define USE_GLFONT 1
+//#define USE_GLFONT 1
 #ifdef USE_GLFONT
 /***************************************************************/
 /*
@@ -4614,6 +4614,18 @@ void fnkeys(int key, int x, int y)
   case GLUT_KEY_F2:
     rotate_about(0.0, 1.0, 0.0, 5.0 );
     break;
+  case GLUT_KEY_F3:
+    rotate_about(1.0, 0.0, 0.0, -5.0 );
+    break;
+  case GLUT_KEY_F4:
+    rotate_about(0.0, 1.0, 0.0, -5.0 );
+    break;
+  case GLUT_KEY_F5:
+    rotate_about(1.0, 0.0, 0.0, 1.0 );
+    break;
+  case GLUT_KEY_F6:
+    rotate_about(1.0, 0.0, 0.0, -1.0 );
+    break;
 #ifdef TEST_MUI_GUI
   case GLUT_KEY_F3:
     mui_test();
@@ -5114,12 +5126,13 @@ void rotate_about(float x, float y, float z, float degrees)
   newm.h = oldm->g * m->b + oldm->h * m->e + oldm->i * m->h;
   newm.i = oldm->g * m->c + oldm->h * m->f + oldm->i * m->i;
 
-#if 0
-  fprintf(stdout,"Transform old:\n");
-  print_transform(&t, &(ldraw_commandline_opts.A));
-  fprintf(stdout,"Transform current:\n");
-  print_transform(&t, &newm);
-#endif
+  if (ldraw_commandline_opts.debug_level == 1)
+  {
+    fprintf(stdout,"Transform old:\n");
+    print_transform(&t, &(ldraw_commandline_opts.A));
+    fprintf(stdout,"Transform current:\n");
+    print_transform(&t, &newm);
+  }
 
   ldraw_commandline_opts.A = newm;
 }
