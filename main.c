@@ -41,6 +41,8 @@
 #    endif
 #  endif
 
+char ldgliteVersion[] = "Version 0.9.9      ";
+
 // Use Glut popup menus if MUI is not available.
 #ifndef TEST_MUI_GUI
 #  define USE_GLUT_MENUS 1
