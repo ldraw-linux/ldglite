@@ -3587,10 +3587,7 @@ int XORcurPiece()
   {
     // Gotta fix Mesa to render to back buffer.  
     // Its 2x faster for normal drawing.  10x faster for XOR and BLEND.
-    if (!panning) // Panning already draws in the BACK buffer.
-      CopyColorBuffer(screenbuffer, staticbuffer);
-    // NOTE: we must CopyBuffer way up here *before* we mess with rendersetup.
-    // NOTE: Copybuffer at 1280x1024 on WinGeneric takes .5 to .8 seconds (slow)
+    // NOTE: Copybuffer at 1280x1024 on WinGeneric takes .5 to .8 secs (slow)
     // NOTE: CopyBuffer seems to lose the block under the cursor in the
     //       Windows Generic driver (at least when alpha blended cursor is on).
     glDrawBuffer(staticbuffer); 
@@ -8369,9 +8366,10 @@ int getDisplayProperties()
   buffer_swap_mode = SWAP_TYPE_NODAMAGE;
   if (NVIDIA_XOR_HACK)
   {
-    NVIDIA_XOR_HACK = 0;
     if (SOLID_EDIT_MODE == NVIDIA_XOR_HACK)
       SOLID_EDIT_MODE = 0;
+    printf("Editing mode =  %d{%d}\n", editing, SOLID_EDIT_MODE);
+    NVIDIA_XOR_HACK = 0;
   }
 #endif
 
