@@ -366,6 +366,19 @@ char *L3fgets(char *Str, int n, FILE *fp)
 /* Modifies the string: lower case and OS-correct slashes */
 #ifndef USE_OPENGL
 static 
+#else
+void StripQuotes(char *s, char *SubPartDatName)
+{
+  if (SubPartDatName[0] == '\"')
+  {
+    if (s = strchr(s, '\"'))
+    {
+      strcpy(SubPartDatName, s+1); /* Strip leading quotes */
+      if (s = strchr(SubPartDatName, '\"'))
+	*s = 0; /* Strip trailing quotes */
+    }
+  }
+}
 #endif
 void          FixDatName(register char *DatName)
 {
@@ -1470,6 +1483,10 @@ static int           ReadDatFile(FILE *fp, struct L3PartS * PartPtr,
                         PartPtr = ((struct L3PartInternalS *) PartPtr)->Father;
                      }
                      PartPtr->FileRead = 1;
+#ifdef USE_OPENGL
+		     /* Allow quotes around filename... */
+		     StripQuotes(s, SubPartDatName);
+#endif
                      FixDatName(SubPartDatName);
                      NewPartPtr = FindPart(0, SubPartDatName);
                      if (!NewPartPtr)
@@ -1583,6 +1600,10 @@ static int           ReadDatFile(FILE *fp, struct L3PartS * PartPtr,
          /* Special care for linetype 1 */
          if (Data.LineType == 1)
          {
+#ifdef USE_OPENGL
+            /* Allow quotes around filename... */
+	    StripQuotes(IInfo.InputStr, SubPartDatName);
+#endif
             /* Watch out for uppercase and (back)slashes in filename... */
             FixDatName(SubPartDatName);
             for (i = 0; i < 3; i++)
