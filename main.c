@@ -329,6 +329,20 @@ float fZRot = 0.0;
 void reshape(int width, int height);
 void rendersetup(void);
 
+/***************************************************************/
+void printModelMat(char *name)
+{
+  GLdouble model[4*4];
+
+  glGetDoublev(GL_MODELVIEW_MATRIX, model);
+  printf("%s(%g,%g,%g,%g, %g,%g,%g,%g %g,%g,%g,%g, %g,%g,%g,%g)\n", name,
+	 model[0], model[1] , model[2], model[3],
+	 model[4], model[5] , model[6], model[7],
+	 model[8], model[9] , model[10], model[11],
+	 model[12], model[13] , model[14], model[15]);
+}
+/***************************************************************/
+
 //#define USE_GLFONT 1
 #ifdef USE_GLFONT
 /***************************************************************/
@@ -1574,6 +1588,8 @@ render(void)
     printf("Out of Memory, exiting");
     exit(-1);
   }
+
+  //printModelMat("ModelR");
 
 #ifdef USE_L3_PARSER
   if (parsername == L3_PARSER)
@@ -4814,9 +4830,17 @@ mouse(int button, int state, int x, int y)
     return;
   }
 
+  // Load an identity matrix before dealing with the mouse.
+  // Otherwise we get some odd jumpy mouse effects.
+  // It gets reset before rendering by rendersetup() in render().
+  glMatrixMode( GL_MODELVIEW );
+  glLoadIdentity();
+
   // Only count mouse button down GLUT_UP
   if (state == GLUT_DOWN)
   {
+    //printModelMat("ModelD");
+
     glGetDoublev(GL_MODELVIEW_MATRIX, model);
     glGetDoublev(GL_PROJECTION_MATRIX, proj);
     glGetIntegerv(GL_VIEWPORT, view);
@@ -4922,22 +4946,16 @@ motion(int x, int y)
   GLdouble p_x, p_y;
   //int glutModifiers;  // Glut doesn't like this here!
 
-  if (1)
-  {
-    //NOTE: something about ledit mode screws up the projection?
-    // matrix (or perhaps the modeling matrix) so that gluUnProject()
-    // returns 80 instead of 0 for pan_y at x=0.
-    // This is always > 10 so it always warps the pointer below,
-    // which makes it impossible to spin.  reshape() fixes it, but
-    // the real cause should be tracked down and fixed.
-    int savedirty;
-    // Reset the projection matrix.
-    savedirty = dirtyWindow; 
-    reshape(Width, Height);
-    dirtyWindow = savedirty; 
-  }
+  // Introduce a delay to avoid too many printfs during debugging.
+  //sleep(100); 
 
   if (mouse_state == GLUT_DOWN && mouse_button == GLUT_LEFT_BUTTON) {
+    // Load an identity matrix before dealing with the mouse.
+    // Otherwise we get some odd jumpy mouse effects.
+    // It gets reset before rendering by rendersetup() in render().
+    glMatrixMode( GL_MODELVIEW );
+    glLoadIdentity();
+
     glGetDoublev(GL_MODELVIEW_MATRIX, model);
     glGetDoublev(GL_PROJECTION_MATRIX, proj);
     glGetIntegerv(GL_VIEWPORT, view);
@@ -4945,6 +4963,21 @@ motion(int x, int y)
 		 model, proj, view,
 		 &pan_x, &pan_y, &pan_z);
     pan_y = -pan_y;
+
+#if 0
+    printf("view(%d, %d, %d, %d)\n", view[0], view[1] , view[2], view[3]);
+    printf("model(%g,%g,%g,%g, %g,%g,%g,%g %g,%g,%g,%g, %g,%g,%g,%g)\n", 
+	   model[0], model[1] , model[2], model[3],
+	   model[4], model[5] , model[6], model[7],
+	   model[8], model[9] , model[10], model[11],
+	   model[12], model[13] , model[14], model[15]);
+    printf("proj(%g,%g,%g,%g, %g,%g,%g,%g, "
+	   "%g,%g,%g,%g, %g,%g,%g,%g)\n", 
+	   proj[0], proj[1] , proj[2], proj[3],
+	   proj[4], proj[5] , proj[6], proj[7],
+	   proj[8], proj[9] , proj[10], proj[11],
+	   proj[12], proj[13] , proj[14], proj[15]);
+#endif
 
     if (ldraw_commandline_opts.debug_level == 1)
       printf("pan(%d, %d), -> (%0.2f, %0.2f, %0.2f)\n", x, y, pan_x, pan_y, pan_z);
@@ -5069,6 +5102,8 @@ motion(int x, int y)
 	pan_start_y = 0;
       }
 #endif
+
+      //printModelMat("ModelM");
 
       glutPostRedisplay();
     }
