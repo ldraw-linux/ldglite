@@ -21,9 +21,6 @@
 
 #include "stdio.h"
 
-#define LDRAW_COMPATIBLE_CENTER  // define to have origin two-thirds of the way down
-								 // the screen, rather than at the center.
-
 typedef struct vector3d_struct {
 	float x;
 	float y;
@@ -52,6 +49,20 @@ extern int zDetailLevel;
 extern int zWire;
 extern char *mpd_subfile_name;
 
+// Drawing modes
+#define TYPE_F_NORMAL 		0x0000
+#define TYPE_F_LOW_RES 		0x0001
+#define TYPE_F_NO_POLYGONS 	0x0002
+#define TYPE_F_NO_LINES 	0x0004
+#define TYPE_F_BBOX_MODE 	0x0008
+#define TYPE_F_INVISIBLE 	(TYPE_F_NO_POLYGONS | TYPE_F_NO_LINES)
+#define TYPE_F_STUDLESS_MODE 	0x0010
+#define TYPE_F_STUDONLY_MODE 	0x0020
+#define TYPE_F_STUDLINE_MODE 	0x0040
+#define TYPE_F_SHADED_MODE 	0x0080
+#define TYPE_F_XOR_MODE 	0x0100
+#define TYPE_F_XOR_PRIMITIVE 	0x0200
+
 char * strsave(char *);
 
 #define MAX_INCLUDE_DEPTH 64
@@ -73,13 +84,17 @@ extern int current_color[MAX_INCLUDE_DEPTH];
 #define TYPE_OTHER 8
 extern int current_type[MAX_INCLUDE_DEPTH];
 
-vector3d* zpoint_lookup(char *name);
-matrix3d* zmatrix_lookup(char *name);
-
 void render_line(vector3d *p1, vector3d *p2, int c);
 void render_triangle(vector3d *p1, vector3d *p2, vector3d *p3, int c);
 void render_quad(vector3d *p1, vector3d *p2, vector3d *p3, vector3d *p4, int c);
 void render_five(vector3d *p1, vector3d *p2, vector3d *p3, vector3d *p4, int c);
+
+/* defined in y.tab.c */
+void transform_vec_inplace(vector3d *v);
+void transform_mat_inplace(matrix3d *m);
+void pop_transform();
+#include <malloc.h>
+
 
 int zGetRowsize();
 int zGetColsize();
@@ -148,7 +163,8 @@ typedef struct zcolor_table_entry_struct {
 typedef struct {
 	matrix3d A;  // transform matrix
 	int B;       // background color
-	int F;		// fast drawing (ignored)
+	int F;		// global drawing mode
+	int F_now;	// current drawing mode
 	char M;     // drawing mode {P|C|S}
 	vector3d O; // set x and y position (z unused)
 	float S;    // scale factor
@@ -158,10 +174,17 @@ typedef struct {
     // non-LDRAW values
 	int poll; // watch file for changes.
 	int output; // emit LDRAW, POV or Rayshade code
+	int output_depth; // max number of type 1 lines to recurse into
 	int rotate; // spin the model after rendering
 	int debug_level; // 0==no messages, 1 == all
 	char log_output; // 0==no logging, 1==log output to file.
+	int W; //line width
 	int Z; // Z distance of viewpoint, in scaled units
+	int clip; // set to 1 to clip off unused pixels in SAVED images, ala LDRAW
+	int image_filetype; // -i4 creates BMP24 images.  -i-4 creates clipped BMP24 images (default)
+	int center_at_origin; // set to 0 for LDRAW-compatible centering (default), 1 for 0,0
+    int emitter; //non-zero for advanced shading.
+	int maxlevel; // ignore steps beyond this depth of include files when -MS
 } LDRAW_COMMANDLINE_OPTS;
 
 extern LDRAW_COMMANDLINE_OPTS ldraw_commandline_opts;
@@ -179,18 +202,27 @@ extern QBUF_ID *word_pool;
 #define INT_MAX 0x7fffffff
 #define INT_MIN 0x80000000
 #endif
-#ifndef max
+#ifdef NEED_MIN_MAX
 #define max(a,b) ((a > b) ? (a) : (b))
-#endif
-#ifndef min
 #define min(a,b) ((a > b) ? (b) : (a))
 #endif
-
 extern char pathname[256]; // base directory for ldraw files
 extern FILE *output_file;
 extern char output_file_name[256];
 vector3d * copyvec(vector3d *vec);
 matrix3d * copymat(matrix3d *mat);
+matrix3d* zmatrix_lookup(char *name);
+int zmatrix_alias(char *name, matrix3d *matrix);
+int zpoint_alias(char *name, vector3d *point);
+int zcolor_modify(int index, char *name, int inverse_index,
+				  int p_r, int p_g, int p_b, int p_a,
+				  int d_r, int d_g, int d_b, int d_a);
+int zcolor_alias(int index, char *name);
+int stop_include_file(void);
+vector3d* zpoint_lookup(char *name);
+int start_include_file(char *root_name);
+int defer_stop_include_file(void);
+
 
 void platform_comment(char *comment_string, int level);
 int cache_mpd_subfiles(char *mpd_subfile_name);

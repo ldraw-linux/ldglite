@@ -177,17 +177,6 @@ double twirl_increment = 10.0;
 
 static int list_made = 0;
 
-// Drawing modes
-#define NORMAL_MODE 	0x0000
-#define STUDLESS_MODE 	0x0001
-#define WIREFRAME_MODE 	0x0002
-#define SHADED_MODE 	0x0004
-#define BBOX_MODE 	0x0008
-#define INVISIBLE_MODE 	0x0010
-#define STUDONLY_MODE 	0x0020
-#define STUDLINE_MODE 	0x0040
-#define XOR_MODE 	0x0080
-
 #define USE_DOUBLE_BUFFER
 #define USE_OPENGL_STENCIL
 
@@ -273,9 +262,8 @@ GLdouble pan_start_x = 0.0;
 GLdouble pan_start_y = 0.0;
 GLdouble pan_end_x = 0.0;
 GLdouble pan_end_y = 0.0;
-int pan_start_zWire;
 int pan_start_F;
-int pan_visible = BBOX_MODE | WIREFRAME_MODE; // Bounding Box spin mode.
+int pan_visible = TYPE_F_BBOX_MODE | TYPE_F_NO_POLYGONS; // BBoxWire spin mode.
 int glutModifiers;
 int z_extent_x1;
 int z_extent_x2;
@@ -303,7 +291,6 @@ char filepattern[256] = "*.dat";
 int drawAxis = 0;
 int qualityLines = 0;
 float lineWidth = 0.0;
-int zSolid = 0;
 
 #ifdef TILE_RENDER_OPTION
 #include "tr.h"
@@ -1019,16 +1006,13 @@ GLfloat mid_shininess[] = { 15.0 }; // Seems nice for plastic chrome and gold.
 GLfloat hi_shininess[] = { 50.0 }; // { 100.0 };
 
 /***************************************************************/
-void
-linequalitysetup(int Solid)
+void linequalitysetup()
 {
+  int zSolid = ldraw_commandline_opts.F & TYPE_F_NO_LINES;
+
   //NOTE: This only works well if I draw all the polys first, 
   // then antialias the lines on top of them in a 2nd pass.
-
-  // Also note: I need to separate zSolid (used by stub.c) from 
-  // the commandline options -fr or -fe for edgeless rendering.
-  // Does the new ldlite use opts.f for this?  Maybe I should too.
-  if (qualityLines && !(Solid))
+  if (qualityLines && !zSolid)
   {
     glEnable( GL_LINE_SMOOTH ); 
     glHint( GL_LINE_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
@@ -1117,7 +1101,8 @@ void init(void)
       glDisable(GL_COLOR_MATERIAL);
 #endif
     }
-    if (zShading)
+      
+    if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
       glEnable(GL_LIGHTING);
     else
       glDisable(GL_LIGHTING);
@@ -1138,7 +1123,7 @@ void init(void)
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0, 1.0);
 
-    linequalitysetup(zSolid);
+    linequalitysetup();
 
 #if 0
     // Make command lists for the eight stipple patterns.
@@ -1286,7 +1271,7 @@ void rendersetup(void)
 {
   GLdouble fx, fy, fz, tx, ty, tz, ux, uy, uz;
 
-  if (zShading)
+  if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
     glEnable(GL_LIGHTING);
   else
     glDisable(GL_LIGHTING);
@@ -1413,6 +1398,7 @@ render(void)
   int client_rect_right;
   int client_rect_bottom;
   int res;
+  int drawmode = ldraw_commandline_opts.F;
 
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
@@ -1478,32 +1464,31 @@ render(void)
   }
   glCallList(1);
 #else
-  if (qualityLines && (zWire == 0))
+  if (qualityLines && ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) == 0))
   {
-    zSolid = 1;
-    linequalitysetup(zSolid);
+    ldraw_commandline_opts.F |= TYPE_F_NO_LINES;
+    linequalitysetup();
     DrawModel();
-    zSolid = 0;
-    linequalitysetup(zSolid);
-    zWire = 1;
+    ldraw_commandline_opts.F &= ~(TYPE_F_NO_LINES);
+    linequalitysetup();
+    ldraw_commandline_opts.F |= TYPE_F_NO_POLYGONS; // zWire = 1;
     stepcount = 0; // NOTE: Not sure what effect this will have...
     DrawModel();
-    zWire = 0;
   }
 #ifdef USE_OPENGL_OCCLUSION
-  else if (editing && !(ldraw_commandline_opts.F & STUDLESS_MODE))
+  else if (editing && !(ldraw_commandline_opts.F & TYPE_F_STUDLESS_MODE))
   {
-    ldraw_commandline_opts.F |= STUDLESS_MODE;
+    ldraw_commandline_opts.F |= TYPE_F_STUDLESS_MODE;
     DrawModel();
-    ldraw_commandline_opts.F &= ~(STUDLESS_MODE);
-    ldraw_commandline_opts.F |= STUDONLY_MODE;
+    ldraw_commandline_opts.F &= ~(TYPE_F_STUDLESS_MODE);
+    ldraw_commandline_opts.F |= TYPE_F_STUDONLY_MODE;
     DrawModel();
-    ldraw_commandline_opts.F &= ~(STUDONLY_MODE);
+    ldraw_commandline_opts.F &= ~(TYPE_F_STUDONLY_MODE);
   }
 #endif
   else 
   {
-    linequalitysetup(zSolid);
+    linequalitysetup();
     DrawModel();
   }
 #endif
@@ -1525,11 +1510,11 @@ render(void)
   }
   glCallList(1);
 #else
-  if (qualityLines && (zWire == 0))
+  if (qualityLines && ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) == 0))
   {
-    zSolid = 1;
+    ldraw_commandline_opts.F |= TYPE_F_NO_LINES;
   }
-  linequalitysetup(zSolid);
+  linequalitysetup();
   mpd_subfile_name = NULL; // potential memory leak
   znamelist_push();
   ldlite_parse(datfilename, buf);
@@ -1565,11 +1550,11 @@ render(void)
     ldlite_parse(NULL,buf);
     znamelist_pop();
   }
-  if (qualityLines && (zWire == 0))
+  if (qualityLines && ((ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) == 0))
   {
-    zSolid = 0;
-    linequalitysetup(zSolid);
-    zWire = 1;
+    ldraw_commandline_opts.F &= ~(TYPE_F_NO_LINES);
+    linequalitysetup();
+    ldraw_commandline_opts.F |= TYPE_F_NO_POLYGONS; // zWire = 1;
 
     zcolor_init();
 
@@ -1604,7 +1589,6 @@ render(void)
       ldlite_parse(NULL,buf);
       znamelist_pop();
     }
-    zWire = 0;
 
   }
 #endif
@@ -1614,7 +1598,7 @@ render(void)
 
   glPopMatrix();
 
-
+  ldraw_commandline_opts.F = drawmode;
 }
 
 /***************************************************************/
@@ -2097,16 +2081,20 @@ int XORcurPiece()
 {
   int retval = 0;
   int drawmode = ldraw_commandline_opts.F;
-  int savewire = zWire;
-  int saveshade = zShading;
 
-  //ldraw_commandline_opts.F |= STUDLESS_MODE;
-  //ldraw_commandline_opts.F = (WIREFRAME_MODE | STUDLESS_MODE);
-  ldraw_commandline_opts.F = WIREFRAME_MODE;
-  if ((drawmode & STUDLINE_MODE) != 0)
-    ldraw_commandline_opts.F |= STUDLINE_MODE;
-  zWire = 1;
-  zShading = 0;
+  //ldraw_commandline_opts.F |= TYPE_F_STUDLESS_MODE;
+  //ldraw_commandline_opts.F = (TYPE_F_NO_POLYGONS | TYPE_F_STUDLESS_MODE);
+  ldraw_commandline_opts.F = TYPE_F_NO_POLYGONS;
+  if ((drawmode & TYPE_F_STUDLINE_MODE) != 0)
+    ldraw_commandline_opts.F |= TYPE_F_STUDLINE_MODE;
+  ldraw_commandline_opts.F &= ~(TYPE_F_SHADED_MODE); // zShading = 0;
+
+  // Disable antialiasing and linewidths.
+  glDisable( GL_LINE_SMOOTH ); 
+  glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+  glDisable( GL_BLEND );
+  glLineWidth( 1.0 );
+  // Should rerun linequalitysetup() after XORcurPiece is over.
 
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
@@ -2167,12 +2155,12 @@ int XORcurPiece()
     glDisable( GL_DEPTH_TEST ); // don't test for depth -- just put in front
   glEnable( GL_COLOR_LOGIC_OP ); 
   glLogicOp(GL_XOR);
-  ldraw_commandline_opts.F |= XOR_MODE;
+  ldraw_commandline_opts.F |= TYPE_F_XOR_MODE;
   glColor3f(1.0, 1.0, 1.0); // white
   glCurColorIndex = -2;
   retval = Draw1Part(curpiece, 15);
   glLogicOp(GL_COPY);
-  ldraw_commandline_opts.F &= ~(XOR_MODE);
+  ldraw_commandline_opts.F &= ~(TYPE_F_XOR_MODE);
   if (movingpiece == curpiece)
   {
     z_line_offset -= 1.0;
@@ -2198,8 +2186,6 @@ int XORcurPiece()
 
   glPopMatrix();
 
-  zShading = saveshade;
-  zWire = savewire;
   ldraw_commandline_opts.F = drawmode;
 
   return retval;
@@ -2380,16 +2366,13 @@ void CopyStaticBuffer(void)
 void DrawTNTPiece(void)
 {
   int drawmode = ldraw_commandline_opts.F;
-  int savewire = zWire;
-  int saveshade = zShading;
 
-  //ldraw_commandline_opts.F |= STUDLESS_MODE;
-  //ldraw_commandline_opts.F = (WIREFRAME_MODE | STUDLESS_MODE);
-  ldraw_commandline_opts.F = WIREFRAME_MODE;
-  if ((drawmode & STUDLINE_MODE) != 0)
-    ldraw_commandline_opts.F |= STUDLINE_MODE;
-  zWire = 1;
-  zShading = 0;
+  //ldraw_commandline_opts.F |= TYPE_F_STUDLESS_MODE;
+  //ldraw_commandline_opts.F = (TYPE_F_NO_POLYGONS | TYPE_F_STUDLESS_MODE);
+  ldraw_commandline_opts.F = TYPE_F_NO_POLYGONS;
+  if ((drawmode & TYPE_F_STUDLINE_MODE) != 0)
+    ldraw_commandline_opts.F |= TYPE_F_STUDLINE_MODE;
+  ldraw_commandline_opts.F &= ~(TYPE_F_SHADED_MODE); // zShading = 0;
 
   //glDisable(GL_LIGHTING);
 
@@ -2400,7 +2383,7 @@ void DrawTNTPiece(void)
 
 #if 1
   glLogicOp(GL_XOR);
-  ldraw_commandline_opts.F |= XOR_MODE;
+  ldraw_commandline_opts.F |= TYPE_F_XOR_MODE;
 
   glDepthFunc(GL_LESS);
   glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); //disable color updates
@@ -2412,7 +2395,7 @@ void DrawTNTPiece(void)
   DrawCurPart(15);
 
   glLogicOp(GL_COPY);
-  ldraw_commandline_opts.F &= ~(XOR_MODE);
+  ldraw_commandline_opts.F &= ~(TYPE_F_XOR_MODE);
   glDepthFunc(GL_LESS);     // New value always wins.
   glDisable( GL_COLOR_LOGIC_OP ); 
 
@@ -2431,8 +2414,6 @@ void DrawTNTPiece(void)
 
   z_line_offset -= 1.0;
 
-  zShading = saveshade;
-  zWire = savewire;
   ldraw_commandline_opts.F = drawmode;
 }
 
@@ -2445,7 +2426,7 @@ void DrawMovingPiece(void)
     // Save depth buffer BEFORE drawing the current part into it.
     SaveDepthBuffer();
 #endif
-    if (zShading)
+    if (ldraw_commandline_opts.F & TYPE_F_SHADED_MODE) // (zShading)
       glEnable(GL_LIGHTING);
     else
       glDisable(GL_LIGHTING);
@@ -2986,8 +2967,8 @@ int edit_mode_fnkeys(int key, int x, int y)
       SOLID_EDIT_MODE = NVIDIA_XOR_HACK; // 0
     if ((glutModifiers & GLUT_ACTIVE_ALT) != 0)
     {
-      //ldraw_commandline_opts.F |= STUDLESS_MODE;
-      ldraw_commandline_opts.F |= STUDLINE_MODE;
+      //ldraw_commandline_opts.F |= TYPE_F_STUDLESS_MODE;
+      ldraw_commandline_opts.F |= TYPE_F_STUDLINE_MODE;
       DrawToCurPiece = 1;
     }
     editing ^= 1;
@@ -3057,7 +3038,7 @@ int edit_mode_fnkeys(int key, int x, int y)
     XORcurPiece(); // Erase the previous piece
     
     // Restore previous continuous mode.
-    ldraw_commandline_opts.F &= (!STUDLINE_MODE);
+    ldraw_commandline_opts.F &= ~(TYPE_F_STUDLINE_MODE);
     ldraw_commandline_opts.M = editingprevmode;
     dirtyWindow = 1;
     glutPostRedisplay();
@@ -3521,8 +3502,8 @@ int edit_mode_keyboard(unsigned char key, int x, int y)
       switch(key) {
       case 'l':
 	clear_edit_mode_gui();
-	//ldraw_commandline_opts.F ^= STUDLESS_MODE;
-	ldraw_commandline_opts.F ^= STUDLINE_MODE;
+	//ldraw_commandline_opts.F ^= TYPE_F_STUDLESS_MODE;
+	ldraw_commandline_opts.F ^= TYPE_F_STUDLINE_MODE;
 	dirtyWindow = 1;
 	glutPostRedisplay();
 	return 1;
@@ -4267,28 +4248,22 @@ void keyboard(unsigned char key, int x, int y)
       reshape(Width, Height);
       break;
     case 'f':
-      ldraw_commandline_opts.F ^= STUDLESS_MODE;
+      ldraw_commandline_opts.F ^= TYPE_F_STUDLESS_MODE;
       reshape(Width, Height);
       break;
     case 'n':
-      zWire = 0;
-      zShading = 0;
-      ldraw_commandline_opts.F &= ~(WIREFRAME_MODE);
-      ldraw_commandline_opts.F &= ~(SHADED_MODE);
+      ldraw_commandline_opts.F &= ~(TYPE_F_NO_POLYGONS); // zWire = 0;
+      ldraw_commandline_opts.F &= ~(TYPE_F_SHADED_MODE); // zShading = 0;
       reshape(Width, Height);
       break;
     case 'h':
-      zWire = 0;
-      zShading = 1;
-      ldraw_commandline_opts.F &= ~(WIREFRAME_MODE);
-      ldraw_commandline_opts.F |= SHADED_MODE;
+      ldraw_commandline_opts.F &= ~(TYPE_F_NO_POLYGONS); // zWire = 0;
+      ldraw_commandline_opts.F |= TYPE_F_SHADED_MODE; // zShading = 1;
       reshape(Width, Height);
       break;
     case 'l':
-      zWire = 1;
-      zShading = 0;
-      ldraw_commandline_opts.F |= WIREFRAME_MODE;
-      ldraw_commandline_opts.F &= ~(SHADED_MODE);
+      ldraw_commandline_opts.F |= TYPE_F_NO_POLYGONS; // zWire = 1;
+      ldraw_commandline_opts.F &= ~(TYPE_F_SHADED_MODE); // zShading = 0;
       reshape(Width, Height);
       break;
     case 'B': // Bitmap
@@ -4311,18 +4286,18 @@ void keyboard(unsigned char key, int x, int y)
       ldraw_commandline_opts.M = c;
       return;
     case 'V':
-      if (pan_visible == (BBOX_MODE | WIREFRAME_MODE) )
-	pan_visible = (WIREFRAME_MODE | STUDLESS_MODE);
-      else if (pan_visible == (WIREFRAME_MODE | STUDLESS_MODE) )
-	pan_visible = INVISIBLE_MODE;
-      else if (pan_visible == (INVISIBLE_MODE) )
-	pan_visible = (BBOX_MODE | SHADED_MODE);
-      else if (pan_visible == (BBOX_MODE | SHADED_MODE) )
-	pan_visible = (STUDLESS_MODE | SHADED_MODE);
-      else if (pan_visible == (STUDLESS_MODE | SHADED_MODE) )
-	pan_visible = (BBOX_MODE | WIREFRAME_MODE);
+      if (pan_visible == (TYPE_F_BBOX_MODE | TYPE_F_NO_POLYGONS) )
+	pan_visible = (TYPE_F_NO_POLYGONS | TYPE_F_STUDLESS_MODE);
+      else if (pan_visible == (TYPE_F_NO_POLYGONS | TYPE_F_STUDLESS_MODE) )
+	pan_visible = TYPE_F_INVISIBLE;
+      else if (pan_visible == (TYPE_F_INVISIBLE) )
+	pan_visible = (TYPE_F_BBOX_MODE | TYPE_F_SHADED_MODE);
+      else if (pan_visible == (TYPE_F_BBOX_MODE | TYPE_F_SHADED_MODE) )
+	pan_visible = (TYPE_F_STUDLESS_MODE | TYPE_F_SHADED_MODE);
+      else if (pan_visible == (TYPE_F_STUDLESS_MODE | TYPE_F_SHADED_MODE) )
+	pan_visible = (TYPE_F_BBOX_MODE | TYPE_F_NO_POLYGONS);
       else 
-	pan_visible = (BBOX_MODE | WIREFRAME_MODE);
+	pan_visible = (TYPE_F_BBOX_MODE | TYPE_F_NO_POLYGONS);
       return;
     case 's':
       // NOTE: I could toggle the menu strings but that would require
@@ -4623,7 +4598,6 @@ mouse(int button, int state, int x, int y)
   else if (panning)
   {
     // Restore wireframe and stud draw modes.
-    zWire = pan_start_zWire;
     ldraw_commandline_opts.F = pan_start_F;
 
     // The LdrawOblique matrix is a projection matrix.
@@ -4738,11 +4712,8 @@ motion(int x, int y)
 	return;
       }
       // Save draw modes, then switch to wireframe and turn off studs.
-      pan_start_zWire = zWire;
-
       pan_start_F = ldraw_commandline_opts.F;
       ldraw_commandline_opts.F = pan_visible; 
-      zWire = (ldraw_commandline_opts.F & WIREFRAME_MODE);
     }
     glutSetCursor(GLUT_CURSOR_NONE);
     panning = 1;
@@ -4750,16 +4721,23 @@ motion(int x, int y)
     // Check for shift or ctrl mouse drag changes on the fly.
     //glutModifiers = glutGetModifiers(); // Glut doesn't like this here!
     if (glutModifiers & GLUT_ACTIVE_CTRL)
-	ldraw_commandline_opts.F = (STUDLESS_MODE | SHADED_MODE);
+	ldraw_commandline_opts.F = (TYPE_F_STUDLESS_MODE | TYPE_F_SHADED_MODE);
     else if (glutModifiers & GLUT_ACTIVE_SHIFT)
-	ldraw_commandline_opts.F = (BBOX_MODE | SHADED_MODE);
+	ldraw_commandline_opts.F = (TYPE_F_BBOX_MODE | TYPE_F_SHADED_MODE);
     else 
       ldraw_commandline_opts.F = pan_visible; 
-    zWire = (ldraw_commandline_opts.F & WIREFRAME_MODE);
 
-    if (ldraw_commandline_opts.F & INVISIBLE_MODE) // Draw the rubberband line
-    {
+    if ((ldraw_commandline_opts.F & TYPE_F_INVISIBLE) == TYPE_F_INVISIBLE)
+    { // Draw the rubberband line
       //printf("MOTION(%0.2f, %0.2f, %0.2f)\n", pan_x, -pan_y, pan_z);
+
+      // Disable antialiasing and linewidths.
+      glDisable( GL_LINE_SMOOTH ); 
+      glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST ); // GL_NICEST GL_DONT_CARE
+      glDisable( GL_BLEND );
+      glLineWidth( 1.0 );
+      // Should rerun linequalitysetup() after rubberband is over.
+
       glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
       glEnable( GL_COLOR_LOGIC_OP ); 
       //glEnable( GL_LOGIC_OP_MODE ); 
@@ -5204,6 +5182,11 @@ void CldliteCommandLineInfo()
   ldraw_commandline_opts.debug_level=0;
   ldraw_commandline_opts.log_output=0;
   ldraw_commandline_opts.Z=INT_MIN;
+
+  if (zShading)
+    ldraw_commandline_opts.F |= TYPE_F_SHADED_MODE;
+  if (zWire)
+    ldraw_commandline_opts.F |= TYPE_F_NO_POLYGONS; // zWire = 1;
 }
 
 /***************************************************************/
@@ -5333,30 +5316,26 @@ void ParseParams(int *argc, char **argv)
 	  sscanf(pszParam,"%c%c",&type,&c);
 	  c = toupper(c);
 	  switch (c) {
-	  case 'H':
-	    zShading = 1; // mnemonic = sHading? =Hi quality?
-	    ldraw_commandline_opts.F |= SHADED_MODE;
+	  case 'H': // mnemonic = sHading? =Hi quality?
+	    ldraw_commandline_opts.F |= TYPE_F_SHADED_MODE; // zShading = 1; 
 	    break;
 	  case 'S':
 	    if (toupper(pszParam[2]) == 'L')
-	      ldraw_commandline_opts.F |= STUDLINE_MODE;
+	      ldraw_commandline_opts.F |= TYPE_F_STUDLINE_MODE;
 	    else
-	      ldraw_commandline_opts.F |= STUDLESS_MODE;
+	      ldraw_commandline_opts.F |= TYPE_F_STUDLESS_MODE;
 	    break;
 	  case 'W':
 	  case 'L':
-	    ldraw_commandline_opts.F |= WIREFRAME_MODE;
-	    zWire = 1;
+	    ldraw_commandline_opts.F |= TYPE_F_NO_POLYGONS; // zWire = 1;
 	    break;
-	  case 'N':
-	    zShading = 0; // mnemonic = normal (no shading)
-	    zWire = 0;
-	    ldraw_commandline_opts.F &= ~(SHADED_MODE);
-	    ldraw_commandline_opts.F &= ~(WIREFRAME_MODE);
+	  case 'N': // mnemonic = normal (no shading)
+	    ldraw_commandline_opts.F &= ~(TYPE_F_NO_POLYGONS); // zWire = 0;
+	    ldraw_commandline_opts.F &= ~(TYPE_F_SHADED_MODE); // zShading = 0 
 	    break;
 	  case 'R':
 	  case 'E':
-	    zSolid = 1; // no Edgelines
+	    ldraw_commandline_opts.F |= TYPE_F_NO_LINES; // no Edgelines
 	    break;
 	  case 'F': // Fog.
 	    {
@@ -5439,7 +5418,7 @@ void ParseParams(int *argc, char **argv)
 	  _strlwr(pszParam);
 	  if (strstr(pszParam, "ledit"))
 	  {
-	    ldraw_commandline_opts.F |= STUDLINE_MODE;
+	    ldraw_commandline_opts.F |= TYPE_F_STUDLINE_MODE;
 	    DrawToCurPiece = 1;
 	  }
 	}
@@ -5450,7 +5429,7 @@ void ParseParams(int *argc, char **argv)
 	  _strlwr(pszParam);
 	  if (strstr(pszParam, "ledit"))
 	  {
-	    ldraw_commandline_opts.F |= STUDLINE_MODE;
+	    ldraw_commandline_opts.F |= TYPE_F_STUDLINE_MODE;
 	    DrawToCurPiece = 1;
 	  }
 	}

@@ -61,18 +61,6 @@ static	float	v[4];
 extern int Skip1Line(int IsModel, struct L3LineS *LinePtr);
 extern int Init1LineCounter(void);
 
-// Drawing modes
-#define NORMAL_MODE 	0x0000
-#define STUDLESS_MODE 	0x0001
-#define WIREFRAME_MODE 	0x0002
-#define SHADED_MODE 	0x0004
-#define BBOX_MODE 	0x0008
-#define INVISIBLE_MODE 	0x0010
-#define STUDONLY_MODE 	0x0020
-#define STUDLINE_MODE 	0x0040
-#define XOR_MODE 	0x0080
-#define XOR_PRIMITIVE 	0x0100
-
 //************************************************************************
 void MakePartBox(struct L3PartS *PartPtr,float m[4][4], vector3d bb3d[8])
 {
@@ -255,7 +243,7 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 	vector3d       v3d[4];
 
 #ifdef USE_OPENGL
-	if ((ldraw_commandline_opts.F & STUDLINE_MODE) != 0)
+	if ((ldraw_commandline_opts.F & TYPE_F_STUDLINE_MODE) != 0)
 	  if (PartPtr->IsStud)
 	  {
 	    DrawPartLine(PartPtr, CurColor, m);
@@ -264,10 +252,10 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 	  }
 
 	// Draw only bounding boxes of top level parts if in fast spin mode.
-	if (ldraw_commandline_opts.F & BBOX_MODE) 
+	if (ldraw_commandline_opts.F & TYPE_F_BBOX_MODE) 
 	  if (PartPtr->FromPARTS) // (!IsModel)
 	  {
-	    if (ldraw_commandline_opts.F & WIREFRAME_MODE) 
+	    if (ldraw_commandline_opts.F & TYPE_F_NO_POLYGONS) 
 	      DrawPartBox(PartPtr, CurColor, m, 1);
 	    else
 	      DrawPartBox(PartPtr, CurColor, m, 0);
@@ -326,10 +314,10 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
     // Other ideas include substituting GLU cylinder primitives for studs.  
 		        if (LinePtr->PartPtr->IsStud)
 			{
-                          if ((ldraw_commandline_opts.F & STUDLESS_MODE) != 0)
+                          if ((ldraw_commandline_opts.F & TYPE_F_STUDLESS_MODE) != 0)
                             break;
 #ifdef USE_OPENGL_OCCLUSION
-                          if ((ldraw_commandline_opts.F & STUDONLY_MODE) != 0)
+                          if ((ldraw_commandline_opts.F & TYPE_F_STUDONLY_MODE) != 0)
 			  {
 			    M4M4Mul(m1,m,LinePtr->v);
 			    if (Occluded(LinePtr->PartPtr, Color, m1))
@@ -348,7 +336,7 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			break;
 		case 2:
 #ifdef USE_OPENGL_OCCLUSION
-		        if ((ldraw_commandline_opts.F & STUDONLY_MODE) &&
+		        if ((ldraw_commandline_opts.F & TYPE_F_STUDONLY_MODE) &&
 			    !(PartPtr->IsStud))
                             break;
 #endif
@@ -363,7 +351,7 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			break;
 		case 3:
 #ifdef USE_OPENGL_OCCLUSION
-		        if ((ldraw_commandline_opts.F & STUDONLY_MODE) &&
+		        if ((ldraw_commandline_opts.F & TYPE_F_STUDONLY_MODE) &&
 			    !(PartPtr->IsStud))
                             break;
 #endif
@@ -376,7 +364,7 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			}
 #ifdef USE_OPENGL
 			// Try to render solid Primitives visibly when in XOR wire mode.
-			if (ldraw_commandline_opts.F & XOR_PRIMITIVE)
+			if (ldraw_commandline_opts.F & TYPE_F_XOR_PRIMITIVE)
 			{
 			    render_line(&v3d[0],&v3d[1],Color);
 			    render_line(&v3d[1],&v3d[2],Color);
@@ -388,7 +376,7 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			break;
 		case 4:
 #ifdef USE_OPENGL_OCCLUSION
-		        if ((ldraw_commandline_opts.F & STUDONLY_MODE) &&
+		        if ((ldraw_commandline_opts.F & TYPE_F_STUDONLY_MODE) &&
 			    !(PartPtr->IsStud))
                             break;
 #endif
@@ -401,7 +389,7 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			}
 #ifdef USE_OPENGL
 			// Try to render solid Primitives visibly when in XOR wire mode.
-			if (ldraw_commandline_opts.F & XOR_PRIMITIVE)
+			if (ldraw_commandline_opts.F & TYPE_F_XOR_PRIMITIVE)
 			{
 			    render_line(&v3d[0],&v3d[1],Color);
 			    render_line(&v3d[1],&v3d[2],Color);
@@ -414,7 +402,7 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			break;
 		case 5:
 #ifdef USE_OPENGL_OCCLUSION
-		        if ((ldraw_commandline_opts.F & STUDONLY_MODE) &&
+		        if ((ldraw_commandline_opts.F & TYPE_F_STUDONLY_MODE) &&
 			    !(PartPtr->IsStud))
                             break;
 #endif
@@ -522,13 +510,13 @@ int Draw1PartPtr(struct L3LineS *LinePtr, int Color)
 	    break;
 	case 1:
 	    M4M4Mul(m1,m_m,LinePtr->v);
-	    if ((ldraw_commandline_opts.F & XOR_MODE) && (LinePtr->PartPtr->FromP))
+	    if ((ldraw_commandline_opts.F & TYPE_F_XOR_MODE) && (LinePtr->PartPtr->FromP))
 	    {
-		// This is a primitive and may render invisibly in XOR_MODE
+		// This is a primitive and may render invisibly in TYPE_F_XOR_MODE
 		// if it contains no edges.
-		ldraw_commandline_opts.F |= XOR_PRIMITIVE;
+		ldraw_commandline_opts.F |= TYPE_F_XOR_PRIMITIVE;
 		DrawPart(0,LinePtr->PartPtr,Color,m1);
-		ldraw_commandline_opts.F &= ~(XOR_PRIMITIVE);
+		ldraw_commandline_opts.F &= ~(TYPE_F_XOR_PRIMITIVE);
 		break;
 	    }
 	    DrawPart(0,LinePtr->PartPtr,Color,m1);
@@ -586,7 +574,7 @@ int Draw1PartPtr(struct L3LineS *LinePtr, int Color)
 		v3d[i].y=r[1];
 		v3d[i].z=r[2];
 	    }
-	    if (ldraw_commandline_opts.F & XOR_MODE)
+	    if (ldraw_commandline_opts.F & TYPE_F_XOR_MODE)
 	    {
 		render_line(&v3d[0],&v3d[1],Color);
 		render_line(&v3d[0],&v3d[2],Color);
@@ -619,9 +607,9 @@ int Draw1Part(int partnum, int Color)
 	{
 	    if (i == partnum)
 	    {
-		//ldraw_commandline_opts.F |= XOR_MODE;
+		//ldraw_commandline_opts.F |= TYPE_F_XOR_MODE;
 		Draw1PartPtr(LinePtr, Color);
-		//ldraw_commandline_opts.F &= ~(XOR_MODE);
+		//ldraw_commandline_opts.F &= ~(TYPE_F_XOR_MODE);
 		return 1;
 	    }
 	    i++;
