@@ -853,9 +853,8 @@ int OffScreenDisplay()
 #ifdef OSMESA_OPTION
    DrawScene();
 
-   platform_step_filename(curstep, filename);
-
-   write_targa(filename, OSbuffer, Width, Height);
+   //platform_step_filename(curstep, filename);
+   //write_targa(filename, OSbuffer, Width, Height);
 #endif
 #ifdef WIN_DIB_OPTION
    DrawScene();
