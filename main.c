@@ -357,7 +357,20 @@ float fontwidth = 1.0;
 // GLUT stubs required by AllegroGl version 0.20
 #include "internal.h"
 
+// Slim down the program by removing unused allegro drivers.
+BEGIN_DIGI_DRIVER_LIST
+END_DIGI_DRIVER_LIST
+
+BEGIN_MIDI_DRIVER_LIST
+END_MIDI_DRIVER_LIST
+
+BEGIN_JOYSTICK_DRIVER_LIST
+END_JOYSTICK_DRIVER_LIST
+
+/***************************************************************/
 GLUTAPI void *glutBitmapHelvetica12 = 0;
+
+extern FONT *font;
 
 /***************************************************************/
 GLUTAPI int GLUTAPIENTRY glutGetModifiers(void)
@@ -483,6 +496,9 @@ DoRasterString( float x, float y, char *s )
     glutBitmapCharacter( GLUT_BITMAP_HELVETICA_12, c );
 #endif
   }
+#ifdef AGL    
+  //allegro_gl_printf(font, x, y, 1, 0, s);
+#endif
 }
 
 /***************************************************************/
@@ -5960,6 +5976,17 @@ main(int argc, char **argv)
 #endif
       }
     }
+#ifdef OSMESA_OPTION
+#if OSMESA_MAJOR_VERSION * 100 + OSMESA_MINOR_VERSION >= 400
+    else // if (OSMESA) // We could check rendstr, but we fetch that later...
+    {
+      // NOTE: It would be NICE if Mesa Glut called these in 
+      // glutGet(GLUT_SCREEN_*) functions instead of blowing the stack.
+      OSMesaGetIntegerv(OSMESA_MAX_WIDTH, &Width);
+      OSMesaGetIntegerv(OSMESA_MAX_HEIGHT, &Height);
+    }
+#endif
+#endif
 
     if ((Width <= 0) || (Height <= 0))
     {
