@@ -79,7 +79,7 @@ int use_png_alpha = 1;
 int ldraw_projection_type = 0;  // 1 = perspective, 0 = orthographic.
 #define WIDE_ANGLE_VIEW 1
 #if WIDE_ANGLE_VIEW
-double projection_znear = 1.0;
+double projection_znear = 10.0; // 1.0 gives zfighting with 16bit Mesa Zbuf
 double projection_zfar = 2000.0;
 double projection_fov = 45.0;
 double projection_fromx = 0.0;
@@ -191,7 +191,9 @@ int staticbuffer = GL_BACK;
 int screenbuffer = GL_FRONT; 
 // Buffer pointers and IDs for speedier opengl extension functions.
 
+GLint rBits, gBits, bBits, aBits;
 GLint DepthBits = 0;
+GLint StencilBits = 0;
 GLuint cbuffer_region = 0;
 GLuint zbuffer_region = 0;
 static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
@@ -2890,6 +2892,12 @@ void DrawMovingPiece(void)
 void display(void)
 {
   int res;
+
+#ifdef PART_BOX_TEST
+  extern void Print1PartBox();
+
+  Print1PartBox();
+#endif
 
 #ifdef TILE_RENDER_OPTION
   if (tiledRendering == 1)
@@ -6123,8 +6131,17 @@ main(int argc, char **argv)
   printf("GL_VENDOR ='%s'\n", (vendstr = (char *)glGetString(GL_VENDOR)));
   printf("GL_RENDERER ='%s'\n", (rendstr = (char *)glGetString(GL_RENDERER)));
   
+  glGetIntegerv(GL_RED_BITS, &rBits);
+  glGetIntegerv(GL_GREEN_BITS, &gBits);
+  glGetIntegerv(GL_BLUE_BITS, &bBits);
+  glGetIntegerv(GL_ALPHA_BITS, &aBits);
+  printf("GL_RGBA_BITS: (%d, %d, %d, %d)\n", rBits, gBits, bBits, aBits);
+
   glGetIntegerv(GL_DEPTH_BITS, &DepthBits);
   printf("GL_DEPTH_BITS = %d\n", DepthBits);
+
+  glGetIntegerv(GL_STENCIL_BITS, &StencilBits);
+  printf("GL_STENCIL_BITS = %d\n", StencilBits);
 
   if (strstr(extstr, "GL_WIN_swap_hint"))
   {
