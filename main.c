@@ -85,8 +85,8 @@ int panning = 0;
 GLdouble pan_start_x = 0.0;
 GLdouble pan_start_y = 0.0;
 
-#define USE_QUATERION 1
-#ifdef USE_QUATERION
+//#define USE_QUATERNION 1
+#ifdef USE_QUATERNION
 float qspin[4] = {0.0, 0.0, 1.0, 0.0};
 #endif
 
@@ -289,7 +289,10 @@ void write_png(char *filename)
 }
 #endif
 
+#ifdef WINDOWS
 #define USE_BMP8 1
+#endif
+
 #ifdef USE_BMP8
 /***************************************************************/
 #define WIDTHBYTES(bits)    (((bits) + 31) / 32 * 4)
@@ -1035,16 +1038,23 @@ void display(void)
 #endif
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+  glColor3f(1.0, 1.0, 1.0); // White.
+
 #ifdef USE_GL_TWIRL
   glMatrixMode(GL_MODELVIEW);
 #endif
-#ifdef USE_QUATERION
+#ifdef USE_QUATERNION
   glMatrixMode(GL_MODELVIEW);
-#endif
   glPushMatrix();
-
-  glColor3f(1.0, 1.0, 1.0); // White.
+  if (qspin[3] == 0.0)
+  {
+    glLoadIdentity();
+  }
+  
+#else
+  glPushMatrix();
   glLoadIdentity();
+#endif
 
   // ldlite_parse seems to offset x,y coords by half the window size.
 
@@ -1067,9 +1077,9 @@ void display(void)
   // substituted an identity matrix for the ldlite model matrix.
   if (twirl_angle != 0.0)
     glRotatef((float)-twirl_angle, 0.0, 1.0, 0.0);
-#define DRAW_AXIS 1
 #endif
-#ifdef USE_QUATERION
+#ifdef USE_QUATERNION
+#define DRAW_AXIS 1
   printf("spin(%0.2f, %0.2f, %0.2f, %0.2f)\n", 
 	 qspin[3], qspin[0], qspin[1], qspin[2]);
   glRotatef(qspin[3], qspin[0], qspin[1], qspin[2]);
@@ -1398,7 +1408,7 @@ void rotate_about(float x, float y, float z, float angle)
   y = v[1];
   z = v[2];
 
-#if USE_QUATERION
+#if USE_QUATERNION
   qspin[0] = -v[0];
   qspin[1] = v[1];
   qspin[2] = v[2];
@@ -1422,8 +1432,8 @@ void rotate_about(float x, float y, float z, float angle)
   m_rot.h = (float)(y*z*(1-c)-(x*s));
   m_rot.i = (float)(z*z*(1-c)+c);
 
-  transform_multiply(&v_dummy,&m_rot,
-		     &v_dummy,&(ldraw_commandline_opts.A),
+  transform_multiply(&v_dummy,&(ldraw_commandline_opts.A),
+		     &v_dummy,&m_rot,
 		     &v_temp, &m_temp);
   ldraw_commandline_opts.A = *m_temp;
 
@@ -1454,10 +1464,7 @@ mouse(int button, int state, int x, int y)
     glGetDoublev(GL_MODELVIEW_MATRIX, model);
     glGetDoublev(GL_PROJECTION_MATRIX, proj);
     glGetIntegerv(GL_VIEWPORT, view);
-    gluProject((GLdouble)x, (GLdouble)y, 0.0,
-		 model, proj, view,
-		 &pan_x, &pan_y, &pan_z);
-    gluUnProject((GLdouble)x, (GLdouble)y, pan_z,
+    gluUnProject((GLdouble)x, (GLdouble)y, 1.0,
 		 model, proj, view,
 		 &pan_x, &pan_y, &pan_z);
     pan_y = -pan_y;
@@ -1475,10 +1482,7 @@ mouse(int button, int state, int x, int y)
     glGetDoublev(GL_MODELVIEW_MATRIX, model);
     glGetDoublev(GL_PROJECTION_MATRIX, proj);
     glGetIntegerv(GL_VIEWPORT, view);
-    gluProject((GLdouble)x, (GLdouble)y, 0.0,
-		 model, proj, view,
-		 &pan_x, &pan_y, &pan_z);
-    gluUnProject((GLdouble)x, (GLdouble)y, pan_z,
+    gluUnProject((GLdouble)x, (GLdouble)y, 1.0,
 		 model, proj, view,
 		 &pan_x, &pan_y, &pan_z);
     pan_y = -pan_y;
@@ -1541,10 +1545,7 @@ motion(int x, int y)
     glGetDoublev(GL_MODELVIEW_MATRIX, model);
     glGetDoublev(GL_PROJECTION_MATRIX, proj);
     glGetIntegerv(GL_VIEWPORT, view);
-    gluProject((GLdouble)x, (GLdouble)y, 0.0,
-		 model, proj, view,
-		 &pan_x, &pan_y, &pan_z);
-    gluUnProject((GLdouble)x, (GLdouble)y, pan_z,
+    gluUnProject((GLdouble)x, (GLdouble)y, 1.0,
 		 model, proj, view,
 		 &pan_x, &pan_y, &pan_z);
     pan_y = -pan_y;
