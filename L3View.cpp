@@ -288,10 +288,16 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			break;
 		default:
 			Color = LinePtr->Color;
+#if 0
 			if ((LinePtr->LineType == 3) || 
 			    (LinePtr->LineType == 4))
 			  // Hardcoded color = printed.  Blend me!
 			  hardcolor = 1; 
+#else
+			if (LinePtr->LineType != 1)
+			  // Hardcoded color = printed.  Blend me!
+			  hardcolor = 1; 
+#endif
 			break;
 		}
 		switch (LinePtr->LineType)
