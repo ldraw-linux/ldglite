@@ -846,10 +846,13 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
   if (zShading )
     if (glCurLighting) glDisable(GL_LIGHTING);
   glCurLighting = 0;
-  if (glCurColorIndex != c)
-    //Glcolor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
-    glColor3ub(zc.r, zc.g, zc.b);
-  glCurColorIndex = c;
+  if (glCurColorIndex != -2)
+  {
+    if (glCurColorIndex != c)
+      //Glcolor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
+      glColor3ub(zc.r, zc.g, zc.b);
+    glCurColorIndex = c;
+  }
   if (lineWidth > 0.0)
   {
     glBegin(GL_POINTS);
@@ -952,10 +955,13 @@ void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs)
   if (zShading)
     if (!glCurLighting) glEnable(GL_LIGHTING);
   glCurLighting = 1;
-  if (glCurColorIndex != c)
-    //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
-    glColor3ub(zc.r, zc.g, zc.b);
-  glCurColorIndex = c;
+  if (glCurColorIndex != -2)
+  {
+    if (glCurColorIndex != c)
+      //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
+      glColor3ub(zc.r, zc.g, zc.b);
+    glCurColorIndex = c;
+  }
   glBegin(GL_TRIANGLES);
   // LDRAW has the y value reversed, so negate the y.
   if (zShading)
@@ -1137,10 +1143,13 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
   if (zShading)
     if (!glCurLighting) glEnable(GL_LIGHTING);
   glCurLighting = 1;
-  if (glCurColorIndex != c)
-    //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
-    glColor3ub(zc.r, zc.g, zc.b);
-  glCurColorIndex = c;
+  if (glCurColorIndex != -2)
+  {
+    if (glCurColorIndex != c)
+      //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
+      glColor3ub(zc.r, zc.g, zc.b);
+    glCurColorIndex = c;
+  }
   // LDRAW has the y value reversed, so negate the y.
   if (use_quads)
   {
@@ -1301,10 +1310,13 @@ int above_line(vector3d *vp1, vector3d *vp2, vector3d *vp3)
   if (zShading)
     if (glCurLighting) glDisable(GL_LIGHTING);
   glCurLighting = 0;
-  if (glCurColorIndex != c)
-    //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
-    glColor3ub(zc.r, zc.g, zc.b);
-  glCurColorIndex = c;
+  if (glCurColorIndex != -2)
+  {
+    if (glCurColorIndex != c)
+      //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
+      glColor3ub(zc.r, zc.g, zc.b);
+    glCurColorIndex = c;
+  }
   if (lineWidth > 1.0)
   {
     glBegin(GL_POINTS);
