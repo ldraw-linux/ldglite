@@ -363,12 +363,13 @@ char *L3fgets(char *Str, int n, FILE *fp)
    return Str;
 }
 
-/* Modifies the string: lower case and OS-correct slashes */
 #ifndef USE_OPENGL
 static 
 #else
 void StripQuotes(char *s, char *SubPartDatName)
 {
+  char *sub;
+
   if (SubPartDatName[0] == '\"')
   {
     if (s = strchr(s, '\"'))
@@ -378,8 +379,15 @@ void StripQuotes(char *s, char *SubPartDatName)
 	*s = 0; /* Strip trailing quotes */
     }
   }
+  // NOTE:  This is kinda lame.
+  else if ((sub = strstr(s, SubPartDatName)) == strstr(s, SubPartDatName))
+  {
+    strcpy(SubPartDatName, sub); 
+  }
 }
 #endif
+
+/* Modifies the string: lower case and OS-correct slashes */
 void          FixDatName(register char *DatName)
 {
    register int         i;
