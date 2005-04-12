@@ -6203,8 +6203,7 @@ int edit_mode_keyboard(int key, int x, int y)
 	  edit_mode_gui(); // Redisplay the GUI
 	  return 1;
 	}
-	for (i = 1; ecommand[i] == ' '; i++); // Strip leading spaces
-	getfilename(&(ecommand[i]), partname);
+	getfilename(&(ecommand[1]), partname);
 	CopyStaticBuffer(0);
 	movingpiece = curpiece;
 	if (strrchr(partname, '.') == NULL)
@@ -6291,11 +6290,11 @@ int edit_mode_keyboard(int key, int x, int y)
 	break;
       case 'L':
 	// Load filename if new
-	for (i = 1; ecommand[i] == ' '; i++); // Strip leading spaces
-	printf("loading file: %s\n", &(ecommand[1]));
-	if (strcmp(&(ecommand[1]),datfilename))
+	getfilename(&(ecommand[1]), partname);
+	printf("loading file: %s\n", partname);
+	if (strcmp(partname,datfilename))
 	{
-	  getfilename(&(ecommand[i]), datfilename);
+	  strcpy(datfilename, partname);
 	  curstep = 0; // Reset to first step
 	  dirtyWindow = 1;
 	  UnSelect1Part(curpiece); // UnSelect part before Loading
@@ -6310,9 +6309,8 @@ int edit_mode_keyboard(int key, int x, int y)
 	break;
       case 'S':
 	// Save as filename
-	for (i = 1; ecommand[i] == ' '; i++); // Strip leading spaces
-	printf("Save as: %s\n", &(ecommand[i]));
-	getfilename(&(ecommand[i]), datfilename);
+	getfilename(&(ecommand[1]), datfilename);
+	printf("Save as: %s\n", datfilename);
 	i = UnSelect1Part(curpiece); // Link part back in before printing
 	Print1Model(datfilename);
 	SetTitle(1); // Change the title of the window.
