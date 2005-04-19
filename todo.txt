@@ -1,3 +1,54 @@
+I have all sorts of trouble with the ATI Radeon 7000 SDR x86/SSE2 on Win XP.
+It has trouble when I draw in the GL_FRONT buffer.  Some of the early 
+geometry is just lost.  I can work around this with -n2 or -n4 which
+force drawing in the back buffer.  But even with this the antialiasing
+has problems.  The early geometry comes out the wrong width unless I
+explicitly specify a width greater than 1.0 on the command line (eg -w1.2).
+
+The KTX extensions are available, but cannot be used because
+glBufferRegionEnabled() returns 0.  What's that all about?
+
+The text printing via glutBitmapCharacter is godawful slow on this
+thing.  It's almost unbearable.  Texture mapped fonts seem ok though.
+
+Here's the opengl info.
+
+GL_VERSION = 1.3.3302 WinXP Release
+GL_EXTENSIONS = GL_ARB_multitexture GL_ARB_texture_border_clamp GL_ARB_texture_c
+ompression GL_ARB_texture_cube_map GL_ARB_texture_env_add GL_ARB_texture_env_com
+bine GL_ARB_texture_env_crossbar GL_ARB_texture_env_dot3 GL_ARB_texture_mirrored
+_repeat GL_ARB_transpose_matrix GL_ARB_vertex_blend GL_ARB_window_pos GL_S3_s3tc
+ GL_ATI_envmap_bumpmap GL_ATI_texture_mirror_once GL_ATI_vertex_streams GL_ATIX_
+texture_env_combine3 GL_ATIX_texture_env_route GL_ATIX_vertex_shader_output_poin
+t_size GL_EXT_abgr GL_EXT_bgra GL_EXT_clip_volume_hint GL_EXT_compiled_vertex_ar
+ray GL_EXT_draw_range_elements GL_EXT_fog_coord GL_EXT_packed_pixels GL_EXT_poin
+t_parameters GL_EXT_rescale_normal GL_EXT_secondary_color GL_EXT_separate_specul
+ar_color GL_EXT_stencil_wrap GL_EXT_texgen_reflection GL_EXT_texture_env_add GL_
+EXT_texture3D GL_EXT_texture_compression_s3tc GL_EXT_texture_cube_map GL_EXT_tex
+ture_edge_clamp GL_EXT_texture_env_combine GL_EXT_texture_env_dot3 GL_EXT_textur
+e_filter_anisotropic GL_EXT_texture_lod_bias GL_EXT_texture_object GL_EXT_vertex
+_array GL_HP_occlusion_test GL_KTX_buffer_region GL_NV_texgen_reflection GL_NV_b
+lend_square GL_SGI_texture_edge_clamp GL_SGIS_texture_border_clamp GL_SGIS_textu
+re_lod GL_SGIS_generate_mipmap GL_SGIS_multitexture GL_WIN_swap_hint WGL_EXT_ext
+ensions_string WGL_EXT_swap_control
+GL_VENDOR ='ATI Technologies Inc.'
+GL_RENDERER ='Radeon 7000 SDR x86/SSE2'
+GL_RGBA_BITS: (8, 8, 8, 8)
+GL_DEPTH_BITS = 24
+GL_STENCIL_BITS = 8
+WGL_EXTENSIONS = WGL_ARB_extensions_string WGL_ARB_make_current_read WGL_ARB_pbu
+ffer WGL_ARB_render_texture WGL_ARB_pixel_format WGL_EXT_extensions_string WGL_E
+XT_swap_control
+The WGL_ARB_pbuffer extension is available
+The GL_KTX_buffer_region extension is available
+The GL_KTX_f1 = 692858E0
+The GL_KTX_f2 = 69285900
+The GL_KTX_f3 = 69285920
+The GL_KTX_f4 = 69285940
+The GL_KTX_f5 = 692858C0
+glBufferRegionEnabled() = 0
+Buffer Swap Mode = 0
+
 ----------------------------------------------------------------------
 Fix the LEDIT mode File Save command to handle filenames with spaces.
 It currently truncates the filename at the first space.  I think it
