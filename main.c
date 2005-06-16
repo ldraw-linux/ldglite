@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.1.6      ";
+char ldgliteVersion[] = "Version 1.1.7      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -457,6 +457,7 @@ void pasteCommand(int x, int y)
   char colorstr[255];
   int color;
   int pastecount = 0;
+  float savemove = moveXamount;
 	  
   if (pastelist)
   {
@@ -471,7 +472,16 @@ void pasteCommand(int x, int y)
   }
   else 
     return;
-    
+
+  // Remove modifier keys before processing the clipboard.
+  // (We know for sure that Ctrl-V has GLUT_ACTIVE_CTRL set)
+  glutModifiers = 0;
+
+  // Set the move amount to Coarse for a big spiral.
+  moveXamount = 100.0; // Coarse movement.
+  moveZamount = 100.0;
+  moveYamount = 80.0;
+
   // For partname or filename, do not allow space or tab chars.
   for (i = 0, token = strtok( str, seps );
        token != NULL;
@@ -497,7 +507,10 @@ void pasteCommand(int x, int y)
       // If working on a part, check for peeron inventory list.
       if ((ecommand[0] == 'p') || ((i > 0) && (ecommand[0] == 'c')))
       {
-	if (strstr(token, "Part # Color Description"))
+
+	//if (strstr(token, "Part # Color Description"))
+	if (stristr(token, "Qty") && stristr(token, "PartNum") &&
+	    stristr(token, "Color") && stristr(token, "Description"))
 	{
 	  printf("// Hey, it's an inventory from peeron.com.\n");
 	  inventory = 1;
@@ -656,6 +669,26 @@ void pasteCommand(int x, int y)
   
   printf("ecommand = <%s>\n", ecommand);
   
+  //restore move amount
+  if (savemove == 100.0)
+    {
+      moveXamount = 100.0; // Coarse movement.
+      moveZamount = 100.0;
+      moveYamount = 80.0;
+    }
+  else if (savemove == 1.0)
+    {
+      moveXamount = 1.0; // Fine movement.
+      moveZamount = 1.0;
+      moveYamount = 1.0;
+    }
+  else
+    {
+      moveXamount = 10.0; // Normal movement.
+      moveZamount = 10.0;
+      moveYamount = 8.0;
+    }
+    
 }
 #endif
 
@@ -4622,6 +4655,8 @@ void display(void)
   }
 #endif
 
+  glFinish();
+
 }
 
 /***************************************************************/
@@ -8047,24 +8082,36 @@ void CldliteCommandLineInfo()
 void PrintParams(int *argc, char **argv)
 {
   char filename[256];
+  char randname[256];
+  char datname[256];
   FILE *fp;
   char *p;
   int i;
+
+  strcpy(filename, "ldglite");
   
   for (i = 1; i < *argc; i++)
   {
+    p = argv[i];
     if ((p[0] != '+') && (p[0] != '-'))
     {
       // It must be a filename.  Save it for parsing.
       strcpy(filename, basename(argv[i]));
+      strcpy(datname, argv[i]);
     }
   }
-  
+
   if ((p = strrchr(filename, '.')) != NULL)
     *p = 0;
   else 
     p = filename + strlen(filename);
+
+  strcat(filename, "_lpub");
   
+  sprintf(randname, "%s_%d", filename, (rand()%100));
+  strcpy(filename, randname);
+  strcat(randname, ".ldr");
+
   strcat(filename, ".bat");
 			      
   fp = fopen(filename, "w+");
@@ -8082,6 +8129,9 @@ void PrintParams(int *argc, char **argv)
   fprintf(fp, "\n");
 
   fclose(fp);
+
+  sprintf(filename, "copy %s %s", datname, randname);
+  system(filename);
 }
 
 /***************************************************************/
@@ -9237,7 +9287,7 @@ main(int argc, char **argv)
 #  endif
 #endif
 
-  // PrintParams(&argc, argv);
+  //PrintParams(&argc, argv);
 
   ParseParams(&argc, argv);
 
