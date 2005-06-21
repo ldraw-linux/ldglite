@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.1.7      ";
+char ldgliteVersion[] = "Version 1.1.8      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -2334,6 +2334,17 @@ void linequalitysetup()
   // then antialias the lines on top of them in a 2nd pass.
   if (qualityLines && !zSolid)
   {
+
+    //TESTING! TESTING! TESTING! TESTING! TESTING! TESTING! TESTING! 
+    if ((ldraw_image_type == IMAGE_TYPE_PNG_RGBA) && 
+	((ldraw_commandline_opts.M == 'S') || (ldraw_commandline_opts.M == 'F')))
+      glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_FALSE); //disable alpha updates
+    // This will clip anything blended with the background when saved
+    // as a transparent PNG.  Sharp outside edges, but no halo effect.
+    // The other cheap alternative is to use -b0 for a dark halo,
+    // which is less disturbing on all backgrounds that a white halo.
+    //TESTING! TESTING! TESTING! TESTING! TESTING! TESTING! TESTING! 
+
     glEnable( GL_LINE_SMOOTH ); 
     glHint( GL_LINE_SMOOTH_HINT, GL_NICEST ); // GL_FASTEST GL_DONT_CARE
     glEnable( GL_BLEND );
@@ -2363,6 +2374,12 @@ void linequalitysetup()
   }
   else
   {
+    //TESTING! TESTING! TESTING! TESTING! TESTING! TESTING! TESTING! 
+    if ((ldraw_image_type == IMAGE_TYPE_PNG_RGBA) && 
+	((ldraw_commandline_opts.M == 'S') || (ldraw_commandline_opts.M == 'F')))
+      glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); //enable alpha updates
+    //TESTING! TESTING! TESTING! TESTING! TESTING! TESTING! TESTING! 
+
 #ifdef LEQUAL_TESTING
     // Watch out!  There is one place where I use GL_EQUAL.
     glDepthFunc(GL_LESS);
