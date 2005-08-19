@@ -3002,7 +3002,7 @@ int ldlite_parse_with_rc(char *filename)
 #define USE_L3_PARSER_AND_BBOX
 #ifdef USE_L3_PARSER_AND_BBOX
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "L3Def.h"
 
 void getextents(void)
