@@ -8,6 +8,10 @@
 
 mkdir  ~/.MacOSX
 
+# CD to ~ so we can stuff the value of $PWD in the environment.plist file
+# instead of the ~ (which is not expanded by a point and click launch)
+cd ~
+
 if test ! -f ~/.MacOSX/environment.plist
 then
 echo "Creating environment.plist"
@@ -38,7 +42,7 @@ then
 echo "Setting LDRAWDIR to ~/Library/ldraw"
 cat <<END3  >>~/.MacOSX/environment.plist
 	<key>LDRAWDIR</key>
-	<string>~/Library/ldraw</string>
+	<string>$PWD/Library/ldraw</string>
 </dict>
 </plist>
 END3
@@ -85,7 +89,7 @@ then
 echo "Setting LDRAWDIR to ~/Library/ldraw"
 cat <<END6  >>~/.MacOSX/environment.plist
 	<key>LDRAWDIR</key>
-	<string>~/Library/ldraw</string>
+	<string>$PWD/Library/ldraw</string>
 END6
 else
 echo "LDRAWDIR not found in /Library or ~/Library"
