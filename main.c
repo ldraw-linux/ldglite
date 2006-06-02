@@ -59,6 +59,7 @@ extern void          DrawModel(void);
 
 //extern void ldlite_parse(char *filename, char *ldraw_lines);
 extern void ldlite_parse(char *ldraw_lines);
+extern void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs);
 
 extern char pathname[256];
 extern char primitivepath[256];
@@ -1450,8 +1451,6 @@ void NewColorPrompt()
     int lineheight = 14.0;
     int charwidth = 9.0;
 
-    extern void translate_color(int c, ZCOLOR *zcp, ZCOLOR *zcs);
-    
     s = str;
     y = Height-(lineheight*2)-2;
     x = charwidth;
@@ -3002,7 +3001,7 @@ int ldlite_parse_with_rc(char *filename)
 #define USE_L3_PARSER_AND_BBOX
 #ifdef USE_L3_PARSER_AND_BBOX
 
-#include "stdafx.h"
+#include "StdAfx.h"
 #include "L3Def.h"
 
 void getextents(void)
