@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.1.8      ";
+char ldgliteVersion[] = "Version 1.1.9      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -238,6 +238,7 @@ int buffer_swap_mode = SWAP_TYPE_UNDEFINED;
 int use_stencil_for_XOR = 1;
 int NVIDIA_XOR_HACK = 0;
 int MESA_3_COLOR_FIX = 0;
+int AVOID_FRONT_BUFFER_TEXT = 0;
 
 int show_edit_mode_gui = 1;
 int autoscaling = 0;
@@ -347,6 +348,12 @@ int OffScreenRendering = 0;
 extern int SetOffScreenRendering();
 extern int OffScreenDisplay();
 extern int OffScreenRender();
+
+// Opengl implementation details.
+char *verstr = "";
+char *extstr = "";
+char *vendstr = "";
+char *rendstr = "";
 
 // Camera movement variables
 #define MOVE_SPEED 10.0
@@ -1619,6 +1626,14 @@ int edit_mode_gui()
   }
   show_edit_mode_gui &= 1;  // Clear the clear gui bit (2).
 
+  if (AVOID_FRONT_BUFFER_TEXT)
+  {
+    // Draw into back buffer in editing mode for glutBitmapCharacter() menu speed.
+    // MUI renders bitmap text into the back buffer and is fast on RADEON.
+    CopyColorBuffer(GL_FRONT, GL_BACK);
+    glDrawBuffer(GL_BACK);
+  }
+
   glDisable( GL_DEPTH_TEST ); /* don't test for depth -- just put in front  */
   glDisable(GL_LIGHTING);
 
@@ -1684,6 +1699,12 @@ int edit_mode_gui()
   // I Should probably call glPushAttrib() and glPopAttrib() instead of
   // reshape() and rendersetup().
   rendersetup();
+
+  if (AVOID_FRONT_BUFFER_TEXT)
+  {
+    glutSwapBuffers();
+    glDrawBuffer(renderbuffer);
+  }
 
   glFlush();
 }
@@ -8848,12 +8869,6 @@ int registerGlutCallbacks()
 }
 
 /***************************************************************/
-char *verstr = "";
-char *extstr = "";
-char *vendstr = "";
-char *rendstr = "";
-
-/***************************************************************/
 int getDisplayProperties()
 {
   char *str;
@@ -9007,6 +9022,14 @@ int getDisplayProperties()
     // The Mac ATI Rage has bleeding edgelines even at 24bit depth.
     // But it may use the Apple software driver when has <= 8MB VRAM.
     projection_znear = 100.0; 
+  }
+
+  if (!strnicmp(rendstr, "RADEON 7000", 10))
+  {
+    printf("RADEON 7000 found.  Avoiding drawing in GL_FRONT buffer.\n");
+    AVOID_FRONT_BUFFER_TEXT = 1;
+    if (zDetailLevel < TYPE_PART) // Draw parts in back buffer,
+      zDetailLevel = TYPE_PART;   // Copy to front after each part. (slow)
   }
 
 #ifdef SIMULATE_MESA      
