@@ -1,3 +1,18 @@
+I suppose I should just recognise this GL_RENDERER string and force a
+bunch of patch/hacks on it so that I can stand to work on the code
+again.  Force the -w1.2, and the -n2 or -n4.  Also add a hack for ledit
+mode to copy the screen to the back buffer and change drawing to there
+right before running the glutBitMapCharacter() calls for the edit menu.
+Hmmm, I've also seen uppercase RADEON 7000 in the GL_RENDERER string
+with the same bugs in the driver.  Maybe I should do a case insensitive
+check for "radeon 7000".  
+
+I wonder if I can force it to use the Windows software driver, or the
+mesa driver.  Either one of those should give acceptable performance 
+without the bugs on any PC with a radeon in it.
+
+----------------------------------------------------------------------
+
 I have all sorts of trouble with the ATI Radeon 7000 SDR x86/SSE2 on Win XP.
 It has trouble when I draw in the GL_FRONT buffer.  Some of the early 
 geometry is just lost.  I can work around this with -n2 or -n4 which
