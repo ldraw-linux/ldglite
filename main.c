@@ -9136,19 +9136,34 @@ MsgSubClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     char *foo;
 
     cds = (COPYDATASTRUCT *) lParam;
-    printf("WM_COPYDATA %d, %d, %p\n",cds->cbData, cds->dwData, cds->lpData);
+    // printf("WM_COPYDATA %d, %d, %p\n",cds->cbData, cds->dwData, cds->lpData);
 
-    if ((cds) && (cds->dwData == 1) && 
+    // Look for first msg from LDList to tell it we accept the drag in our window.
+    if ((cds) && (cds->dwData == 0) && (cds->cbData == 0) && (cds->lpData == NULL))
+    {
+      // iRet = CallWindowProc(wpOrigMsgProc, hwnd, uMsg, wParam, lParam);
+      printf("Accepting DragNdrop from LDList\n");
+      return 1; // Accept the drag.
+    }
+    // 2nd msg from LDList contains screen(X,Y) drop point and the part text string.
+    else if ((cds) && (cds->dwData == 1) && 
 	(cds->cbData == sizeof(*CopyRecord)) && (cds->lpData))
     {
       CopyRecord = cds->lpData;
-      printf("Copyrecord = %d, %d, %s\n",
-	     CopyRecord->X, CopyRecord->Y, CopyRecord->s);
-
+      // printf("Copyrecord = %d, %d, %s\n", CopyRecord->X, CopyRecord->Y, CopyRecord->s);
       pastelist = strdup(CopyRecord->s);
+
+      // No need to forward or accept this message.  LDList ignores any return code.
+      // I could possibly convert X,Y to window coords and insert there, but not now.
+      //RecHnd = WindowFromPoint(p);   
+      //ScreenToClient(p);
     }
-    else
-      return CallWindowProc(wpOrigMsgProc, hwnd, uMsg, wParam, lParam);
+    else // Who knows what this is.  Pass it along to glut.
+    {
+      iRet = CallWindowProc(wpOrigMsgProc, hwnd, uMsg, wParam, lParam);
+      // printf("CallWindowProc() = %d\n", iRet);
+      return iRet; 
+    }
   }
   // Intercept Windows Explorer style Drag and Drop messages.
   else if (uMsg == WM_DROPFILES)
@@ -9210,6 +9225,7 @@ MsgSubClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
   else
     return CallWindowProc(wpOrigMsgProc, hwnd, uMsg, wParam, lParam);
 
+  // Post a ctrl-V to glut so it knows we have a paste/drop event.
 #if 1
   //iRet = PostMessage(hwnd, WM_KEYDOWN, VK_CONTROL, 0x8001);
   iRet = PostMessage(hwnd, WM_KEYDOWN, 'V', 0x8001);
