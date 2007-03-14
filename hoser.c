@@ -280,6 +280,16 @@ void hoser(float m[4][4], int color, int steps, int drawline,
       segname = firstparttext;
     else 
       segname = parttext;
+    if (!stricmp(parttext, "209.dat")) // Chain links
+    {
+      // Turn each link 90 degrees from the previous link.
+      // NOTE: The center point on each link is not the part center.
+      // Its the center of the half torus at one end of the link.
+      // This makes the last link troublesome to place.  We ought to
+      // set the end point half a link further out from the end part,
+      // and then skip the 180 turn for the last link.
+    }
+    else
     if (i==(steps-1))
     {
       // Turn the last part 180 degrees to make it face out of the hose.
@@ -323,6 +333,30 @@ void hoser(float m[4][4], int color, int steps, int drawline,
     m1[3][1] = 0;
     m1[3][2] = 0;
     m1[3][3] = 1;
+    if (((i & 1) == 0) && (!stricmp(parttext, "209.dat")))
+    {
+      // Roll alternate chain links 90 degrees around Y axis
+      // (before applying the hoser matrix).
+      float m0[4][4] = {
+	{1.0,0.0,0.0,0.0},
+	{0.0,1.0,0.0,0.0},
+	{0.0,0.0,1.0,0.0},
+	{0.0,0.0,0.0,1.0}
+      };
+      float m2[4][4] = {
+	{1.0,0.0,0.0,0.0},
+	{0.0,1.0,0.0,0.0},
+	{0.0,0.0,1.0,0.0},
+	{0.0,0.0,0.0,1.0}
+      };
+      m0[0][0] = 0.0;  //(float)cos(pidiv2);
+      m0[0][2] = 1.0;  //(float)sin(pidiv2);
+      m0[2][0] = -1.0; //(float)(-1.0*sin(pidiv2));
+      m0[2][2] = 0.0;  //(float)cos(pidiv2);
+      M4M4Mul(m2,m1,m0);
+      memcpy(m1, m2, sizeof(m1));
+
+    }
     hoseseg(segname, color, m1);
 #endif
 
