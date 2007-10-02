@@ -437,12 +437,16 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			  if (ldraw_commandline_opts.debug_level == 1)
 			    printf("%s\n", s);
                           // 0 !COLOUR Phosphor_White    CODE  21  VALUE #E0FFB0  EDGE #77CC00  ALPHA 250  LUMINANCE 15
+                          // Gotta handle LUMINANCE n, RUBBER, CHROME, and PEARLESCENT somehow?
 			  char colorstr[256];
 			  char name[256];
 			  int n, inverse_index, r, g, b, alpha;
 
 			  n = sscanf(s, "!COLOUR %s CODE %d VALUE #%x EDGE %d ALPHA %d",
 				     name, &i, &b, &inverse_index, &alpha);
+			  if (n == 3) // Retry EDGE as a hex number
+                            n = sscanf(s, "!COLOUR %s CODE %d VALUE #%x EDGE #%x ALPHA %d",
+				       name, &i, &b, &inverse_index, &alpha);
 			  if (n == 4)
                             alpha = 255;
                           else if (n != 5)
