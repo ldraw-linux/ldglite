@@ -431,6 +431,31 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 					(int)m1[0][0], (int)m1[0][1], (int)m1[0][2], (int)m1[0][3],
 					(int)m1[1][0], (int)m1[1][1], (int)m1[1][2], (int)m1[1][3]);
 			}
+
+			if (strncmp(s,"!COLOUR",7) == 0)
+                        {
+			  if (ldraw_commandline_opts.debug_level == 1)
+			    printf("%s\n", s);
+                          // 0 !COLOUR Phosphor_White    CODE  21  VALUE #E0FFB0  EDGE #77CC00  ALPHA 250  LUMINANCE 15
+			  char colorstr[256];
+			  char name[256];
+			  int n, inverse_index, r, g, b, alpha;
+
+			  n = sscanf(s, "!COLOUR %s CODE %d VALUE #%x EDGE %d ALPHA %d",
+				     name, &i, &b, &inverse_index, &alpha);
+			  if (n == 4)
+                            alpha = 255;
+                          else if (n != 5)
+			  {
+			    if (ldraw_commandline_opts.debug_level == 1)
+			      printf("Illegal !COLOR syntax %d\n",n);
+			    break;
+			  }
+                          r = (b >> 16) & 0xff;
+                          g = (b >> 8) & 0xff;
+                          b = b & 0xff;
+			  zcolor_modify(i,name,inverse_index, r, g, b, alpha, r, g, b, alpha);
+			}
 #else
 			if (strncmp(LinePtr->Comment,"STEP",4) == 0)
 			{
@@ -802,6 +827,11 @@ struct L3PartS *LoadRC()
   extern int LoadPart(struct L3PartS * PartPtr, int IsModel, char *ReferencingDatfile);
 
   struct L3PartS *PartPtr;
+
+  PartPtr = FindPart(0, "ldconfig.ldr");
+  if (PartPtr)
+    if (LoadPart(PartPtr, false, NULL) != 2)
+      return(PartPtr);
 
   PartPtr = FindPart(0, "ldliterc.dat");
   if (!PartPtr)
