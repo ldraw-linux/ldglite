@@ -445,8 +445,12 @@ static void DrawPart(int IsModel, struct L3PartS *PartPtr, int CurColor, float m
 			  n = sscanf(s, "!COLOUR %s CODE %d VALUE #%x EDGE %d ALPHA %d",
 				     name, &i, &b, &inverse_index, &alpha);
 			  if (n == 3) // Retry EDGE as a hex number
+                          {
                             n = sscanf(s, "!COLOUR %s CODE %d VALUE #%x EDGE #%x ALPHA %d",
 				       name, &i, &b, &inverse_index, &alpha);
+                            // Encode EDGE as an L3P extended RGB color.
+                            inverse_index |= 0x2000000;
+                          }
 			  if (n == 4)
                             alpha = 255;
                           else if (n != 5)
