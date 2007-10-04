@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.1.9      ";
+char ldgliteVersion[] = "Version 1.2.0      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -2987,13 +2987,20 @@ void rendersetup(void)
 int ldlite_parse_with_rc(char *filename)
 {
   // Partly copied from render_file() in ldliteView.cpp
-  // NOTE: I also need to find a way to add this to l3Input.cpp or l3View.cpp
-  // Although the L3 parser seems to ignore 0 COLOR metacommands anyways.
-  // I guess I would have to add the metacommands to L3Input.cpp first.
   FILE *fp;
   int bytes = 0;
 
-  fp = fopen("ldliterc.dat","rb");
+  fp = fopen("ldconfig.ldr","rb"); // Try the official ldconfig.ldr first.
+  if (fp == NULL)
+  {
+    char filename[256];
+    concat_path(datfilepath, "ldconfig.ldr", filename);
+    if (filename[0] == '.') // I hate the ./filename thing.
+      strcpy(filename, "ldconfig.ldr");
+    fp = OpenDatFile(filename); // Try the l3p paths after current working dir.
+  }
+  if (fp == NULL)
+    fp = fopen("ldliterc.dat","rb"); // If that fails, try the ldliterc file.
   if (fp != NULL) {
     bytes += fread(buf,1,15*1024,fp);
     fclose(fp);
@@ -3016,6 +3023,59 @@ int ldlite_parse_with_rc(char *filename)
   sprintf(&(buf[bytes]),"\n1 16 0 0 0 1 0 0 0 1 0 0 0 1 \"%s\"\n", filename);
 #endif
   ldlite_parse(buf);
+}
+
+/***************************************************************/
+int ldlite_parse_colour_meta(char *s)
+{
+    // Skip whitespace
+    for (; *s != 0; s++)
+    {
+      if ((*s != ' ') && (*s != '\t'))
+	break;
+    }
+
+    // Intercept the ldconfig.ldr !COLOUR meta command.
+    if (strncmp(s,"!COLOUR",7) == 0)
+    {
+      // 0 !COLOUR Phosphor_White    CODE  21  VALUE #E0FFB0  EDGE #77CC00  ALPHA 250  LUMINANCE 15
+      // Gotta handle LUMINANCE n, RUBBER, CHROME, and PEARLESCENT somehow?
+      char name[256];
+      int i, n, inverse_index, r, g, b, alpha;
+
+      if (ldraw_commandline_opts.debug_level == 1)
+	printf("%s\n", s);
+      
+      n = sscanf(s, "!COLOUR %s CODE %d VALUE #%x EDGE %d ALPHA %d",
+		 name, &i, &b, &inverse_index, &alpha);
+      if (n == 3) // Retry EDGE as a hex number
+      {
+	n = sscanf(s, "!COLOUR %s CODE %d VALUE #%x EDGE #%x ALPHA %d",
+		   name, &i, &b, &inverse_index, &alpha);
+	// Encode EDGE as an L3P extended RGB color.
+	inverse_index |= 0x2000000;
+      }
+      if (n == 4)
+      {
+	n++;
+	alpha = 255;
+      }
+      if (n != 5)
+      {
+	if (ldraw_commandline_opts.debug_level == 1)
+	  printf("Illegal !COLOUR meta-command syntax %d\n",n);
+      }
+      else
+      {
+	r = (b >> 16) & 0xff;
+	g = (b >> 8) & 0xff;
+	b = b & 0xff;
+	zcolor_modify(i,name,inverse_index, r, g, b, alpha, r, g, b, alpha);
+      }
+      return 1;
+    }
+
+    return 0;
 }
 
 /***************************************************************/
