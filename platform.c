@@ -352,6 +352,13 @@ char *platform_getenv(const char *var)
 
 void platform_comment(char *message, int level)
 {
+  // Handy place to parse new META commands unhandled by ldlite parser.
+  extern int ldlite_parse_colour_meta(char *s);
+
+  // Intercept the ldconfig.ldr !COLOUR meta command.
+  if (ldlite_parse_colour_meta(message))
+    return;
+
   if (level == 0)
     printf("comment %s\n", message);
 }
