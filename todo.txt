@@ -1,3 +1,18 @@
+Add support for RUBBER and other materials in ldconfig.ldr
+
+Add a command line option for only using NEW colors from ldconfig.ldr
+because I like the default ldlite colors and especially the edge
+colors better than the official ldraw.org ones.  You know, I could
+make this really simple by just importing the NEW colors into 
+lcolors.c and doing a new release.
+
+Maybe consider parsing both ldconfig.ldr and ldliterc.dat.  I'm not
+sure which should get preference though.  I'm leaning towards giving
+preference to ldliterc.dat since ldconfig.ldr is distributed with 
+the official parts and is thus less geared towards personal tastes.
+
+----------------------------------------------------------------------
+
 I suppose I should just recognise this GL_RENDERER string and force a
 bunch of patch/hacks on it so that I can stand to work on the code
 again.  Force the -w1.2, and the -n2 or -n4.  Also add a hack for ledit
