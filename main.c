@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.2.0      ";
+char ldgliteVersion[] = "Version 1.2.1      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -8495,8 +8495,15 @@ void ParseParams(int *argc, char **argv)
 	}
 	break;
       case 'J':
-      case 'j':
 	ldraw_projection_type = 1;
+	break;
+      case 'j':
+	ldraw_projection_type = 0;
+	if (m_viewMatrix == LdrawOblique)
+	{
+	  m_viewMatrix = Oblique;
+	  parse_view(m_viewMatrix);
+	}
 	break;
       case 'K':
       case 'k':
