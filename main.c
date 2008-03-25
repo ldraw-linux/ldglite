@@ -333,6 +333,8 @@ int qualityLines = 0;
 float lineWidth = 0.0;
 int LineChecking = 0;
 int preprintstep = 0;
+int dimLevel = 0; // Same as ldraw_commandline_opts.maxlevel=32767;  // a huge number
+float dimAmount = 0.0;
 
 #ifdef TILE_RENDER_OPTION
 #include "tr.h"
@@ -1028,6 +1030,7 @@ void printModelMat(char *name)
 void parse_view(char *viewMatrix);
 void getCamera(float m[4][4], float v[3]);
 
+#include "StdAfx.h" /* For L3Def.h */
 #include "L3Def.h" /* For m4v3mul() */
 
 /***************************************************************/
@@ -3082,8 +3085,9 @@ int ldlite_parse_colour_meta(char *s)
 #define USE_L3_PARSER_AND_BBOX
 #ifdef USE_L3_PARSER_AND_BBOX
 
-#include "StdAfx.h"
-#include "L3Def.h"
+// Included above now
+//#include "StdAfx.h"
+//#include "L3Def.h"
 
 void getextents(void)
 {
@@ -8380,7 +8384,21 @@ void ParseParams(int *argc, char **argv)
 	break;
       case 'D':
       case 'd':
-	sscanf(pszParam,"%c%d",&type,&(ldraw_commandline_opts.maxlevel));
+	{
+	  int lev;
+	  n = sscanf(pszParam,"%c%d,%g",&type,&lev, &dimAmount);
+	  if (n == 3)
+	  {
+	    dimLevel = lev;
+	    if (dimAmount < 0.0)
+	      dimAmount = 0.0;
+	    if (dimAmount > 1.0)
+	      dimAmount = 1.0;
+	    printf("Dimlevel = %d, %g\n", dimLevel, dimAmount);
+	  }
+	  else 
+	    ldraw_commandline_opts.maxlevel = lev;
+	}
 	break;
       case 'E':
       case 'e':
