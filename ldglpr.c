@@ -1,4 +1,4 @@
- /*
+/*
  *  ldglpr.c   Module for printing pictures of ldlite .dat files
  *  Copyright (C) 2001  DMH
  *
@@ -63,7 +63,15 @@ void *OSbuffer = NULL;
 AGLContext ctx;
 // NOTE:  Apple currently lists aglSetOffScreen() as unsupported by Carbon.
 #endif
-
+#ifdef CGL_OFFSCREEN_OPTION
+//#include <CGL/CGLCurrent.h>
+//#include <CGL/CGLTypes.h>
+#include <Carbon/Carbon.h>
+#include <OpenGL/OpenGL.h>
+#include <OpenGL/gl.h>
+void *OSbuffer = NULL;
+CGLContextObj ctx;
+#endif
 char *pix;
 
 /***************************************************************/
@@ -556,7 +564,7 @@ void write_png(char *filename)
     else
       glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, pix);
 
-    png_write_row(png_ptr, pix);
+    png_write_row(png_ptr, (unsigned char *)pix);
   }
 
   text_ptr[0].key = "Software";
@@ -857,6 +865,9 @@ int SetOffScreenRendering()
 #ifdef AGL_OFFSCREEN_OPTION
   return 1;
 #endif
+#ifdef CGL_OFFSCREEN_OPTION
+  return 1;
+#endif
 
   return 0;
 }
@@ -878,6 +889,9 @@ int OffScreenDisplay()
    //platform_step_filename(curstep, filename);
 #endif
 #ifdef AGL_OFFSCREEN_OPTION
+   DrawScene();
+#endif
+#ifdef CGL_OFFSCREEN_OPTION
    DrawScene();
 #endif
    return 0;
@@ -1022,6 +1036,67 @@ void CleanupAGL( AGLContext ctx )
 }
 #endif
 
+#ifdef CGL_OFFSCREEN_OPTION
+//************************************************************************
+static CGLContextObj setupCGL(void)
+{
+  int numPixelFormats = 0; // long numPixelFormats = 0;
+  CGLPixelFormatObj pixelFormatObj;
+  CGLContextObj  ctx;
+  CGLError       ok;
+  GLsizei        rowbytes;
+  CGLPixelFormatAttribute attribs[] = {
+                                       kCGLPFAOffScreen,
+                                       kCGLPFAColorSize, 32,
+				       kCGLPFADepthSize, 32,
+                                       0}; //NULL};
+#endif
+
+  /* Allocate the image buffer */
+  // NOTE:  4 bytes rgb + 4 bytes depth?
+  OSbuffer = malloc(Width * Height * 8);
+
+  if (!OSbuffer) {
+    printf("Alloc image buffer failed!\n");
+    return NULL;
+  }
+
+  /* Choose an rgb pixel format */
+  CGLChoosePixelFormat (attribs, &pixelFormatObj, &numPixelFormats);
+  if( pixelFormatObj == NULL )
+    return NULL;
+
+  /* Create a CGL context */
+  CGLCreateContext (pixelFormatObj, NULL, &ctx);
+  if( ctx == NULL )
+    return NULL;
+
+  /* The pixel format is no longer needed */
+  CGLDestroyPixelFormat (pixelFormatObj);
+
+  /* Make the context the current context */
+  ok = CGLSetCurrentContext (ctx);
+  if ( ok != kCGLNoError )
+    return NULL;
+
+  /* Attach the off screen area to the context */
+  rowbytes = Width * 4; // * sizeof(GLubyte);
+  ok = CGLSetOffScreen (ctx, Width, Height, rowbytes, OSbuffer);
+  if ( ok != kCGLNoError )
+    return NULL;
+
+  return ctx;
+}
+
+/***************************************************************/
+void CleanupCGL( CGLContextObj ctx )
+{
+  CGLSetCurrentContext (NULL);
+  CGLClearDrawable (ctx);
+  CGLDestroyContext (ctx);
+}
+#endif
+
 /***************************************************************/
 int OffScreenRender()
   {
@@ -1062,6 +1137,13 @@ int OffScreenRender()
       exit(0);
     }
 #endif
+#ifdef CGL_OFFSCREEN_OPTION
+    ctx = setupCGL();
+    if (ctx == NULL) {
+      printf("setupCGL failed!\n");
+      exit(0);
+    }
+#endif
 
     getDisplayProperties();
 
@@ -1096,6 +1178,12 @@ int OffScreenRender()
    free( OSbuffer );
 
    CleanupAGL( ctx );
+#endif
+#ifdef CGL_OFFSCREEN_OPTION
+   /* free the image buffer */
+   free( OSbuffer );
+
+   CleanupCGL( ctx );
 #endif
 
     return 0;
