@@ -227,9 +227,16 @@ void write_bmp(char *filename)
         p[0] = p[2];
         p[2] = c;
 #else
+#ifdef OSMESA_OPTION
 	// MESA or OSmesa bug?  ReadPixels gives GBR instead of RGB???
         p[0] = p[1];
         p[1] = c;
+#endif
+#ifdef CGL_OFFSCREEN_OPTION
+        // I assume the BGR is for the BMP file, so follow the lead of Windows.
+        p[0] = p[2];
+        p[2] = c;
+#endif
 #endif
         p+=3;
       }
@@ -1047,13 +1054,38 @@ static CGLContextObj setupCGL(void)
   GLsizei        rowbytes;
   CGLPixelFormatAttribute attribs[] = {
                                        kCGLPFAOffScreen,
-                                       kCGLPFAColorSize, 32,
+                                       //kCGLPFAColorSize, 32,
+                                       kCGLPFAColorSize, 24,
+                                       kCGLPFAAlphaSize, 8,
 				       kCGLPFADepthSize, 32,
+                                       //kCGLRGB888A8Bit,
                                        0}; //NULL};
+
+#if 0
+   //kCGLRGB888A8Bit,
+   //Specifies a format that has 8-32 bits per pixel with an ARGB channel layout, 
+   //and the channels located in the following bits: A=7:0, R=23:16, G=15:8, B=7:0. 
+   //NOTE: I dont get it.  In the docs it says A above is for Accumulation (not Alpha?)
+   // Do I need this???
+   //kCGLPFAAccumSize, 8,
+
+   // Here's the code from Ldview.  It uses an unaccelerated pbuffer.
+   // I think I only need stencil for moving parts around, but I'd better check...
+   CGLPixelFormatAttribute attrs[] =
+   {
+   	kCGLPFADepthSize, (CGLPixelFormatAttribute)24,
+   	kCGLPFAColorSize, (CGLPixelFormatAttribute)24,
+   	kCGLPFAAlphaSize, (CGLPixelFormatAttribute)8,
+   	kCGLPFAStencilSize, (CGLPixelFormatAttribute)8,
+   	kCGLPFAAccelerated, (CGLPixelFormatAttribute)NO,
+   	kCGLPFAPBuffer,
+   	(CGLPixelFormatAttribute)0, // reserved for kCGLPFARemotePBuffer (if shared context)
+   	(CGLPixelFormatAttribute)0
+   };
 #endif
 
   /* Allocate the image buffer */
-  // NOTE:  4 bytes rgb + 4 bytes depth?
+  // NOTE:  4 bytes RGBA + 4 bytes depth per pixel?
   OSbuffer = malloc(Width * Height * 8);
 
   if (!OSbuffer) {

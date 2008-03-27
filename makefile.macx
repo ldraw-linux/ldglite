@@ -12,8 +12,10 @@ TR_FLAGS=-DTILE_RENDER_OPTION
 TR_SRC=tr.c
 
 # UnComment this to build in support for Mesa Offscreen rendering
-OFFSCREEN_FLAGS=-DAGL_OFFSCREEN_OPTION
-OFFSCREEN_LIBS= -framework AGL
+#OFFSCREEN_FLAGS=-DAGL_OFFSCREEN_OPTION
+#OFFSCREEN_LIBS= -framework AGL
+OFFSCREEN_FLAGS=-DCGL_OFFSCREEN_OPTION
+OFFSCREEN_LIBS=
 
 # Comment these out to disable the test GUI made with MUI.
 #
@@ -30,7 +32,7 @@ LIBS = libmui.a
 GL_LIBS=-framework OpenGL -framework GLUT -framework Carbon -lobjc -lstdc++ $(OFFSCREEN_LIBS) 
 
 CFLAGS=-g -I./osx -DUNIX -DMACOS_X -DUSING_CARBON -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 -DNEED_MIN_MAX $(PNG_FLAGS) $(TR_FLAGS) $(OFFSCREEN_FLAGS) $(GUI_FLAGS)
-CFLAGS+=-DNOT_WARPING -DVISIBLE_SPIN_CURSOR -DSAVE_DEPTH_ALL -DSAVE_COLOR_ALL -DMACOS_X_TEST2
+CFLAGS+=-DNOT_WARPING -DVISIBLE_SPIN_CURSOR -DSAVE_DEPTH_ALL -DSAVE_COLOR_ALL -DMACOS_X_TEST2 -arch i386 -arch ppc
 
 ## This is lame.  I don't know how to do both .c and .cpp for the OBJS line
 ## so I pretend L3*.cpp is L3*.c and make rules for them later.
