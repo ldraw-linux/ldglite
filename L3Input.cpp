@@ -140,8 +140,12 @@ static struct InputInfo
 static char          Path[_MAX_PATH];
 static char          SubPartDatName[_MAX_PATH];
 static char          ErrStr[400];
+#ifdef USE_OPENGL
+char                *Dirs[] = {"\\P\\", "\\Parts\\", "\\Models\\", 
+			       "\\Unofficial\\P\\", "\\Unofficial\\Parts\\"};
+#else
 char                *Dirs[] = {"\\P\\", "\\Parts\\", "\\Models\\"};
-
+#endif
 struct L3PovS        L3Pov = {
    {                                      /* Camera position                 */
       30.0,                               /* Latitude                        */
@@ -558,6 +562,18 @@ static FILE         *OpenDatFile2(char *DatName, char *Extension)
 	   concat_path(partspath, DatName, Path);
 	 if (stricmp(Dirs[i], "\\Models\\") == 0)
 	   concat_path(modelspath, DatName, Path);
+	 if (stricmp(Dirs[i], "\\Unofficial\\P\\") == 0)
+	 {
+	   char PrePath[_MAX_PATH];
+	   concat_path(LDrawDir, Dirs[i], PrePath);
+	   concat_path(PrePath, DatName, Path);
+	 }
+	 if (stricmp(Dirs[i], "\\Unofficial\\Parts\\") == 0)
+	 {
+	   char PrePath[_MAX_PATH];
+	   concat_path(LDrawDir, Dirs[i], PrePath);
+	   concat_path(PrePath, DatName, Path);
+	 }
 #else	
          strcpy(Path, LDrawDir);
          strcat(Path, Dirs[i]);
