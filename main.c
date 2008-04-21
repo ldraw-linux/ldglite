@@ -273,7 +273,8 @@ GLint DepthBits = 0;
 GLint StencilBits = 0;
 GLuint cbuffer_region = 0;
 GLuint zbuffer_region = 0;
-static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
+//static float *zbufdata = NULL;   // NOTE: gotta free when finished editing.
+static int *zbufdata = NULL;   // NOTE: gotta free when finished editing.
 static char *cbufdata = NULL;   // NOTE: gotta free when finished editing.
 
 /***************************************************************/
@@ -374,6 +375,7 @@ void rendersetup(void);
 int edit_mode_keyboard(int key, int x, int y);
 int edit_mode_fnkeys(int key, int x, int y);
 void mouse(int button, int state, int x, int y);
+char *stristr(char *src, char *dst);
 
 /***************************************************************/
 static int prevlookup = 0;
@@ -3900,6 +3902,7 @@ void SaveDepthBuffer(void)
       printf("sbox = %d, %d, %d, %d\n", sc[0], sc[1], sc[2], sc[3]);
     if (zbufdata)
       free (zbufdata);  // NOTE: gotta free this when finished editing.
+    //zbufdata = (float *) malloc(sc[2] * sc[3] * sizeof(float));
     zbufdata = (int *) malloc(sc[2] * sc[3] * sizeof(int));
     glReadBuffer(staticbuffer); // set pixel source
     glReadPixels(sc[0],sc[1],sc[2],sc[3],GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
@@ -3922,7 +3925,8 @@ void SaveDepthBuffer(void)
       //zbufdata = realloc(zbufdata, Width * Height * sizeof(float));
     }
     else
-      zbufdata = (float *) malloc(Width * Height * sizeof(int));
+      zbufdata = (int *) malloc(Width * Height * sizeof(int));
+      //zbufdata = (float *) malloc(sc[2] * sc[3] * sizeof(float));
     glReadBuffer(staticbuffer); // set pixel source
     //glReadPixels(0,0, Width,Height, GL_DEPTH_COMPONENT, GL_FLOAT, zbufdata);
     glReadPixels(0,0,Width,Height,GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,zbufdata);
@@ -5105,9 +5109,9 @@ char *loadpartlist(void)
 }
 
 /***************************************************************/
-int stristr(char *src, char *dst)
+char *stristr(char *src, char *dst)
 {
-  int n;
+  char *n;
   char ss[256];
   char dd[256];
 
@@ -5255,7 +5259,7 @@ char *loadpluglist(void)
     if ((strlen(buffer) + strlen(filename) + 2) > filesize)
     {
       filesize += 1000;
-      filesize = realloc(buffer, filesize * sizeof(char));
+      buffer = realloc(buffer, filesize * sizeof(char));
     }
     strcat(buffer, filename);
     strcat(buffer, "\n");
@@ -8917,7 +8921,7 @@ int InitInstance()
 
 /***************************************************************/
 // Called when user wants to open a new file
-int setfilename(const char *newfile)
+int setfilename(char *newfile)
 {
   strcpy(datfilename, basename(newfile));
   strcpy(datfilepath, dirname(newfile));
@@ -9508,9 +9512,13 @@ main(int argc, char **argv)
 
   // Get the path to the program to find the plugins directory
   if (GetExecName(argv[0], progname, 256) == 0)
+  {
     strcpy(progpath, dirname(progname));
+  }
   else
+  {
     strcpy(progpath, "");
+  }
 
   strcpy(progname, basename(argv[0]));
   // SetTitle(0);
@@ -9533,6 +9541,14 @@ main(int argc, char **argv)
     }
   }
 #endif
+
+
+  //DEBUG stuff
+  if (OffScreenRendering)
+    printf("Rendering OffScreen\n");
+  else
+    printf("Rendering OnScreen\n");
+
 
   if (OffScreenRendering == 1)
   {

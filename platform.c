@@ -376,6 +376,7 @@ void platform_comment(char *message, int level)
 
 #if defined(UNIX)
 #include <sys/param.h>
+#include <limits.h> // For realpath() on Red Hat 9.
 
 #define PATHSIZE MAXPATHLEN
 #else
@@ -397,9 +398,7 @@ long get_file_mode(char *path)
 
 /***********************************************************************/
 /*  Strip off first element of path into buf.  Returns new path. */
-char *getPathElement( path, buf )
-  register char *path;
-  register char *buf;
+char *getPathElement(char *path, char *buf)
 {
   while ( (*buf = *path++) != '\0' ) {
     if (*buf == ':') {
@@ -421,12 +420,14 @@ int GetExecName(char *argv0, char *buf, int buflen)
 #else
   // getexecname() on Solaris??
 
+  char    tmpbuf[PATHSIZE];
+
   // Handle absolute paths.  Easy!
   if (*argv0 == '/') {
     strcpy( buf, argv0 );
     return(0);
   }
-  
+
   // Handle relative paths.  Almost easy.  Work off of getcwd()
   if (*argv0 == '.' && *(argv0+1) == '/') {
     strcpy(buf, argv0 + 2);
@@ -450,18 +451,24 @@ int GetExecName(char *argv0, char *buf, int buflen)
       if((get_file_mode(buf) & S_IFMT) == S_IFDIR) continue;
       /* Got it.  Now if it is not absolute, just prepend cwd */
       if (*buf != '/') {
-	char    tmpbuf[PATHSIZE];
 	
       found:
 	strncpy(tmpbuf, buf, PATHSIZE/sizeof(char));
+#if 0	
 	if ( getcwd(buf, (PATHSIZE/sizeof(char))-1) == 0 ) break;
 	strncat(buf, "/", PATHSIZE/sizeof(char));
 	strncat( buf, tmpbuf, PATHSIZE/sizeof(char));
-	
+#else
+	if ( getcwd(buf, buflen-1) == 0 ) break;
+	strncat(buf, "/", buflen);
+	strncat( buf, tmpbuf, buflen);
+#endif	
 	if ( realpath(buf, tmpbuf) == NULL)
 	  return 1;
 	
-	strncpy(buf, tmpbuf, PATHSIZE/sizeof(char));
+	//strncpy(buf, tmpbuf, PATHSIZE/sizeof(char));
+	strncpy(buf, tmpbuf, buflen);
+
 	return 2;
       }
       return(0);

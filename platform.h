@@ -42,6 +42,8 @@
 #define LACKS_DIRNAME 0
 #define LACKS_BASENAME 0
 
+// Get dirname and basename from libgen.h (on Redhat 9 linux, anyhow)
+#include <libgen.h>
 
 #elif defined(MAC)
 

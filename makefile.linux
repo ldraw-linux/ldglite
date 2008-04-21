@@ -12,8 +12,9 @@ TR_SRC=tr.c
 
 # UnComment this to build in support for Mesa Offscreen rendering
 # This needs (namespace?) fixing to work with GLX mesa.
-#OFFSCREEN_FLAGS=-DOSMESA_OPTION
+OFFSCREEN_FLAGS=-DOSMESA_OPTION
 #OFFSCREEN_LIBS= -lOSMesa
+OFFSCREEN_LIBS= /usr/X11R6/lib/libOSMesa.a
 # NOTE: Mesa Offscreen lib is not required in some older? version of Mesa?
 
 # Comment these out to disable the test GUI made with MUI.
