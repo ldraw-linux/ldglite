@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.2.1      ";
+char ldgliteVersion[] = "Version 1.2.2      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -75,7 +75,9 @@ char bitmappath[256];
 #define LDLITE_PARSER 0
 #define L3_PARSER     1
 
-int parsername = UNKNOWN_PARSER;
+// It's 2008 and the l3 parser works much better with current GPU chips.
+// So maybe it's about time to set L3 as the default parser.
+int parsername = L3_PARSER; // (was UNKNOWN_PARSER)
 #endif
 
 int EPS_OUTPUT_FIGURED_OUT = 0;
@@ -223,6 +225,38 @@ int sc[4];
 #define SWAP_TYPE_NODAMAGE 3	// unchanged even by X expose() events
 #define SWAP_TYPE_KTX 4		// use the GL_KTX_buffer_region extension
 #define SWAP_TYPE_APPLE 5	// OSX fakes GL_FRONT by drawing in GL_BACK
+
+// Lookup some of these extensions for reference:
+// GL_APPLE_flush_render {provides glSwapAPPLE() glFlushRenderAPPLE(), glFinishRenderAPPLE()}
+// GLX_SWAP_COPY_OML, GLX_SWAP_METHOD_OML
+// GL_WIN_swap_hint
+// WGL_SWAP_METHOD_ARB, WGL_SWAP_METHOD_EXT, WGL_SWAP_UNDEFINED_ARB, WGL_SWAP_UNDEFINED_EXT
+// WGL_SWAP_COPY_ARB, WGL_SWAP_COPY_EXT, WGL_SWAP_EXCHANGE_ARB, WGL_SWAP_EXCHANGE_EXT
+// 
+
+/*
+GL_APPLE_flush_render   (Specification pending)
+-------------------------------
+Normally, in single buffered mode glFlush and glFinish submit the
+command stream and copy the resulting image to the screen. This
+extension provides glFlushRenderAPPLE and glFinishRenderAPPLE which
+just submit pending opengl commands and do not copy the results to the
+screen. Also, provides glSwapAPPLE which copies rendered image for the
+current context to the screen without needing a context argument and
+works in both single and double buffered modes symmetrically.
+
+System: Mac OS X v10.3 and later
+Renderers: All 
+
+
+GL_APPLE_fence   (Specification)
+-------------------------------
+Provides synchronization primitives that can be inserted into the
+OpenGL command stream and later queried for completion.
+
+System: Mac OS X v10.2 "Jaguar" and later
+Renderers: All 
+*/
 
 // Set default editing mode.
 #ifdef MESA
@@ -920,9 +954,16 @@ void CopyColorBuffer(int srcbuffer, int destbuffer)
 
   if ((srcbuffer == staticbuffer) && (destbuffer == screenbuffer))
   {
-    if ((buffer_swap_mode == SWAP_TYPE_COPY) ||
-	(buffer_swap_mode == SWAP_TYPE_NODAMAGE))
+    if ((buffer_swap_mode == SWAP_TYPE_COPY)
+	|| (buffer_swap_mode == SWAP_TYPE_NODAMAGE)
+	|| (buffer_swap_mode == SWAP_TYPE_APPLE) // OSX seems to COPY (according to blender)
+	)
     {
+      printf("CopyColorBuffer(%s to %s) = glutswapBuffers(mode=%d)\n", 
+	     ((srcbuffer==GL_FRONT)? "Front" : "Back"), 
+	     ((destbuffer==GL_FRONT)? "Front" : "Back"),
+	     buffer_swap_mode);
+
       glutSwapBuffers(); // Found GL_WIN_swap_hint extension
 #ifdef WINTIMER
       finishtime = timeGetTime();
@@ -931,6 +972,10 @@ void CopyColorBuffer(int srcbuffer, int destbuffer)
       return;
     }
   }
+
+  printf("CopyColorBuffer(%s to %s)\n", 
+	 ((srcbuffer==GL_FRONT)? "Front" : "Back"), 
+	 ((destbuffer==GL_FRONT)? "Front" : "Back"));
 
   glPushAttrib(GL_COLOR_BUFFER_BIT|GL_CURRENT_BIT|GL_DEPTH_BUFFER_BIT|
 	       GL_FOG_BIT|GL_LIGHTING_BIT|GL_VIEWPORT_BIT);
@@ -1626,7 +1671,7 @@ int edit_mode_gui()
   // If nothing is happening and hiding the LEDIT GUI just return.
   else if ((show_edit_mode_gui == 0) && (ecommand[0] == 0))
   {
-    glFlush();
+    printf("glFlush(edit_mode_gui(middle))\n"); glFlush();
     return;
   }
   show_edit_mode_gui &= 1;  // Clear the clear gui bit (2).
@@ -1707,11 +1752,11 @@ int edit_mode_gui()
 
   if (AVOID_FRONT_BUFFER_TEXT)
   {
-    glutSwapBuffers();
+    {printf("glutSwapBuffers()\n"); glutSwapBuffers();}
     glDrawBuffer(renderbuffer);
   }
 
-  glFlush();
+  printf("glFlush(edit_mode_gui(bottom))\n"); glFlush();
 }
 
 /***************************************************************/
@@ -1734,6 +1779,11 @@ int platform_write_step_comment(char *comment_string)
 {
   int savedirty;
 
+#if 0
+  // The reshape() fn seems to hose up the display right before glutSwapBuffers()
+  return 0;
+#endif
+
 #ifndef ALWAYS_REDRAW
   glEnable( GL_COLOR_LOGIC_OP ); 
   //glEnable( GL_LOGIC_OP_MODE ); 
@@ -1741,6 +1791,7 @@ int platform_write_step_comment(char *comment_string)
 #endif
 
   glMatrixMode( GL_PROJECTION );
+  glPushMatrix();
   glLoadIdentity();
 #ifdef USE_GLFONT
   if (fontname)
@@ -1769,7 +1820,14 @@ int platform_write_step_comment(char *comment_string)
 
   // Reset the projection matrix.
   savedirty = dirtyWindow; 
+#if 1
   reshape(Width, Height);
+#else
+  // The reshape() fn seems to hose up the display right before glutSwapBuffers()
+  glMatrixMode( GL_PROJECTION );
+  glPopMatrix();
+  glMatrixMode( GL_MODELVIEW );
+#endif
   dirtyWindow = savedirty; 
 }
 
@@ -2704,6 +2762,8 @@ void reshape(int width, int height)
 {
     GLdouble left, right, top, bottom, aspect, znear, zfar, fov;
 
+    printf("reshape(debugging)\n");
+
     // Check for new opengl context on reshape() calls.
     // Should probably also do this when entering/leaving game mode.
     // NOTE:  I should probably break up this fn so I can skip this check
@@ -3438,7 +3498,7 @@ void DrawScene(void)
   }
   
 
-  glFlush();
+  printf("glFlush(DrawScene)\n"); glFlush();
 
   dirtyWindow = 0;  // The window is nice and squeaky clean now.
 
@@ -4171,7 +4231,7 @@ int XORcurPiece()
   glCurColorIndex = -2;
 
   retval = Draw1Part(curpiece, 15);
-  glFlush(); // Force display now.  For OSX, this copies BACK to FRONT.
+  printf("glFlush(XORcurPiece)\n"); glFlush(); // Force display now.  For OSX, this copies BACK to FRONT.
 
 #ifdef MESA_XOR_TEST
   if (buffer_swap_mode == SWAP_TYPE_NODAMAGE) // Mesa
@@ -4179,7 +4239,7 @@ int XORcurPiece()
     //CopyColorBuffer(renderbuffer, screenbuffer); 
     if (!panning)
     {
-      glutSwapBuffers(); // Copy the BACK buffer with XOR part to FRONT.
+      {printf("glutSwapBuffers()\n"); glutSwapBuffers();} // Copy the BACK buffer with XOR part to FRONT.
       retval = Draw1Part(curpiece, 15);  // Erase it in the BACK buffer.
       glDrawBuffer(screenbuffer); // Switch to FRONT buffer for LEDIT menu.
     }
@@ -4342,7 +4402,7 @@ void CopyStaticBuffer(int forcedsave)
 	glDrawBufferRegion(zbuffer_region,0,0,Width,Height,0,0);
 	glDrawBufferRegion(cbuffer_region,0,0,Width,Height,0,0);
       }
-      glutSwapBuffers(); 
+      {printf("glutSwapBuffers()\n"); glutSwapBuffers();} 
       glDrawBuffer(screenbuffer); 
       rendersetup();
       return;
@@ -4376,7 +4436,7 @@ void CopyStaticBuffer(int forcedsave)
       glDrawBuffer(staticbuffer); 
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       render();
-      glutSwapBuffers();
+      {printf("glutSwapBuffers()\n"); glutSwapBuffers();}
       glDrawBuffer(screenbuffer); 
       UnSelect1Part(curpiece);
     }
@@ -4471,7 +4531,7 @@ void DrawMovingPiece(void)
   {
     XORcurPiece();
   }
-  glFlush();
+  printf("glFlush(DrawMovingPiece)\n"); glFlush();
 }
 
 /***************************************************************/
@@ -4530,7 +4590,7 @@ void display(void)
 	// Delay swap until after XOR moving part for Mesa.
 	if (buffer_swap_mode != SWAP_TYPE_NODAMAGE) // Mesa
 #endif
-	glutSwapBuffers();
+	{printf("glutSwapBuffers()\n"); glutSwapBuffers();}
 	glDrawBuffer(renderbuffer); 
       }
       if (SOLID_EDIT_MODE)
@@ -4585,7 +4645,7 @@ void display(void)
 	glDrawBuffer(screenbuffer); 
 	// Solid moving part must be drawn in GL_FRONT if not panning.
 	if (!SOLID_EDIT_MODE || (movingpiece != curpiece) || panning)
-	  glutSwapBuffers();
+	  {printf("glutSwapBuffers()\n"); glutSwapBuffers();}
       }
 #endif
       if (!panning)
@@ -4706,16 +4766,21 @@ void display(void)
     }
   }
 
-  glFlush();
+  //printf("glFlush(Display)\n"); glFlush();
 
   glPopMatrix();
 
   //  if (!selection)
-  //    glutSwapBuffers();
+  //    {printf("glutSwapBuffers()\n"); glutSwapBuffers();}
+
+  if (renderbuffer == GL_FRONT)
+    {printf("glFinish(Display)\n"); glFinish();}
+  else
+    {printf("Skipping glFinish(Display)\n");}
 
 #ifdef USE_DOUBLE_BUFFER
   if (panning)
-    glutSwapBuffers();
+    {printf("glutSwapBuffers()\n"); glutSwapBuffers();}
   else if (zDetailLevel > TYPE_P)
     // Get every last update (including text) into the front buffer.
     CopyColorBuffer(renderbuffer, screenbuffer);
@@ -4760,7 +4825,7 @@ void display(void)
   }
 #endif
 
-  glFinish();
+  //printf("glFinish(Display)\n"); glFinish();
 
 }
 
@@ -4810,7 +4875,7 @@ void EraseCurPiece(void)
       glDepthFunc(GL_EQUAL); // Tricky!  We already drew it in the front buf.
       DrawCurPart(-1); //Draw1Part(curpiece, -1);
       glDepthFunc(GL_LESS);
-      glFlush(); // Force drawing now.
+      printf("glFlush(EraseCurPiece)\n"); glFlush(); // Force drawing now.
       glDrawBuffer(renderbuffer);
     }
 #endif
@@ -4871,7 +4936,7 @@ void HiLightNewPiece(int piecenum)
       glDrawBuffer(staticbuffer); 
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       render();
-      glutSwapBuffers();
+      {printf("glutSwapBuffers()\n"); glutSwapBuffers();}
       glDrawBuffer(screenbuffer); 
     }
   }
@@ -4908,7 +4973,7 @@ void InsertNewPiece(void)
       glDrawBuffer(staticbuffer); 
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       render();
-      glutSwapBuffers();
+      {printf("glutSwapBuffers()\n"); glutSwapBuffers();}
       glDrawBuffer(screenbuffer); 
     }
   }
@@ -7845,7 +7910,7 @@ motion(int x, int y)
       glEnable( GL_DEPTH_TEST ); 
       glDisable( GL_COLOR_LOGIC_OP ); 
       //glDisable( GL_LOGIC_OP_MODE ); 
-      glFlush();
+      printf("glFlush(motion)\n"); glFlush();
 
       pan_end_x = pan_x;
       pan_end_y = pan_y;
@@ -9032,7 +9097,11 @@ int getDisplayProperties()
 #ifdef MESA
   buffer_swap_mode = SWAP_TYPE_NODAMAGE;
 #else
+#  ifdef MACOS_X
+  buffer_swap_mode = SWAP_TYPE_APPLE;
+#  else
   buffer_swap_mode = SWAP_TYPE_UNDEFINED;
+#  endif
 #endif
 
   /*
@@ -9469,6 +9538,23 @@ main(int argc, char **argv)
 	// get the screen size and subtract a fudge factor for window borders
 	Width = ldraw_commandline_opts.V_x = glutGet(GLUT_SCREEN_WIDTH) - 8;
 	Height = ldraw_commandline_opts.V_y = glutGet(GLUT_SCREEN_HEIGHT) - 32;
+#ifdef MACOS_X
+	{
+	  int w,h;
+	  void GetAvailablePos(int *w, int *h);
+
+	  // Fix this to return top and left as well.
+	  // Then set XwinPos, YwinPos to avoid a side mounted dock.
+	  // By the way, glut docs say X,YWinpos should default to -1,-1.
+	  // Which lets the window mgr decide where to place it.  
+	  // Maybe I should try that first?
+          XwinPos = -1; YwinPos = -1;
+	  GetAvailablePos(&w, &h);
+	  Width = ldraw_commandline_opts.V_x = w;
+	  Height = ldraw_commandline_opts.V_y = h;
+	  printf( "Screen resolution: %d, %d\n", w, h );
+	}
+#endif
 #if defined(MAC)
 	// Set default window small for MACs to get cmdline args.
 	Width = 640;
@@ -9615,7 +9701,9 @@ main(int argc, char **argv)
 #endif
 #endif
   {
+    printf("glutInitWindowSize(%d, %d)\n",Width, Height);
     glutInitWindowSize(Width, Height);
+    printf("glutInitPosition(%d, %d)\n",XwinPos, YwinPos);
     glutInitWindowPosition(XwinPos, YwinPos);
 
     main_window = glutCreateWindow(title);
@@ -9623,6 +9711,7 @@ main(int argc, char **argv)
     if (ldraw_commandline_opts.V_x < 0)
     {
       ldraw_commandline_opts.V_x = Width;
+      printf("glutFullScreen(%d, %d)\n", ldraw_commandline_opts.V_x, Width);
       glutFullScreen();  // This shows no window decorations.
     }   
   }

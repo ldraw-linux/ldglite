@@ -74,6 +74,19 @@ CGLContextObj ctx;
 #endif
 char *pix;
 
+#ifdef MACOS_X
+void GetAvailablePos(int *w, int *h)
+{
+  //HIWindowGetAvailablePositioningBounds() // Leopard only?
+  //Prior to Leopard, just use GetAvailableWindowPositioningBounds
+  Rect rect;
+  //GetAvailableWindowPositioningBounds( GetMainDevice(), &rect );
+  GetAvailableWindowPositioningBounds( NULL, &rect ); //GetMainDevice() is old.
+  *w = rect.right - rect.left;
+  *h = rect.bottom - rect.top;
+}
+#endif
+
 /***************************************************************/
 #define BYTE1(i) ((unsigned char) (i & 0x0ff))
 #define BYTE2(i) ((unsigned char) ((i / 0x100) & 0x0ff))
