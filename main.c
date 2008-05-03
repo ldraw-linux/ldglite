@@ -2714,9 +2714,15 @@ int getDisplayProperties();
 /***************************************************************/
 void reshapeCB(int width, int height)
 {
-  reshape(width, height);
   printf("reshape(%d, %d) -> (Width=%d, Height=%d)\n", 
-	 width, height, Width, Height);
+	 Width, Height, width, height);
+  reshape(width, height);
+
+  // On OSX I seem to need this flush when the shape changes on startup.
+  // Thats usually done to avoid the dock and the menu.
+  // Without the flush I lose some of the early geometry.
+  // Maybe I should only do this if the size actually changes?
+  printf("glFlush(reshapeCB)\n"); glFlush();
 }
 
 /***************************************************************/
@@ -4560,6 +4566,8 @@ void display(void)
     OffScreenDisplay();
     return;
   }
+
+  printf("Display()\n");
 
   if (editing) 
   {
@@ -9548,7 +9556,7 @@ main(int argc, char **argv)
 	  // By the way, glut docs say X,YWinpos should default to -1,-1.
 	  // Which lets the window mgr decide where to place it.  
 	  // Maybe I should try that first?
-          XwinPos = -1; YwinPos = -1;
+          //XwinPos = -1; YwinPos = -1;  // Yuck, makes OSX place it weird.
 	  GetAvailablePos(&w, &h);
 	  Width = ldraw_commandline_opts.V_x = w;
 	  Height = ldraw_commandline_opts.V_y = h;
