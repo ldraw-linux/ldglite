@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+ <key>LSRiskCategorySafe</key>
+  <dict>
+   <key>LSRiskCategoryExtensions</key>
+    <array>
+     <string>LDR</string>
+     <string>ldr</string>
+     <string>MPD</string>
+     <string>mpd</string>
+     <string>DAT</string>
+     <string>dat</string>
+    </array>
+   <key>LSRiskCategoryMIMETypes</key>
+    <array>
+     <string>application/x-ldraw</string>
+    </array>
+   </dict>
+</dict>
+</plist>

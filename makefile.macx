@@ -40,6 +40,12 @@ GL_LIBS=-framework OpenGL -framework GLUT -framework Carbon -lobjc -lstdc++ $(OF
 CFLAGS=-g -I./osx -DUNIX -DMACOS_X -DUSING_CARBON -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 -DNEED_MIN_MAX $(PNG_FLAGS) $(TR_FLAGS) $(OFFSCREEN_FLAGS) $(GUI_FLAGS)
 CFLAGS+=-DNOT_WARPING -DVISIBLE_SPIN_CURSOR -DSAVE_DEPTH_ALL -DSAVE_COLOR_ALL -DMACOS_X_TEST2 -DHAVE_STRDUP -arch i386 -arch ppc -mmacosx-version-min=10.4 -isysroot /Developer/SDKs/MacOSX10.4u.sdk
 
+# This stuff did not force the linker to choose generic ppc instead of ppc7400, 
+# but adding -force_cpusubtype_ALL after CFLAGS on the ldglite target did work.
+#PER_ARCH_CFLAGS_ppc = "-DCOMPILE_ARCH=\\\"G3\\\"
+#PER_ARCH_CFLAGS_ppc = -mcpu=G3 -mtune=G4 -DCPU_SUBTYPE_POWERPC_ALL
+#OTHER_LDFLAGS_ppc = -mcpu=G3 -mtune=G4
+
 ## This is lame.  I don't know how to do both .c and .cpp for the OBJS line
 ## so I pretend L3*.cpp is L3*.c and make rules for them later.
 #
@@ -49,7 +55,7 @@ OBJS = $(SRCS:.c=.o)
 all	: ldglite
 
 ldglite:   $(OBJS) $(LIBS)
-	$(CC) $(CFLAGS) $(OBJS) -o ldglite $(GL_LIBS) $(PNG_LIBS) $(GUI_LIBS) -lm
+	$(CC) $(CFLAGS) -force_cpusubtype_ALL $(OBJS) -o ldglite $(GL_LIBS) $(PNG_LIBS) $(GUI_LIBS) -lm
 	rm -rf l3glite
 	ln -s ldglite l3glite
 	rm -rf l3gledit
@@ -76,3 +82,4 @@ L3View.o: L3View.cpp
 
 clean:
 	rm *.o
+
