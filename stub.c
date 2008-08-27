@@ -39,6 +39,8 @@ extern float lineWidth;
 extern int qualityLines;
 extern int LineChecking;
 extern int preprintstep;
+extern int dimLevel;
+extern float dimAmount;
 
 // Ambient and diffusion properties for front and back faces.
 extern GLfloat full_mat[];
@@ -1094,6 +1096,9 @@ void render_five(vector3d *vp1, vector3d *vp2, vector3d *vp3, vector3d *vp4, int
     {
       //glColor3f(((float)zc.r)/255.0, ((float)zc.g)/255.0, ((float)zc.b)/255.0);
       glColor3ub(zc.r, zc.g, zc.b);
+      if (dimLevel)
+	//if (curstep > stepcount)
+	glColor3ub(zc.r+100, zc.g+100, zc.b+100);
       if (MESA_3_COLOR_FIX)
 	glFlush();
     }

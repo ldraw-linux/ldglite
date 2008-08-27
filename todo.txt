@@ -1,3 +1,179 @@
+The red kill app menubar button is greyed out on the Mac.  See if
+this is the problem, and possible fix.
+
+For GLUT's issue, the work around is not public API, but this should
+not affect your case (it is only for non-bundled apps that end up
+background only), as you should not have your app end up background
+only. Please write a bug and submit a test case. The profiler
+engineer I am sure can figure out what is strange about your bundled
+app.
+
+You may want to try:
+ProcessSerialNumber psn;
+GetCurrentProcess (&psn);
+SetFrontProcess(&psn); // bring process to front
+
+Or maybe we need something like the Rob Fletcher's glutWMCloseFunc()
+callback glut patch for OS-X glut.  I think freeglut implemented
+something similar.
+
+Actually the Read Me for GLUT for Mac OS X (GLUT-3.2.8) says it
+added the glutCheckLoop() and GlutWMCloseFunc() APIs.  Gotta try 
+them.  (This may only be in the glut source distribution.)  
+
+---------------------------
+
+Consider adding a -reg command line arg to register MIME types on 
+Windows to avoid this mess:
+
+This tutorial works for Windows 98 and I think it's close enough for
+2000, but naturally M$ made it even harder for XP. 
+
+  http://www.ldraw.org/reference/tutorials/tips/mime/
+
+I even tried some old command line functions that I think used
+to work, but no luck.
+
+  FTYPE ldraw.document=C:\projects\ldglite.exe -l3 -v4 "%1"
+  ASSOC .dat=ldraw.document
+  ASSOC .mpd=ldraw.document
+  ASSOC .ldr=ldraw.document
+  SET PATHEXT=.ldr;.mpd;.dat;%PATHEXT%
+
+problem is that's only half of the solution.  Lugnet serves up LDR data
+with the application/x-ldraw MIME type.  In win95 and win98 you could
+create new MIME types in explorer.  See steps 5 and 6 of the tutorial. 
+
+  http://www.ldraw.org/reference/tutorials/tips/mime/
+
+But win2k and winXP only let you select from the list of MIME types
+already in the registry.  I suppose they must consider it a security
+risk to allow mere mortals to make new ones.  Anyhow, silly me.  It
+turns out I solved this one myself two years ago when I first
+encountered win2K.
+
+---------------------------
+
+For Internet Explorer in Win2k (and perhaps Millenium):
+
+    Thank you Micro$oft.  In Win2k you can no longer create new MIME types
+    from an Explorer window.  You must use regedit instead.
+
+    1) Start/Run
+       Type "regedit" in the box and click "OK"
+
+    2) Right click on HKEY_CLASSES_ROOT.
+       Add a new key and rename it to ".dat"
+       Right click on (Default) for this new key and modify the value.
+       Enter "ldlite.Document" for the Value data.
+
+    3) Right click on the key HKEY_CLASSES_ROOT/.dat
+       Add a new string value and rename it to "Content Type"
+       Right click on "Content Type" and select modify.
+       Change the Value data to "application/x-ldraw".
+
+    4) Find the key:
+       HKEY_CLASSES_ROOT/MIME/Database/Content Type.
+       Under this key, create a key for application/x-ldraw.
+
+    5) Under the application/x-ldraw key, create a string value:
+       "Extension", with data ".dat".
+
+    6) Quit regedit.
+
+    7) Open an Explorer window (or any folder window).
+
+    8) Select the "Tools->Folder Options" menu selection.
+
+    9) Go to the "File Types" tab.
+
+   10) Scroll down and double click on the "ldlite Document" line.
+       (On Win2K search for the "DAT" extension)
+           If there is no "DAT" extension line, click the "New" button
+           and then click on the "Advanced >>" button.
+           Enter "DAT" in the "File Extension" field.
+           and scroll to select "ldlite Document" for "Associated File Type".
+           (If you can't find it go back to step 1)
+           Press OK.
+
+   11) Press the "Advanced" button.
+
+   12) If "open" is not listed under "Actions" click the "New" button.
+       Otherwise click on "open" and then click "Edit".
+
+   13) In the "Actions" field, enter "open" if it's not already there.
+       For "Application...", browse to the location of ldglite.exe
+       (or l3glite.exe)
+
+   14) Add any extra command line arguments in the "Application..." field
+       Mine says this (I use the l3 parser and a small window):
+       C:\projects\ldglite\ldglite -l3 -v3 "%1"
+
+   15) Press enough OK buttons to finish this up.
+
+
+-----------------------------
+
+
+Another alternative is to use a .reg file.  I think you can paste
+the following into a file called ldglite.reg and run regedit ldglite.reg
+to do it all at once.  Of course you have to edit the path to ldglite.exe
+below before running regedit.  Is this too much work?  Perhaps I should
+include a new program in the zip file to do this stuff?  Any thoughts on
+this?
+
+REGEDIT4
+
+[HKEY_CLASSES_ROOT\.dat]
+@="ldlite.Document"
+"Content Type"="application/x-ldraw"
+
+[HKEY_CLASSES_ROOT\MIME\Database\Content Type\application/x-ldraw]
+"Extension"=".dat"
+
+[HKEY_CLASSES_ROOT\ldlite.Document]
+@="ldlite Document"
+"EditFlags"=dword:00000000
+"AlwaysShowExt"=""
+"BrowserFlags"=dword:00000008
+
+[HKEY_CLASSES_ROOT\ldlite.Document\shell]
+@=""
+
+[HKEY_CLASSES_ROOT\ldlite.Document\shell\open]
+
+[HKEY_CLASSES_ROOT\ldlite.Document\shell\open\command]
+@="C:\\projects\\ldglite\\ldglite.exe -l3 -v3 \"%1\""
+
+----------------------------------------------------------------------
+
+Argh, it's not just the radeon.  Rendering remotely via GLX from a
+RedHat 9 box to XMing on a windows box also has problems with incomplete
+updates. Unfortunately I get the Same VENDOR and RENDERER strings
+as I get when I render it locally on the windows box, and it works
+just fine that way.  Double Argh!!
+
+  GL_VENDOR ='NVIDIA Corporation'
+  GL_RENDERER ='Quadro NVS 140M/PCI/SSE2'
+
+Maybe I should default to -n2 or -n4 and force the user to pick -n0
+to see the drawing in the front buffer.
+
+In addition, glut doesn't seem to do X pointer motion event compression
+when rendering remotely via GLX, so it falls behind on the mouse
+dragging.  Is there a glut fn to do that, or do I have to go straight to
+X11 fns?  (Like this code from glut itself for expose events)
+
+  /* compress expose events */
+  while (XEventsQueued(__glutDisplay, QueuedAfterReading)> 0) {
+    XPeekEvent(__glutDisplay, &ahead);
+    if (ahead.type != Expose || ahead.xexpose.window != event.xexpose.window)
+      break;
+    XNextEvent(__glutDisplay, &event);
+    }
+
+----------------------------------------------------------------------
+
 Add support for RUBBER and other materials in ldconfig.ldr
 
 Add a command line option for only using NEW colors from ldconfig.ldr
