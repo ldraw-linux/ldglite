@@ -46,8 +46,8 @@
 			</array>
 			<key>LSTypeIsPackage</key>
 			<false/>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<!-- Uncomment the this key to rule the mime type. -->
+			<!-- <key>LSIsAppleDefaultForType</key>	<true/> -->
 		</dict>
 		<dict>
 		  	<key>CFBundleTypeExtensions</key>
