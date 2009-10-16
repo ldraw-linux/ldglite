@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.2.3      ";
+char ldgliteVersion[] = "Version 1.2.4      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -9090,7 +9090,9 @@ int getDisplayProperties()
   printf("GL_DEPTH_BITS = %d\n", DepthBits);
 
   // Change the default znear for skimpy depth buffers like the Mesa Default.
-  if (DepthBits < 24) 
+  if (projection_znear > 100.0)
+    { /* znear was probably already adjusted by -cg camera globe.  Leave it alone. */ }
+  else if (DepthBits < 24) 
     projection_znear = 100.0; 
   else if (strstr(vendstr, "ATI") || strstr(verstr, "ATI"))
   {
