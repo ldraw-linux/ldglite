@@ -1,44 +1,57 @@
-CC=gcc
 
-# Comment these out to disable PNG output if no PNG lib is available.
-#
-PNG_FLAGS=-DUSE_PNG 
-PNG_LIBS= -lpng -lz 
+PREFIX?=/usr/local
 
-# Comment these out to disable tile rendering option.
-#
-TR_FLAGS=-DTILE_RENDER_OPTION
-TR_SRC=tr.c
+ENABLE_PNG?=Yes
+ENABLE_TILE_RENDERING?=Yes
+ENABLE_OFFSCREEN_RENDERING?=Yes
+ENABLE_TEST_GUI?=Yes
 
-# UnComment this to build in support for Mesa Offscreen rendering
-# This needs (namespace?) fixing to work with GLX mesa.
-OFFSCREEN_FLAGS=-DOSMESA_OPTION
-OFFSCREEN_LIBS= -lOSMesa
-# Switch to this one to build with static OSMesa lib.
-#OFFSCREEN_LIBS= /usr/X11R6/lib/libOSMesa.a
-# NOTE: Mesa Offscreen lib is not required in some older? version of Mesa?
+CC=$(TOOLPREFIX)gcc
+CXX=$(CC)
 
-# Comment these out to disable the test GUI made with MUI.
-#
-# Define both MUI and GLUT to access the MUI GUI via the GLUT menu.
-#GUI_FLAGS=-DTEST_MUI_GUI -I./mui/include -DUSE_GLUT_MENUS
-GUI_FLAGS=-DTEST_MUI_GUI -I./mui/include
-GUI_SRC=ldglgui.c
-GUI_LIBS=-L./mui/lib/mui -lmui
-LIBS = libmui.a
+
+# PNG output option
+ifeq ($(ENABLE_PNG),Yes)
+    PNG_FLAGS=-DUSE_PNG 
+    PNG_LIBS= -lpng -lz
+endif
+
+# Tile rendering option
+ifeq ($(ENABLE_TILE_RENDERING),Yes)
+    TR_FLAGS=-DTILE_RENDER_OPTION
+    TR_SRC=tr.c
+endif
+
+# Mesa offscreen rendering option
+ifeq ($(ENABLE_OFFSCREEN_RENDERING),Yes)
+    # This needs (namespace?) fixing to work with GLX mesa.
+    OFFSCREEN_FLAGS=-DOSMESA_OPTION
+    OFFSCREEN_LIBS= -lOSMesa
+    # Switch to this one to build with static OSMesa lib.
+    #OFFSCREEN_LIBS= /usr/X11R6/lib/libOSMesa.a
+    # NOTE: Mesa Offscreen lib is not required in some older? version of Mesa?
+endif
+
+# Test GUI option
+ifeq ($(ENABLE_TEST_GUI),Yes)
+    # Define both MUI and GLUT to access the MUI GUI via the GLUT menu.
+    #GUI_FLAGS=-DTEST_MUI_GUI -I./mui/include -DUSE_GLUT_MENUS
+    GUI_FLAGS=-DTEST_MUI_GUI -I./mui/include
+    GUI_SRC=ldglgui.c
+    GUI_LIBS=-L./mui/lib/mui -lmui
+    LIBS = libmui.a
+endif
 
 CFLAGS=-g -DUNIX -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 -DNEED_MIN_MAX $(PNG_FLAGS) $(TR_FLAGS) $(OFFSCREEN_FLAGS) $(GUI_FLAGS)
+CXXFLAGS=$(CFLAGS)
 
-## This is lame.  I don't know how to do both .c and .cpp for the OBJS line
-## so I pretend L3*.cpp is L3*.c and make rules for them later.
-#
-SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c lcolors.c y.tab.c lex.yy.c qbuf.c main.c ldglpr.c L3Edit.c L3Math.c L3Input.c L3View.c hoser.c ldglmenu.c plugstub.c $(TR_SRC) $(GUI_SRC)
-OBJS = $(SRCS:.c=.o)
+SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c lcolors.c y.tab.c lex.yy.c qbuf.c main.c ldglpr.c L3Edit.c L3Math.cpp L3Input.cpp L3View.cpp hoser.c ldglmenu.c plugstub.c $(TR_SRC) $(GUI_SRC)
+OBJS = $(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(SRCS)))
 
-all	: ldglite
+all: ldglite
 
 ldglite:   $(OBJS) $(LIBS)
-	$(CC) $(CFLAGS) $(OBJS) -o ldglite -L/usr/X11R6/lib $(PNG_LIBS) $(OFFSCREEN_LIBS) $(GUI_LIBS) -lglut -lGLU -lGL -lX11 -lXi -lXext -lXmu -lm
+	$(CC) $(CFLAGS) $(OBJS) -o ldglite $(PNG_LIBS) $(OFFSCREEN_LIBS) $(GUI_LIBS) -lglut -lGLU -lGL -lX11 -lXext -lm
 	rm -rf l3glite
 	ln -s ldglite l3glite
 	rm -rf l3gledit
@@ -49,19 +62,16 @@ libmui.a:
 
 l3glite:   ldglite
 
-ldglitepng:   ldglite
-
-l3glitepng:   ldglite
-
-## This is lame.  I don't know how to do both .c and .cpp for the OBJS line.
-#
-L3Math.o: L3Math.cpp
-	$(CC) -c $(CFLAGS) L3Math.cpp
-L3Input.o: L3Input.cpp
-	$(CC) -c $(CFLAGS) L3Input.cpp
-L3View.o: L3View.cpp
-	$(CC) -c $(CFLAGS) L3View.cpp
-
+l3gledit:   ldglite
 
 clean:
-	rm *.o
+	rm *.o *.a
+
+install:
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	cp -a -f ldglite l3glite l3gledit $(DESTDIR)$(PREFIX)/bin
+
+uninstall:
+	rm -f $(DESTDIR)$(PREFIX)/bin/ldglite
+	rm -f $(DESTDIR)$(PREFIX)/bin/l3glite
+	rm -f $(DESTDIR)$(PREFIX)/bin/l3gledit
