@@ -2152,7 +2152,9 @@ void platform_setpath()
   else if (GetPrivateProfileString("LDraw","BaseDirectory","",
 			  pathname,256,"ldraw.ini") == 0)
   {
-#if defined MACOS_X
+#if defined LDRAWDIR
+    sprintf(pathname, LDRAWDIR);
+#elif defined MACOS_X
     sprintf(pathname, "/Library/ldraw");
 #elif defined(UNIX)
     sprintf(pathname, "/usr/local/ldraw");
