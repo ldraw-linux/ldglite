@@ -22,8 +22,9 @@ Summary:	LDraw LEGO CAD renderer
 Url:		http://ldglite.sourceforge.net/
 Group:		Productivity/Graphics/CAD
 Source:		ldglite.tar.bz2
+BuildRequires:  ldraw-library >= 2014.02.1
 BuildRequires:	freeglut-devel libpng-devel Mesa-devel gcc-c++
-Requires:	ldraw-library
+Requires:       ldraw-library >= 2014.02.1
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Provides:	ldraw-renderer
 
@@ -41,10 +42,13 @@ make -f makefile.linux LDRAWDIR=/usr/share/ldraw
 
 %install
 install -d %{buildroot}/%{_bindir}
-install -m 755 ldglite %{buildroot}/%{_bindir}/ldglite
+install -m 755 ldglite %{buildroot}/%{_bindir}/ldglite.bin
+ln -s %{_libexecdir}/ldraw-wrapper %{buildroot}/%{_bindir}/ldglite
+
 
 %files
 %defattr(-,root,root)
 %{_bindir}/ldglite
+%{_bindir}/ldglite.bin
 
 %changelog
