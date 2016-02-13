@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.2.6      ";
+char ldgliteVersion[] = "Version 1.2.6.1    ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -7236,6 +7236,12 @@ void menuKeyEvent(int key, int x, int y)
 	break;
     case '0':
       m_viewMatrix = LdrawOblique;
+      if (ldraw_projection_type)
+      { // LdrawObliqe only makes sense with orthographic projection.
+	ldraw_projection_type = 0;
+	parse_view(m_viewMatrix);
+	reshape(Width, Height);
+      }
       newview = 1;
       break;
     case '1':
@@ -7276,10 +7282,20 @@ void menuKeyEvent(int key, int x, int y)
       break;
     case 'j':
       ldraw_projection_type = 0;
+      if (m_viewMatrix == LdrawOblique)
+      {
+	m_viewMatrix = Oblique;
+	parse_view(m_viewMatrix);
+      }
       reshape(Width, Height);
       break;
     case 'J':
       ldraw_projection_type = 1;
+      if (m_viewMatrix == LdrawOblique)
+      {
+	m_viewMatrix = Oblique;
+	parse_view(m_viewMatrix);
+      }
       reshape(Width, Height);
       break;
     case 'f':
@@ -8597,13 +8613,20 @@ void ParseParams(int *argc, char **argv)
 	}
 	break;
       case 'J':
-	ldraw_projection_type = 1;
-	break;
-      case 'j':
-	ldraw_projection_type = 0;
+	ldraw_projection_type = 1; // Use Perspective projection.
+	/* LdrawOblique only makes sense in ortho projection. */
 	if (m_viewMatrix == LdrawOblique)
 	{
-	  m_viewMatrix = Oblique;
+	  m_viewMatrix = Oblique; // Turn off LdrawOblique model/proj matrix.
+	  parse_view(m_viewMatrix);
+	}
+	break;
+      case 'j':
+	ldraw_projection_type = 0; // Use Orthographic projection.
+	/* Also disable LdrawOblique.  Press 0 key to view LdrawOblique. */
+	if (m_viewMatrix == LdrawOblique)
+	{
+	  m_viewMatrix = Oblique; // Turn off LdrawOblique model/proj matrix.
 	  parse_view(m_viewMatrix);
 	}
 	break;
