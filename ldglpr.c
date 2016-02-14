@@ -25,6 +25,7 @@
 
 #include "platform.h"
 #include "ldliteVR.h"
+
 #ifndef WINDOWS
 // This stuff gets pulled in by glut.h for windows.
 #include "wstubs.h"

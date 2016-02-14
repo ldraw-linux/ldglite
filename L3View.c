@@ -33,7 +33,7 @@
 
 #ifdef USE_OPENGL
 #include "math.h"
-extern "C" {
+//extern "C" {
 #include "platform.h"
 #endif
 
@@ -808,15 +808,13 @@ struct L3PartS *LoadRC()
   extern int LoadPart(struct L3PartS * PartPtr, int IsModel, char *ReferencingDatfile);
 
   struct L3PartS *PartPtr;
-  
-  char *ldconfig = (char *)"ldconfig.ldr";
-  PartPtr = FindPart(0, ldconfig);
+
+  PartPtr = FindPart(0, "ldconfig.ldr");
   if (PartPtr)
     if (LoadPart(PartPtr, false, NULL) != 2)
       return(PartPtr);
 
-  char *ldliterc = (char *)"ldliterc.dat";
-  PartPtr = FindPart(0, ldliterc);
+  PartPtr = FindPart(0, "ldliterc.dat");
   if (!PartPtr)
     return NULL; //partnum not found
   //if (LoadPart(PartPtr, false, Parts[0].DatName) == 2)
@@ -915,7 +913,7 @@ void CL3View::OnToolbarUnder()
 #endif
 
 #ifdef USE_OPENGL
-}
+//}
 #endif /* __cplusplus */
 
 

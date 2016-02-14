@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.2.6.1    ";
+char ldgliteVersion[] = "Version 1.2.6.2    ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -2182,6 +2182,11 @@ void platform_setpath()
 
   concat_path(userpath, use_uppercase ? "MODELS" : "models", modelspath);
   concat_path(userpath, use_uppercase ? "BITMAP" : "bitmap", bitmappath);
+
+  // Get search directories from environment
+  int *ErrorCode;
+  GetLDrawSearchDirs(ErrorCode);
+  //printf("GetLDrawSearchDirs(%d)\n",ErrorCode);
 }
 
 /***************************************************************/

@@ -83,6 +83,14 @@ extern void          CheckMemoryUsage(void);
 #define L3_UPDATEVIEW_NEWMODEL 37913      /* To avoid OnInitialUpdate()      */
 #endif
 
+#ifdef USE_OPENGL
+#ifndef false
+#define false 0
+#endif
+#ifndef true
+#define true 1
+#endif
+#endif
 
 struct L3LineS                            /* Not too economic with memory... */
 {
@@ -315,6 +323,7 @@ extern struct L3LightS *AddLight(void);
 extern void          FreeLights(void);
 extern int           SaveLine(struct L3LineS *** LinePtrPtrPtr,
                               struct L3LineS * Data, char *Comment);
+extern void         GetLDrawSearchDirs(int *ErrorCode);
 
 /* L3PoV.cpp */
 extern struct PovPartS *FindPovPart(char *DatName);
@@ -352,6 +361,5 @@ extern char         *L3Strdup(int Usage, const char *Str);
 extern void          L3Free(int Usage, void *MemBlock, unsigned long Size);
 extern int           L3Logging;
 extern void          L3Log(char *format,...);
-
 
 #endif
