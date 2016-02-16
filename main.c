@@ -8964,7 +8964,13 @@ void ParseParams(int *argc, char **argv)
     // L3p puts the origin at the center of model bbox, not ldraw (0,0,0).
     // Maybe I should offset by the center of the model bbox to match it.
     // Unfortunately I don't have that until I parse the model...
-    if (m_viewMatrix == LdrawOblique)
+
+    // When would it not be oblique in parseparams?  ALWAYS switch to Front for -cg.
+    // The real problem here is if someone passed a matrix in via -a.
+    // I'd still be *calling* it oblique, but it could be anything.
+    // Maybe we want to move the model by it and then apply the camera settings.
+    // Gotta think about that.  For now, just switch to front.
+    //if (m_viewMatrix == LdrawOblique) 
     {
       m_viewMatrix = Front;
       parse_view(m_viewMatrix);
