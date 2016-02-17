@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.2.6.2    ";
+char ldgliteVersion[] = "Version 1.2.8      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -370,6 +370,8 @@ int LineChecking = 0;
 int preprintstep = 0;
 int dimLevel = 0; // Same as ldraw_commandline_opts.maxlevel=32767;  // a huge number
 float dimAmount = 0.0;
+
+int downsample = 0; // decimate output file by 2 with antialias filter.
 
 #ifdef TILE_RENDER_OPTION
 #include "tr.h"
@@ -8752,8 +8754,9 @@ void ParseParams(int *argc, char **argv)
 	ldraw_commandline_opts.output_depth=1;
 	printf("Save (%s)\n", output_file_name);
 	break;
+      case 's': // Scale but then downsample with AA when writing image file.  
+	downsample = 1; // Consider using a different command, or a suffix like -sn.n,d
       case 'S':
-      case 's':
 #if 0
 	sscanf(pszParam,"%c%g",&type,&(ldraw_commandline_opts.S));
 #else

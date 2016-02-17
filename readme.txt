@@ -407,12 +407,19 @@ to GIF and JPEG:
 And if you want to improve the looks of the model, you can render
 the model in double size, and then scale down the images:
 
-  ldglite-run -i2 -ms -s2 -w2 model.mpd
+  ldglite-run -i2 -ms -S2 -w2 model.mpd
 
   foreach file ( /usr/local/share/ldraw/bitmap/model*.png )
     pngtopnm < ${file} | pnmscale 0.5 | cjpeg > `basename ${file} .png`.jpeg
     pngtopnm < ${file} | pnmscale 0.5 | ppmtogif > `basename ${file} .png`.gif
   end
+
+New as of version 1.2.8:
+Ldglite will decimate output images by 2 if you scale with lower case -s.
+No need for any external image decimation program.  (png output only)
+
+  ldglite-run -i2 -ms -s2 -w2 model.mpd
+
 
 		       -----------------------
 

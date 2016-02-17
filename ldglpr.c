@@ -49,6 +49,8 @@ extern int curstep;
 extern int OffScreenRendering;
 extern int renderbuffer; 
 
+extern int downsample; 
+
 #ifdef OSMESA_OPTION
 #include "GL/osmesa.h"
 void *OSbuffer = NULL;
@@ -74,6 +76,7 @@ void *OSbuffer = NULL;
 CGLContextObj ctx;
 #endif
 char *pix;
+char *PIX = NULL;
 
 #ifdef MACOS_X
 void GetAvailablePos(int *w, int *h)
@@ -509,7 +512,7 @@ FILE *start_png(char *filename, int width, int height,
 /***************************************************************/
 void write_png(char *filename)
 {
-  int i, j;
+  int i, j, k;
 
   png_structp png_ptr;
   png_infop info_ptr;
@@ -520,14 +523,14 @@ void write_png(char *filename)
   int height = Height;
   GLint xoff = 0;
   GLint yoff = 0;
+  char *px, *PX;
+
   pix = &buf[0];
   if (width > 2560)
-  {
-    if (use_png_alpha)
-      pix = (char*)malloc(width*3);
-    else
-      pix = (char*)malloc(width*4);
-  }
+    pix = (char*)malloc(width*4); // Alloc rgba even if alpha not used.
+  if (downsample)
+    PIX = (char*)malloc(width*4); // Alloc rgba even if alpha not used.
+  px = pix;
 
   if (cropping)
   {
@@ -537,11 +540,14 @@ void write_png(char *filename)
     height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
     width = ((width + 3)/4) * 4; // round to a multiple of 4.
     if (ldraw_commandline_opts.debug_level == 1)
-      printf("bmpsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
+      printf("pngsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
     if ((width <= 0) || (height <= 0)) return;
   }
   
-  fp = start_png(filename, width, height, &png_ptr, &info_ptr);
+  if (downsample)
+    fp = start_png(filename, width/2, height/2, &png_ptr, &info_ptr);
+  else
+    fp = start_png(filename, width, height, &png_ptr, &info_ptr);
   if (fp == NULL)
     return;
 
@@ -550,10 +556,10 @@ void write_png(char *filename)
   //png_write_image(png_ptr, row_pointers);
   for (i = height-1; i >= 0; i--)
   {
+   for (k = downsample; k >= 0; k--) {
 #ifdef OSMESA_OPTION
     if (OffScreenRendering)
     {
-      int j;
       char *b = (char *)OSbuffer;
       b += ((i+yoff)*Width +xoff) *4;
       for (j=0; j<width; j++) {
@@ -575,9 +581,8 @@ void write_png(char *filename)
 #endif
     if (use_png_alpha)
     {
-      int j;
-      char *b = pix+3;
       glReadPixels(xoff, i+yoff, width, 1, GL_RGBA, GL_UNSIGNED_BYTE, pix);
+      char *b = pix+3;
       for (j = 0; j < width; j++)
 	if (b[4*j])
 	  b[4*j] = 0xff; // Convert partial alpha to opaque.
@@ -585,7 +590,43 @@ void write_png(char *filename)
     else
       glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, pix);
 
+    if (k > 0) {
+      if (--i < 0) // Skip this line because png header doesn't expect it.
+	break; //memcpy(PIX, pix, width*4); 
+      pix = PIX;
+      continue;
+    }  
+#if 1
+    // Use fast color averaging algorithm from compuphase.com/graphic/scale3.html
+    if (downsample) { // Now downsample to one halfwidth row.
+      unsigned int a, b, c, m; // 3 pixel values to work with and the underflow mask.
+      unsigned int *p;
+      m = 0xfefefefe;          // underflow = lowest bit of each color byte.
+      pix = px;                // Restore pix ptr to the start of buf.
+      PX = PIX;                // px = pointer to top row, PX = bottom row ptr.
+      p = (unsigned int *)pix; // p = dest ptr (reuse left half of top row).
+      for (j=0; j<width; j++) {
+	// Average 2 pixels from one row.
+	a = *(unsigned int *)px;
+	px += 4;
+	b = *(unsigned int *)px;
+	a = (((a ^ b) & m) >> 1) + (a & b); 
+	// Average 2 pixels from next row.
+	c = *(unsigned int *)PX;
+	PX += 4;
+	b = *(unsigned int *)PX;
+	c = (((c ^ b) & m) >> 1) + (c & b); 
+	// Average the average pixels to squeeze 2x2 pixels to 1..
+	a = (((a ^ c) & m) >> 1) + (a & c); 
+	*p++ = a;
+	px += 4;
+	PX += 4;
+      }
+      px = pix; // Restore px pointer to the start of pix buf.
+    }
+#endif
     png_write_row(png_ptr, (unsigned char *)pix);
+   }
   }
 
   text_ptr[0].key = "Software";
@@ -600,6 +641,9 @@ void write_png(char *filename)
 
   if (width > 2560)
     free(pix);
+  if (downsample) 
+    free(PIX);
+      
 }
 #endif
 
