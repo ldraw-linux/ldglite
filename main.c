@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.2.8      ";
+char ldgliteVersion[] = "Version 1.2.9      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -8910,6 +8910,16 @@ void ParseParams(int *argc, char **argv)
     double distance;
     double lo, la;
     double x, y, z;
+
+#if 0
+    // DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG. 
+    // This is a nice spot to add test settings for LPub3d.
+	downsample = 1;
+	ldraw_commandline_opts.S *= 2.0;
+	lineWidth *= 2;
+	// lightposition0[] = { 0.0, 1000.0, 1000.0, 0.0 };
+    // DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG. 
+#endif
 
     if (camera_distance <= 0.0)
     {

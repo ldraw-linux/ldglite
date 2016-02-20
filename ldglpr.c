@@ -76,7 +76,6 @@ void *OSbuffer = NULL;
 CGLContextObj ctx;
 #endif
 char *pix;
-char *PIX = NULL;
 
 #ifdef MACOS_X
 void GetAvailablePos(int *w, int *h)
@@ -509,8 +508,9 @@ FILE *start_png(char *filename, int width, int height,
   return(fp);
 }
 
+#ifdef CHEESY_2X2_AVG
 /***************************************************************/
-void write_png(char *filename)
+void write_png_avg(char *filename)
 {
   int i, j, k;
 
@@ -524,6 +524,7 @@ void write_png(char *filename)
   GLint xoff = 0;
   GLint yoff = 0;
   char *px, *PX;
+  char *PIX = NULL;
 
   pix = &buf[0];
   if (width > 2560)
@@ -644,6 +645,177 @@ void write_png(char *filename)
   if (downsample) 
     free(PIX);
       
+}
+#endif
+
+/***************************************************************/
+void write_png(char *filename)
+{
+  int i, j, k;
+
+  png_structp png_ptr;
+  png_infop info_ptr;
+  png_text text_ptr[1];
+  FILE *fp;
+
+  int width = Width;
+  int height = Height;
+  GLint xoff = 0;
+  GLint yoff = 0;
+  unsigned int *p, *p0, *p1, *p2;
+
+  pix = &buf[0];
+  if (downsample) {
+    extern ZCOLOR_DEF_TABLE_ENTRY zcolor_table_default[];
+
+    // Alloc rgba even if alpha not used.
+    p0 = (unsigned int*)calloc(width+1, sizeof(unsigned int)); 
+    p1 = (unsigned int*)calloc(width+1, sizeof(unsigned int)); 
+    p2 = (unsigned int*)calloc(width+1, sizeof(unsigned int));
+    // Add a topright border of 1 pixel of transparent background for filter.
+    i = ldraw_commandline_opts.B;
+    k = (width+1) * (3 + use_png_alpha);
+    pix = (char *)p0;
+    for (j=0; j<k; j++){
+      pix[j++] = zcolor_table_default[i].primary.r;
+      pix[j++] = zcolor_table_default[i].primary.g;
+      pix[j]   = zcolor_table_default[i].primary.b;
+      if (use_png_alpha)
+	pix[++j] = 0;
+    }
+    pix = (char *)p2;
+    k = k - use_png_alpha;
+    pix[k-3] = zcolor_table_default[i].primary.r;
+    pix[k-2] = zcolor_table_default[i].primary.g;
+    pix[k-1] = zcolor_table_default[i].primary.b;
+    pix = (char *)p1;
+    pix[k-3] = zcolor_table_default[i].primary.r;
+    pix[k-2] = zcolor_table_default[i].primary.g;
+    pix[k-1] = zcolor_table_default[i].primary.b;
+  }
+  else if (width > 2560)
+    pix = (char*)malloc(width*4); // Alloc rgba even if alpha not used.
+
+  if (cropping)
+  {
+    xoff = max(0, z.extent_x1);
+    yoff = max(0, z.extent_y1);
+    width = min((z.extent_x2 - xoff), (Width - xoff));
+    height = min((z.extent_y2 + 1 - yoff), (Height - yoff));
+    width = ((width + 3)/4) * 4; // round to a multiple of 4.
+    if (ldraw_commandline_opts.debug_level == 1)
+      printf("pngsize = (%d, %d) at (%d, %d)\n", width, height, xoff, yoff);
+    if ((width <= 0) || (height <= 0)) return;
+  }
+  
+  if (downsample)
+    fp = start_png(filename, width/2, height/2, &png_ptr, &info_ptr);
+  else
+    fp = start_png(filename, width, height, &png_ptr, &info_ptr);
+  if (fp == NULL)
+    return;
+
+  glReadBuffer(renderbuffer);
+  // Write image rows
+  //png_write_image(png_ptr, row_pointers);
+  for (i = height-1; i >= 0; i--)
+  {
+   for (k = downsample; k >= 0; k--) {
+#ifdef OSMESA_OPTION
+    if (OffScreenRendering)
+    {
+      char *b = (char *)OSbuffer;
+      b += ((i+yoff)*Width +xoff) *4;
+      for (j=0; j<width; j++) {
+	if (use_png_alpha){
+	  pix[4*j] = b[0];
+	  pix[4*j+1] = b[1];
+	  pix[4*j+2] = b[2];
+	  pix[4*j+3] = b[3];
+	}
+	else {
+	  pix[3*j] = b[0];
+	  pix[3*j+1] = b[1];
+	  pix[3*j+2] = b[2];
+	}
+	b+=4;
+      }
+    }
+    else
+#endif
+    if (use_png_alpha)
+    {
+      glReadPixels(xoff, i+yoff, width, 1, GL_RGBA, GL_UNSIGNED_BYTE, pix);
+      char *b = pix+3;
+      for (j = 0; j < width; j++)
+	if (b[4*j])
+	  b[4*j] = 0xff; // Convert partial alpha to opaque.
+    }
+    else
+      glReadPixels(xoff, i+yoff, width, 1, GL_RGB, GL_UNSIGNED_BYTE, pix);
+
+    if (k > 0) {
+      if (--i < 0) // Skip this line because png header doesn't expect it.
+	break; //memcpy(PIX, pix, width*4); 
+      pix = (char *)p2;
+      continue;
+    }  
+#if 1
+    // Use 3x3 gaussian blur filter.
+    if (downsample) { // Now downsample to one halfwidth row.
+      unsigned int a, b; 
+      p = p1; // p = dest ptr (reuse left half of top row).
+      for (j=0; j<width; j+=2) {
+	a  = (p0[j+0] & 0xff00ff00) >> 4;
+	a += (p0[j+1] & 0xff00ff00) >> 3;
+	a += (p0[j+2] & 0xff00ff00) >> 4;
+	a += (p1[j+0] & 0xff00ff00) >> 3;
+	a += (p1[j+1] & 0xff00ff00) >> 2;
+	a += (p1[j+2] & 0xff00ff00) >> 3;
+	a += (p2[j+0] & 0xff00ff00) >> 4;
+	a += (p2[j+1] & 0xff00ff00) >> 3;
+	a += (p2[j+2] & 0xff00ff00) >> 4;
+	a &= 0xff00ff00;
+	b  = (p0[j+0] & 0xff00ff) << 0;
+	b += (p0[j+1] & 0xff00ff) << 1;
+	b += (p0[j+2] & 0xff00ff) << 0;
+	b += (p1[j+0] & 0xff00ff) << 1;
+	b += (p1[j+1] & 0xff00ff) << 2;
+	b += (p1[j+2] & 0xff00ff) << 1;
+	b += (p2[j+0] & 0xff00ff) << 0;
+	b += (p2[j+1] & 0xff00ff) << 1;
+	b += (p2[j+2] & 0xff00ff) << 0;
+	b = (b >> 4) & 0xff00ff;
+	*p++ = a | b;
+      }
+      pix = p0; // Swap ptr to third row into first row ptr so we can reuse the row.
+      p0 = p2;
+      p2 = pix;
+      pix = (char *)p1; // Setup to read the 2nd and 3rd rows.
+    }
+#endif
+    png_write_row(png_ptr, (unsigned char *)pix);
+
+   }
+  }
+
+  text_ptr[0].key = "Software";
+  text_ptr[0].text = "LdGLite";
+  text_ptr[0].compression = PNG_TEXT_COMPRESSION_NONE;
+  png_set_text(png_ptr, info_ptr, text_ptr, 1);
+  
+  png_write_end(png_ptr, info_ptr);
+  png_destroy_write_struct(&png_ptr, &info_ptr);
+
+  fclose(fp);
+
+  if (width > 2560)
+    free(pix);
+  if (downsample) {
+    free(p0);
+    free(p1);
+    free(p2);
+  }      
 }
 #endif
 
