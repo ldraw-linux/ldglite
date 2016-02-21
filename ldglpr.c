@@ -649,6 +649,15 @@ void write_png_avg(char *filename)
 #endif
 
 /***************************************************************/
+#ifndef NO_GAMMA_CORRECT  // Use 3x3 gaussian blur filter (no gamma correction).
+#include <math.h>
+
+double gamma        = 2.2;
+int GAMMA[256];
+unsigned char GAM2RGB[4096]; // Use 12 bits for gamma math.
+#endif
+
+/***************************************************************/
 void write_png(char *filename)
 {
   int i, j, k;
@@ -667,6 +676,14 @@ void write_png(char *filename)
   pix = &buf[0];
   if (downsample) {
     extern ZCOLOR_DEF_TABLE_ENTRY zcolor_table_default[];
+
+#ifndef NO_GAMMA_CORRECT  // Use 3x3 gaussian blur filter (no gamma correction).
+    /* Make lookup tables now to avoid pow inside the loops */
+    for(i = 0; i< 256; i++)
+      GAMMA[i] = (unsigned int) (4095.0 * pow((i/255.0), gamma));
+    for(i = 0; i< 4096; i++)
+      GAM2RGB[i] = (unsigned char) (255.0 * pow((i/4095.0), (1.0 / gamma)));
+#endif
 
     // Alloc rgba even if alpha not used.
     p0 = (unsigned int*)calloc(width+1, sizeof(unsigned int)); 
@@ -760,12 +777,14 @@ void write_png(char *filename)
       pix = (char *)p2;
       continue;
     }  
-#if 1
-    // Use 3x3 gaussian blur filter.
+    // ************************************************************************
+    // NOTE: This code is RGBA specific.  Will NOT work as is for RGB without A.
+    // ************************************************************************
     if (downsample) { // Now downsample to one halfwidth row.
-      unsigned int a, b; 
+      unsigned int a, r, g, b; 
       p = p1; // p = dest ptr (reuse left half of top row).
-      for (j=0; j<width; j+=2) {
+      for (j=0; j<width; j+=2) { 
+#ifdef NO_GAMMA_CORRECT  // Use 3x3 gaussian blur filter (no gamma correction).
 	a  = (p0[j+0] & 0xff00ff00) >> 4;
 	a += (p0[j+1] & 0xff00ff00) >> 3;
 	a += (p0[j+2] & 0xff00ff00) >> 4;
@@ -787,13 +806,58 @@ void write_png(char *filename)
 	b += (p2[j+2] & 0xff00ff) << 0;
 	b = (b >> 4) & 0xff00ff;
 	*p++ = a | b;
+#else   // Use 3x3 gaussian blur filter (with gamma correction).
+	// **************************************************************
+	// NOTE: This is ENDIAN specific.  Assumes alpha is last char of 4 and HI byte of int32.
+	// **************************************************************
+	a  = (p0[j+0] & 0xff000000) >> 4;
+	a += (p0[j+1] & 0xff000000) >> 3;
+	a += (p0[j+2] & 0xff000000) >> 4;
+	a += (p1[j+0] & 0xff000000) >> 3;
+	a += (p1[j+1] & 0xff000000) >> 2;
+	a += (p1[j+2] & 0xff000000) >> 3;
+	a += (p2[j+0] & 0xff000000) >> 4;
+	a += (p2[j+1] & 0xff000000) >> 3;
+	a += (p2[j+2] & 0xff000000) >> 4;
+	a &= 0xff000000;
+	r  = GAMMA[(p0[j+0] & 0xff0000) >> 16] << 0;
+	r += GAMMA[(p0[j+1] & 0xff0000) >> 16] << 1;
+	r += GAMMA[(p0[j+2] & 0xff0000) >> 16] << 0;
+	r += GAMMA[(p1[j+0] & 0xff0000) >> 16] << 1;
+	r += GAMMA[(p1[j+1] & 0xff0000) >> 16] << 2;
+	r += GAMMA[(p1[j+2] & 0xff0000) >> 16] << 1;
+	r += GAMMA[(p2[j+0] & 0xff0000) >> 16] << 0;
+	r += GAMMA[(p2[j+1] & 0xff0000) >> 16] << 1;
+	r += GAMMA[(p2[j+2] & 0xff0000) >> 16] << 0;
+	r  = GAM2RGB[r >> 4] << 16;
+	g  = GAMMA[(p0[j+0] & 0xff00) >> 8] << 0;
+	g += GAMMA[(p0[j+1] & 0xff00) >> 8] << 1;
+	g += GAMMA[(p0[j+2] & 0xff00) >> 8] << 0;
+	g += GAMMA[(p1[j+0] & 0xff00) >> 8] << 1;
+	g += GAMMA[(p1[j+1] & 0xff00) >> 8] << 2;
+	g += GAMMA[(p1[j+2] & 0xff00) >> 8] << 1;
+	g += GAMMA[(p2[j+0] & 0xff00) >> 8] << 0;
+	g += GAMMA[(p2[j+1] & 0xff00) >> 8] << 1;
+	g += GAMMA[(p2[j+2] & 0xff00) >> 8] << 0;
+	g  = GAM2RGB[g >> 4] << 8;
+	b  = GAMMA[(p0[j+0] & 0xff) >> 0] << 0;
+	b += GAMMA[(p0[j+1] & 0xff) >> 0] << 1;
+	b += GAMMA[(p0[j+2] & 0xff) >> 0] << 0;
+	b += GAMMA[(p1[j+0] & 0xff) >> 0] << 1;
+	b += GAMMA[(p1[j+1] & 0xff) >> 0] << 2;
+	b += GAMMA[(p1[j+2] & 0xff) >> 0] << 1;
+	b += GAMMA[(p2[j+0] & 0xff) >> 0] << 0;
+	b += GAMMA[(p2[j+1] & 0xff) >> 0] << 1;
+	b += GAMMA[(p2[j+2] & 0xff) >> 0] << 0;
+	b  = GAM2RGB[b >> 4] << 0;
+	*p++ = a | r | g | b;
+#endif
       }
       pix = p0; // Swap ptr to third row into first row ptr so we can reuse the row.
       p0 = p2;
       p2 = pix;
       pix = (char *)p1; // Setup to read the 2nd and 3rd rows.
     }
-#endif
     png_write_row(png_ptr, (unsigned char *)pix);
 
    }
