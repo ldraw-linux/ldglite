@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.2.9      ";
+char ldgliteVersion[] = "Version 1.2.10     ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -372,6 +372,7 @@ int dimLevel = 0; // Same as ldraw_commandline_opts.maxlevel=32767;  // a huge n
 float dimAmount = 0.0;
 
 int downsample = 0; // decimate output file by 2 with antialias filter.
+int upscale = 0;    // upscale everything needed for eventual downsample.
 
 #ifdef TILE_RENDER_OPTION
 #include "tr.h"
@@ -5876,6 +5877,29 @@ char *ScanPoints(float m[4][4], int numpoints, char *str)
     return token; // This is not NULL if there is more of str left to parse.
 }
 
+/*****************************************************************************/
+char *ScanPOINTS(double m[4][4], int numpoints, char *str)
+{
+    int  i, j;
+    char seps[] = "()[]{}<> ,\t"; // Allow parens and commas for readability.
+    char *token;
+      
+    for (i = 0, j = 0,token = strtok( str, seps );
+	 token != NULL;
+	 token = strtok( NULL, seps ), i++ )
+    {
+      if (i > 2)
+      {
+	i = 0;
+	j++;
+      }
+      if (j >= numpoints)
+	break;
+      sscanf(token, "%lf", &m[j][i]);
+    }
+    return token; // This is not NULL if there is more of str left to parse.
+}
+
 /***************************************************************/
 char *getfilename(char *s, char *filename)
 {
@@ -8432,10 +8456,11 @@ void ParseParams(int *argc, char **argv)
 	}
         else if (toupper(pszParam[1]) == 'C') // Camera location.
 	{
-	  float v[4][4];
+	  //float v[4][4];
+	  double v[4][4];
 	  v[0][0] = v[0][1] = v[0][2] = 0.0;
-	  ScanPoints(v, 1, &(pszParam[2]));
-	  printf("CAM = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
+	  ScanPOINTS(v, 1, &(pszParam[2]));
+	  printf("CAM = (%lg, %lg, %lg)\n", v[0][0], v[0][1], v[0][2]);
 	  projection_fromx = v[0][0];
 	  projection_fromy = -v[0][1]; // L3P uses LDRAW y (-OpenGL y).
 	  projection_fromz = v[0][2];
@@ -8477,10 +8502,11 @@ void ParseParams(int *argc, char **argv)
 	}
         else if (toupper(pszParam[1]) == 'G') // Camera location (on Globe)
 	{
-	  float v[4][4];
+	  //float v[4][4];
+	  double v[4][4];
 	  v[0][0] = v[0][1] = v[0][2] = 0.0;
-	  ScanPoints(v, 1, &(pszParam[2]));
-	  printf("FROM = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
+	  ScanPOINTS(v, 1, &(pszParam[2]));
+	  printf("FROM = (%lg, %lg, %lg)\n", v[0][0], v[0][1], v[0][2]);
 	  camera_latitude = v[0][0];
 	  camera_longitude = v[0][1];
 	  camera_distance  = v[0][2];
@@ -8754,8 +8780,8 @@ void ParseParams(int *argc, char **argv)
 	ldraw_commandline_opts.output_depth=1;
 	printf("Save (%s)\n", output_file_name);
 	break;
-      case 's': // Scale but then downsample with AA when writing image file.  
-	downsample = 1; // Consider using a different command, or a suffix like -sn.n,d
+      case 's':
+	//downsample = 1;
       case 'S':
 #if 0
 	sscanf(pszParam,"%c%g",&type,&(ldraw_commandline_opts.S));
@@ -8887,6 +8913,24 @@ void ParseParams(int *argc, char **argv)
 #endif
 	}
 	break;
+      case '2': // Downsample when writing image file, and/or prescale up.  
+	{
+	  char *p;
+	  for (p = pszParam; p; p = strchr(p, ','))
+	  {
+	    int j, n;
+	    if (*p == ',')
+	      p++; // skip over the comma char.
+	    if (2 == sscanf(p,"%d%c",&j, &type)) {
+	      if (tolower(type) == 'g') // G for Gaussian blur filtered decimation.
+		downsample = 1; // Someday this could be j-1 for bigger filter.
+	      else if (tolower(type) == 'x') // X for eg. 2x upscale.
+		upscale = j;
+	    }
+	  }
+	  printf("Downsample = (%d, %d)\n", downsample, upscale);
+	break;
+	}
       }
     }
   }
@@ -8901,6 +8945,21 @@ void ParseParams(int *argc, char **argv)
     {
       ldraw_commandline_opts.V_x = x;
       ldraw_commandline_opts.V_y = y;
+    }
+  }
+
+  // If upscaling (in preparation for eventual downsample) then scale up scene.
+  if (upscale) {
+    ldraw_commandline_opts.S *= upscale;
+    lineWidth *= upscale;
+    if (OffScreenRendering || camera_globe_set) // Scale up render window.
+    {
+      camera_distance *= upscale;
+      ldraw_commandline_opts.V_x *= upscale;
+      ldraw_commandline_opts.V_y *= upscale;
+      ldraw_commandline_opts.O.x *= upscale;
+      ldraw_commandline_opts.O.y *= upscale;
+      ldraw_commandline_opts.O.z *= upscale;
     }
   }
 

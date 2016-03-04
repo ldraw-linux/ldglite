@@ -293,7 +293,10 @@ Command line options (see also the original ldlite docs for more):
    through ldglite and produce an image file.  For example ldrawmode for
    emacs could possibly be extended to use this to send a dat file in the
    buffer out to the printer.  (especially if I add postscript output)
-
+-2g downsamples output images by 2 with a Gaussian blur filter (png only).
+-2g,2x will also scale up the image (and edge lines) by 2 first.
+   The result is a nice pretty antialiased image.  Edges are smooth.
+   Transparent parts are blended instead of dithered.
 
 Hot Keys (especially useful in fullscreen gamemode):
 NOTE:  A few keys were changed in 0.9.0 to accomodate LEDIT emulation mode.
@@ -394,7 +397,7 @@ and JPEG.
 LDGLite (see http://www.ldraw.org/reference/linux for installation
 instructions on Linux) can convert DAT and MPD files to PNG:
 
-  ldglite-run -i2 -ms model.mpd
+  ldglite -i2 -ms model.mpd
 
 Using netpbm/pbmplus (and tcsh) it is easy to convert the PNG files
 to GIF and JPEG:
@@ -407,18 +410,18 @@ to GIF and JPEG:
 And if you want to improve the looks of the model, you can render
 the model in double size, and then scale down the images:
 
-  ldglite-run -i2 -ms -S2 -w2 model.mpd
+  ldglite -i2 -ms -S2 -w2 model.mpd
 
   foreach file ( /usr/local/share/ldraw/bitmap/model*.png )
     pngtopnm < ${file} | pnmscale 0.5 | cjpeg > `basename ${file} .png`.jpeg
     pngtopnm < ${file} | pnmscale 0.5 | ppmtogif > `basename ${file} .png`.gif
   end
 
-New as of version 1.2.8:
-Ldglite will decimate output images by 2 if you scale with lower case -s.
+New as of version 1.2.10:
+Ldglite will render double size and then decimate for you with -2g,2x
 No need for any external image decimation program.  (png output only)
 
-  ldglite-run -i2 -ms -s2 -w2 model.mpd
+  ldglite -i2 -ms -2g,2x model.mpd
 
 
 		       -----------------------
