@@ -652,7 +652,7 @@ void write_png_avg(char *filename)
 #include <math.h>
 // Gamma correct 8 bits into 16 bits for more precise addititon.
 // Then downshift to 12 bits and inverse gamma that back to 8 bits.
-double gamma        = 2.2;
+double gamma_val        = 2.2;
 int GAMMA[256];
 unsigned char GAM2RGB[4096]; 
 
@@ -678,9 +678,9 @@ void write_png(char *filename)
 
     /* Make gamma lookup tables now to avoid pow inside the loops */
     for(i = 0; i< 256; i++)
-      GAMMA[i] = (unsigned int) (65535.0 * pow((i/255.0), gamma));
+      GAMMA[i] = (unsigned int) (65535.0 * pow((i/255.0), gamma_val));
     for(i = 0; i< 4096; i++)
-      GAM2RGB[i] = (unsigned char) (255.0 * pow((i/4095.0), (1.0 / gamma)));
+      GAM2RGB[i] = (unsigned char) (255.0 * pow((i/4095.0), (1.0 / gamma_val)));
 
     // Alloc rgba even if alpha not used.
     p0 = (unsigned char*)calloc(width+1, 4);
