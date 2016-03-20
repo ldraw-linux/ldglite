@@ -7350,16 +7350,16 @@ void menuKeyEvent(int key, int x, int y)
       break;
     case 'B': // Bitmap
     case 'b':
-      if (key == 'B') 
+      if (key == 'B')
       {
 	ldraw_image_type = IMAGE_TYPE_PNG_RGB;
-	if (glutModifiers & GLUT_ACTIVE_CTRL)
+	if (glutModifiers & GLUT_ACTIVE_ALT)
 	  ldraw_image_type = IMAGE_TYPE_PNG_RGBA;
       }
       else 
       {
 	ldraw_image_type = IMAGE_TYPE_BMP8;
-	if (glutModifiers & GLUT_ACTIVE_CTRL)
+	if (glutModifiers & GLUT_ACTIVE_ALT)
 	  ldraw_image_type = IMAGE_TYPE_BMP;
       }
       c = ldraw_commandline_opts.M;

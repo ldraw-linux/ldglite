@@ -335,8 +335,8 @@ h turns on shading.
 l turns on line only wireframe mode.
 f toggles stud drawing.
 V toggles visible spin mode.
-b prints a BMP file. (use CTRL-b for 24 bit BMP)
-B prints a PNG file. (use CTRL-B for Alpha transparency)
+b prints a BMP file. (use ALT-b for 24 bit BMP)
+B prints a PNG file. (use ALT-B for Alpha transparency)
 q toggles line quality (antialiasing)
 Esc quits.
 
