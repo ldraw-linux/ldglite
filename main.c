@@ -1110,12 +1110,12 @@ void printPOVMatrix(FILE *f)
   char perspectivestr[] = "\t//orthographic\n";
   char *projectionstr = orthographicstr;
 
-  extern ZCOLOR_DEF_TABLE_ENTRY zcolor_table_default[];
+  ZCOLOR zcp, zcs;
 
-  i = ldraw_commandline_opts.B;
-  bc[0] = zcolor_table_default[i].primary.r / 255.0;
-  bc[1] = zcolor_table_default[i].primary.b / 255.0;
-  bc[2] = zcolor_table_default[i].primary.g / 255.0;
+  translate_color(ldraw_commandline_opts.B, &zcp, &zcs);
+  bc[0] = zcp.r / 255.0;
+  bc[1] = zcp.b / 255.0;
+  bc[2] = zcp.g / 255.0;
  fprintf(f,"\nbackground { color rgb <%g,%g,%g>}\n", bc[0], bc[1], bc[2]);
 
   if (1) //(ldraw_projection_type)
@@ -1278,7 +1278,7 @@ void printLdrawMatrix(FILE *f)
   s = matrix_string;
   if(ldraw_commandline_opts.B != 15)
   {
-    sprintf(s,"-b%d ", ldraw_commandline_opts.S);
+    sprintf(s,"-b%d ", ldraw_commandline_opts.B);
     s = matrix_string + strlen(matrix_string);
   }
   if (lineWidth > 1.0)

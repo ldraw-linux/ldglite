@@ -674,7 +674,7 @@ void write_png(char *filename)
 
   pix = &buf[0];
   if (downsample) {
-    extern ZCOLOR_DEF_TABLE_ENTRY zcolor_table_default[];
+    ZCOLOR zcp, zcs;
 
     /* Make gamma lookup tables now to avoid pow inside the loops */
     for(i = 0; i< 256; i++)
@@ -687,25 +687,25 @@ void write_png(char *filename)
     p1 = (unsigned char*)calloc(width+1, 4);
     p2 = (unsigned char*)calloc(width+1, 4);
     // Add a topright border of 1 pixel of transparent background for filter.
-    i = ldraw_commandline_opts.B;
+    translate_color(ldraw_commandline_opts.B, &zcp, &zcs);
     k = (width+1) * (3 + use_png_alpha);
     pix = p0;
     for (j=0; j<k; j++){
-      pix[j++] = zcolor_table_default[i].primary.r;
-      pix[j++] = zcolor_table_default[i].primary.g;
-      pix[j]   = zcolor_table_default[i].primary.b;
+      pix[j++] = zcp.r;
+      pix[j++] = zcp.g;
+      pix[j]   = zcp.b;
       if (use_png_alpha)
 	pix[++j] = 0;
     }
     pix = (char *)p2;
     k = k - use_png_alpha;
-    pix[k-3] = zcolor_table_default[i].primary.r;
-    pix[k-2] = zcolor_table_default[i].primary.g;
-    pix[k-1] = zcolor_table_default[i].primary.b;
+    pix[k-3] = zcp.r;
+    pix[k-2] = zcp.g;
+    pix[k-1] = zcp.b;
     pix = (char *)p1;
-    pix[k-3] = zcolor_table_default[i].primary.r;
-    pix[k-2] = zcolor_table_default[i].primary.g;
-    pix[k-1] = zcolor_table_default[i].primary.b;
+    pix[k-3] = zcp.r;
+    pix[k-2] = zcp.g;
+    pix[k-1] = zcp.b;
   }
   else if (width > 2560)
     pix = (char*)malloc(width*4); // Alloc rgba even if alpha not used.
