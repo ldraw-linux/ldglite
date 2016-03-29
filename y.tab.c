@@ -32,7 +32,7 @@
 #define	tMATRIX	282
 #define	tFILE	283
 
-
+#include <string.h>
 #include "stdio.h"
 #include "stdlib.h"
 #include "ldliteVR.h"

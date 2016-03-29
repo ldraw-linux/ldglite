@@ -35,6 +35,10 @@
 #ifndef GLWINKIT_H
 #define GLWINKIT_H
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#endif
+
 #ifdef USING_SLUT
 #  include "slut.h" // A sleazy implementation of GLUT on SDL.
 #else

@@ -1546,6 +1546,9 @@ void ls(void)
 /***************************************************************/
 int cd(char *s)
 {
+    char *p = directory;
+    extern int strwidth(char *s);
+
     //printf("cd %s\n", s);
     muiClearTBString(t1);  // Clear out the text box 
     if(chdir(s) < 0) {
@@ -1555,7 +1558,9 @@ int cd(char *s)
     pwd();
     ls();
     muiSetTLStrings(tl, filelist);
-    muiChangeLabel(l4, directory);
+    while (*p && strwidth(p) > 250) /* Make it fit in title bar label.*/
+      p++;
+    muiChangeLabel(l4, p);
     selectedfile = -1;
     selectedprev = -1;
     muiSetVSValue(vs, 1.0);
