@@ -27,6 +27,7 @@
 
 #include "platform.h"
 #include "ldliteVR.h"
+#include "LDrawIni.h"
 
 #  ifndef WINDOWS
      // This stuff gets pulled in by glut.h for windows.
@@ -2222,7 +2223,7 @@ void platform_sethome()
 }
 
 /***************************************************************/
-void platform_fixcase(char *path_str)
+LDrawIniBoolT platform_fixcase(char *path_str)
 {
   int i;
 
@@ -2232,6 +2233,8 @@ void platform_fixcase(char *path_str)
   else
     for(i=0; i<strlen(path_str); i++) 
       path_str[i] = tolower(path_str[i]);
+
+  return 1;
 }
 
 /***************************************************************/

@@ -1,0 +1,241 @@
+Here are my ideas of an API for accessing the LDrawIni settings.
+
+The basic idea is that it should be very simple to use, there are only four functions
+and a data structure declaration.
+
+First you call LDrawIniGet to read and initialize all relevant ldraw.ini data,
+the LDrawDir, the search directories, the LGEO directory.
+The data is initialized from environment variables and/or ini files
+suitable for the platform you are running and in the agreed order.
+
+L3P, as an example, will now look for the model in each of the search dirs.
+When found L3P calls LDrawIniComputeRealDirs with the directory of the model.
+This will recalculate the search dirs in the data structure to include those with <MODELDIR>.
+L3P will now (probably) have an extra search dir to look in for the remaining loading of parts.
+(directories marked with <SKIP> will of course be excluded from the search dirs)
+
+For each search dir there may be a number of flags. The known ones are parsed into bit-flags
+to speed up testing (e.g. LDSDF_HIDE|LDSDF_DEFPRIM), the remaining are available
+as a string, e.g "<MyFlag><UnknownFlag>".
+(or would you like a NULL terminated array of strings?)
+
+When finding a file in one of the search dirs and the file has no official header
+L3P can quickly determine whether the default filetype is e.g. Primitive.
+
+When done L3P calls LDrawIniFree to release the data structure.
+
+L3Lab works the same way, only it calls LDrawIniComputeRealDirs
+whenever a new model is loaded.
+
+The last function is LDrawIniResetSearchDirs, only to be called from the
+LDrawSetup program - or if you wish to override the search to be the
+standard one.
+
+
+In C (not C++ for greatest compatibility) it may look like this, LDrawIni.h:
+
+struct LDrawSearchDirS
+{
+   int            Flags;        /* Parsed and known flags LDSDF_XXX          */
+   char          *UnknownFlags; /* Any unknown flags <XXX>                   */
+   char          *Dir;          /* The full path of a search dir             */
+};
+
+struct LDrawIniS
+{
+   /* The LDRAWDIR containing the P, PARTS and MODELS directories */
+   char          *LDrawDir;
+
+   /* The LDrawSearch directories ready to use */
+   int            nSearchDirs;
+   struct LDrawSearchDirS *SearchDirs;
+
+   /* The LGEODIR (named LGEO) containing the LGEO .inc files */
+   char          *LgeoDir;
+
+   /* Private date for the LDrawIni routines */
+   struct LDrawIniPrivateDataS *PrivateData;
+};
+
+/* LDrawSearchDir Flags */
+#define LDSDF_HIDE     0x0001   /* Hide directory                            */
+#define LDSDF_DEFPART  0x0002   /* Default filetype: Part                    */
+#define LDSDF_DEFPRIM  0x0004   /* Default filetype: Primitive               */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/*
+Initialize and read all settings.
+If the argument LDrawDir is not NULL
+it will override the normal initialization of the LDraw directory.
+If ErrorCode is not NULL it will return a code telling why
+LDrawIniGet returned NULL.
+If all is OK then a pointer to struct LDrawIniS is returned.
+You should then call LDrawIniComputeRealDirs to obtain the search dirs.
+Remember to free the struct by calling LDrawIniFree.
+*/
+struct LDrawIniS *LDrawIniGet(const char *LDrawDir, int *ErrorCode);
+/*
+Compute Real Dirs by substituting <LDRAWDIR> and <MODELDIR> in
+the Symbolic Dirs read from the env vars or ini files.
+If OnlyValidDirs is true then non-existing search dirs is skipped
+If AddTrailingSlash is true then the search dirs will have a slash/backslash appended.
+If ModelDir is NULL then search dir <MODELDIR> is skipped.
+Returns 1 if OK, 0 on error
+*/
+int LDrawIniComputeRealDirs(struct LDrawIniS * LDrawIni,
+                            int OnlyValidDirs,
+                            int AddTrailingSlash,
+                            const char *ModelDir);
+/*
+Reset search dirs to default if LDrawSearch is NULL
+or to the dirs specified in LDrawSearch delimited by |.
+Returns 1 if OK, 0 on error
+*/
+int LDrawIniResetSearchDirs(struct LDrawIniS * LDrawIni,
+                            const char *LDrawSearch);
+/*
+Free the LDrawIni data
+*/
+   void LDrawIniFree(struct LDrawIniS * LDrawIni);
+
+#ifdef __cplusplus
+}
+#endif
+
+/* Error codes returned by LDrawIniGet */
+#define LDRAWINI_ERROR_OUT_OF_MEMORY     1
+#define LDRAWINI_ERROR_LDRAWDIR_NOT_SET  2
+
+(end of LDrawIni.h)
+
+The LDrawSetup program would like to have access to the private data
+and to some internal (static) functions for reading ini files and parsing,
+so I am thinking of an additional include file, LDrawIniP.h:
+
+struct LDrawIniPrivateDataS
+{
+   /* The LDrawSearch directories as read */
+   int            nSymbolicSearchDirs;
+   char         **SymbolicSearchDirs;
+};
+
+some reading/parsing functions
+
+(end of LDrawIniP.h)
+
+
+
+//***************************************************************
+I have currently tested the functions in L3P on Windows 
+and will shortly test on Linux.
+I had to rearrange some code in L3P now that you can't be sure
+that the <MODELDIR> is the first search dir...
+//***************************************************************
+
+The L3P usage of the LDrawIni API is:
+
+   LDrawIni = LDrawIniGet(NULL, &LDrawIniErrorCode);
+   if (!LDrawIni)
+   {
+      if (LDrawIniErrorCode == LDRAWINI_ERROR_LDRAWDIR_NOT_SET)
+      {
+         /* Neither environment variable, nor ldraw.ini, simply try current dir */
+         if (IsDir("P") && IsDir("PARTS") && IsDir("MODELS"))
+            LDrawIni = LDrawIniGet(".", &LDrawIniErrorCode);
+      }
+   }
+   if (!LDrawIni)
+   {
+      Exit("\
+Environment variable LDRAWDIR must be set to directory with P,PARTS,MODELS.\n\
+e.g.  'set LDRAWDIR=c:\\Lego\\LDraw'       (don't use long names)\n\
+You may type the set command at the DOS prompt or put it into C:\\AUTOEXEC.BAT", NULL);
+   }
+
+   if (L3Pov.UseLgeoParts && !LDrawIni->LgeoDir)
+   {
+      Exit("\
+Environment variable LGEODIR must be set to directory with LGEO parts.\n\
+e.g.  'set LGEODIR=c:\\Lego\\LGEO'       (don't use long names)\n\
+You may type the set command at the DOS prompt or put it into C:\\AUTOEXEC.BAT", NULL);
+   }
+
+   i = LDrawIniComputeRealDirs(LDrawIni, 1, 1, NULL);
+   if (!i)
+      Exit("Failed to compute search dirs", NULL);
+
+   fp = OpenDatFile(ModelFilename, 1);
+   if (!fp)
+      Exit("Cannot find model file '%s'", ModelFilename);
+   fclose(fp);
+
+Preparing load of model:
+   strcpy(ModelDir, lpszPathName);
+   for (i = strlen(ModelDir); --i >= 0;)
+      if (ModelDir[i] == '/' || ModelDir[i] == '\\')
+         break;
+   ModelDir[i<0? 0 : i] = '\0';     /* ModelDir may be empty.          */
+   if (!LDrawIniComputeRealDirs(LDrawIni, 1, 1, ModelDir))
+      return -1;
+
+And when loading DAT files:
+
+static int FileIsFromP;
+static int FileIsFromPARTS;
+static FILE *OpenDatFile2(char *DatName, char *Extension)
+{
+   FILE          *fp;
+   register int   i;
+
+   for (i = 0; i < LDrawIni->nSearchDirs; i++)
+   {
+      strcpy(DatPath, LDrawIni->SearchDirs[i].Dir); /* Has trailing \ */
+      strcat(DatPath, DatName);
+      strcat(DatPath, Extension);
+      FileIsFromP = (LDrawIni->SearchDirs[i].Flags & LDSDF_DEFPRIM) ? 1 : 0;
+      FileIsFromPARTS = (LDrawIni->SearchDirs[i].Flags & LDSDF_DEFPART) ? 1 : 0;
+      fp = fopeni(DatPath, "rb");
+      if (fp)
+         return fp;
+   }
+   return NULL;
+}
+FILE *OpenDatFile(char *DatName, int IsModel)
+{
+   static char *Extensions[] = { "", ".ldr", ".dat", ".mpd" };
+   int i;
+   FILE          *fp;
+
+   if (IsModel)
+   {
+      /* Be sure to load model; can't be sure <MODELDIR> is in search dirs */
+      strcpy(DatPath, ModelDir); /* ModelDir may be "" */
+      if (DatPath[0])
+         strcat(DatPath, BACKSLASH_STRING);
+      strcat(DatPath, DatName);
+      FileIsFromP = 0;
+      FileIsFromPARTS = 0;
+      fp = fopeni(DatPath, "rb");
+      if (fp)
+         return fp;
+   }
+   for (i = 0; i < sizeof(Extensions)/sizeof(char *); i++)
+   {
+      fp = OpenDatFile2(DatName, Extensions[i]);
+      if (fp)
+         return fp;
+   }
+   return NULL;
+}
+
+
+I hope the above gives you an idea of how to use the LDrawIni API in your program.
+Let me know if you have other wishes I haven't thought of.
+
+After a little more testing I'll soon publish LDrawIni.c.
+I'll make an HTML page describing the functionlity,
+the env var and ini file order, the format and the API.
+/Lars
