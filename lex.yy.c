@@ -585,6 +585,7 @@ char *yytext;
 
 #ifdef USE_OPENGL
 #include "platform.h"
+#include "LDrawIni.h"
 #endif
 
 #include "ldliteVR.h"
@@ -650,6 +651,9 @@ char primitivepath[256];
 char partspath[256];
 char modelspath[256];
 char datfilepath[256];
+
+struct LDrawIniS *LDrawIni;
+int LDrawIniErrorCode;
 #endif
 
 #define STRING 1
@@ -1946,6 +1950,7 @@ int start_include_file(char *root_name)
   FILE *fp = NULL;
   int ftype=0;
   CACHED_STREAM *found_it;
+  int i;
   
   if ( include_stack_ptr >= (MAX_INCLUDE_DEPTH-1) ) {
 	  fprintf( stderr, "Includes nested too deeply" );
@@ -1953,8 +1958,6 @@ int start_include_file(char *root_name)
   }
   // look up to see if file is in cache.
   {
-	  int i;
-
 	  found_it = NULL;
 	  for(i=0; i<cached_file_stack_index; i++) {
 		  switch (cached_streams[i].valid) {
@@ -1985,6 +1988,23 @@ int start_include_file(char *root_name)
 	  // We probably should NOT fixcase for the model dir, and random files.
 	  strcpy(fixed_root_name, root_name);
 	  platform_fixcase(fixed_root_name); // fix case for parts and prims.
+#if 1     
+	  for (i = 0; i < LDrawIni->nSearchDirs; i++)
+	  {
+	    concat_path(LDrawIni->SearchDirs[i].Dir, fixed_root_name, filename);
+	    if (LDrawIni->SearchDirs[i].Flags & LDSDF_DEFPRIM) 
+	      ftype = TYPE_P;
+	    else if (LDrawIni->SearchDirs[i].Flags & LDSDF_DEFPART)
+	      ftype = TYPE_PART;
+	    else if (LDrawIni->SearchDirs[i].Flags & LDSDF_MODELDIR)
+	      ftype = TYPE_MODEL;
+	    else
+	      ftype = TYPE_OTHER;
+	    fp = fopen( filename, "r" );
+	    if (fp)
+	      break;
+	  }
+#else
 	  concat_path(primitivepath, fixed_root_name, filename);
 	  if ((!strcmp(root_name,  "-")) || (!strcmp(root_name,  "\"-\"")))
 	    fp = stdin; 
@@ -2030,6 +2050,7 @@ int start_include_file(char *root_name)
 		  concat_path(PrePath, fixed_root_name, filename);
 		  fp = fopen( filename, "r" );
 	  }
+#endif	  
 	  if ( ! fp ) {	
 		  char buf[300];
 		  sprintf(buf,
