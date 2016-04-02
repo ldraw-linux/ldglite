@@ -186,6 +186,8 @@ You may type the set command at the DOS prompt or put it into C:\\AUTOEXEC.BAT\n
       exit(1);
     }
   }
+
+  strcpy(pathname, LDrawIni->LDrawDir); // Needed for old ldglite code.
   
   // That NULL at the end is the modelpath.  Do we have it yet?
   // If not, then we may need to redo this when we do have it.
@@ -657,7 +659,6 @@ static FILE         *OpenDatFile2(char *DatName, char *Extension)
          if (fp)
             break;
       }
-#endif
       if (!fp && ModelDir[0])
       {
          /* If still not found, try directory of the model itself */
@@ -670,11 +671,11 @@ static FILE         *OpenDatFile2(char *DatName, char *Extension)
          strcat(Path, Extension);
          fp = fopen(Path, "rt");
       }
+#endif
       /* If still not found, try LDRAWDIR itself for ldconfig.ldr */
       if (!fp && (stricmp(DatName, "ldconfig.ldr") == 0))
       {
-    	 concat_path(LDrawDir, DatName, Path);
-         strcat(Path, Extension);
+    	 concat_path(pathname, DatName, Path);
          fp = fopen(Path, "rt");
       }
    }

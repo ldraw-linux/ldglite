@@ -919,6 +919,10 @@ int LDrawIniParseSymbolicSearchDir(struct LDrawSearchDirS * Result,
          if (strcmp(s + 1, "PARTS") == 0)
             Flags |= LDSDF_DEFPART;
       }
+      {
+	extern LDrawIniBoolT platform_fixcase(char *);
+	platform_fixcase(s); /* ldglite dont like uppercase. */
+      }
    }
    else if (strncmp(s, "<MODELDIR>", 10) == 0)
    {
@@ -1006,13 +1010,13 @@ static int TryTypicalLDrawDirs(char *Str, int sizeofStr)
       return 1;
 #endif
    if (!use_uppercase) // ldglite
-     strcatSafe(Str, sizeofStr, "/usr/local/share/ldraw");
+     strcpySafe(Str, sizeofStr, "/usr/local/share/ldraw");
    else
-   strcpySafe(Str, sizeofStr, "/usr/local/share/LDRAW");
+     strcpySafe(Str, sizeofStr, "/usr/local/share/LDRAW");
    if (DirHasPandPARTS(Str))
       return 1;
-   strcpySafe(Str, sizeofStr, e); // for ldglite Linux Packages on github
-   strcatSafe(Str, sizeofStr, "/usr/share/ldraw");
+   // for ldglite Linux Packages on github
+   strcpySafe(Str, sizeofStr, "/usr/share/ldraw");
    if (DirHasPandPARTS(Str))
          return 1;
 #endif
