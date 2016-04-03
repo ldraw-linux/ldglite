@@ -652,8 +652,7 @@ char partspath[256];
 char modelspath[256];
 char datfilepath[256];
 
-struct LDrawIniS *LDrawIni;
-int LDrawIniErrorCode;
+extern struct LDrawIniS *LDrawIni;
 #endif
 
 #define STRING 1

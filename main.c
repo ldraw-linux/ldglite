@@ -39,7 +39,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.3.1.c    ";
+char ldgliteVersion[] = "Version 1.3.1.d    ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -2136,6 +2136,30 @@ int GetPrivateProfileString(char *appName, char *appVar, char *varDefault,
 #endif
 
 /***************************************************************/
+int platform_setdir()
+{
+  extern struct LDrawIniS *LDrawIni;
+
+  char filename[256];
+  int i;
+
+  // Redo the ldrawini real dirs whenever we set a new ModelDir.
+  // If ModelDir is unknown and model is still found then
+  // it's path is *already* being searched and ModelDir gets ".".
+  // This means the *current* dir is also searched.  Is that ok?
+
+  // FYI:  LDrawIniComputeRealDirs() expects path *with* model filename.
+  concat_path(datfilepath, datfilename, filename);
+  i = LDrawIniComputeRealDirs(LDrawIni, 1, 0, filename);
+  if (!i){
+    printf("Failed to recompute search dirs with ModelDir");
+    return(0);
+  }
+
+  return(1);
+}
+
+/***************************************************************/
 void platform_setpath()
 {
   char *env_str;
@@ -2173,6 +2197,8 @@ void platform_setpath()
   int *ErrorCode;
   GetLDrawSearchDirs(ErrorCode);
   //printf("GetLDrawSearchDirs(%d)\n",ErrorCode);
+
+  platform_setdir();
 
   concat_path(pathname, use_uppercase ? "P" : "p", primitivepath);
   concat_path(pathname, use_uppercase ? "PARTS" : "parts", partspath);
@@ -5075,6 +5101,7 @@ void loadnewdatfile(char *datpath, char *datfile)
   strcpy(datfilename, datfile);
   strcpy(datfilepath, datpath);
   strcpy(dirfilepath, datpath);
+  platform_setdir();
 
   SetTitle(1); // Change title of the window to show the new dat filename.
   
@@ -5104,6 +5131,7 @@ void saveasdatfile(char *datpath, char *datfile)
   strcpy(datfilename, datfile);
   strcpy(datfilepath, datpath);
   strcpy(dirfilepath, datpath); // I think this is only used by glut menus.
+  platform_setdir();
 
   if (editing)
     i = UnSelect1Part(curpiece); // Link part back in before printing
@@ -9115,6 +9143,8 @@ int setfilename(char *newfile)
   strcpy(datfilename, basename(newfile));
   strcpy(datfilepath, dirname(newfile));
   strcpy(dirfilepath, datfilepath);
+
+  platform_setdir();
 }
 
 

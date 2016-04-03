@@ -2262,15 +2262,6 @@ int                  LoadModel(const char *lpszPathName)
    if (!LDrawDir[0])
      strcpy(LDrawDir, pathname);
    strcpy(ModelDir, datfilepath);
-   // Redo this ldrawini real dirs now that we have ModelDir.
-   // If ModelDir is unknown and model is still found then
-   // it's path is *already* being searched and ModelDir gets ".".
-   // This means the *current* dir is also searched.  Is that ok?
-   i = LDrawIniComputeRealDirs(LDrawIni, 1, 0, ModelDir);
-   if (!i){
-     printf("Failed to recompute search dirs with ModelDir");
-     return(0);
-   }
 #else
    if (!LDrawDir[0] && !InitLDrawDir())
       return (0);
