@@ -2198,8 +2198,6 @@ void platform_setpath()
   GetLDrawSearchDirs(ErrorCode);
   //printf("GetLDrawSearchDirs(%d)\n",ErrorCode);
 
-  platform_setdir();
-
   concat_path(pathname, use_uppercase ? "P" : "p", primitivepath);
   concat_path(pathname, use_uppercase ? "PARTS" : "parts", partspath);
 
@@ -8979,6 +8977,23 @@ void ParseParams(int *argc, char **argv)
     }
   }
 
+#ifdef FORCE_2G2X
+  // DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG. 
+  // This is a nice spot to add test settings for LPub3d.
+  // Force -2g2x, set background to black, and lighting to head on.   
+  if (OffScreenRendering) // Scale up render window.
+  {
+    downsample = 1;
+    upscale = 2;
+    ldraw_commandline_opts.B = 0x2000000;
+    lightposition0[0] = 0.0;
+    lightposition0[1] = 1000.0;
+    lightposition0[2] = 1000.0;
+    lightposition0[3] = 0.0;
+  }
+  // DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG. 
+#endif
+
   // If upscaling (in preparation for eventual downsample) then scale up scene.
   if (upscale) {
     ldraw_commandline_opts.S *= upscale;
@@ -9000,16 +9015,6 @@ void ParseParams(int *argc, char **argv)
     double distance;
     double lo, la;
     double x, y, z;
-
-#if 0
-    // DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG. 
-    // This is a nice spot to add test settings for LPub3d.
-	downsample = 1;
-	ldraw_commandline_opts.S *= 2.0;
-	lineWidth *= 2;
-	// lightposition0[] = { 0.0, 1000.0, 1000.0, 0.0 };
-    // DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG. 
-#endif
 
     if (camera_distance <= 0.0)
     {
@@ -9664,6 +9669,9 @@ main(int argc, char **argv)
   // Go work in HOME dir for icon clickers.
   platform_sethome();
 #endif
+
+  // Setup things that need to know the directory containing the model.
+  platform_setdir();
 
 #if !defined(MAC)
 #  ifndef MACOS_X
