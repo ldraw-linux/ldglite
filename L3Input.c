@@ -80,7 +80,8 @@ problem with bbox for mpd files...
 
 #ifdef USE_OPENGL
 #include "platform.h"
-extern void platform_fixcase(char *);
+#include "LDrawIni.h"
+extern LDrawIniBoolT platform_fixcase(char *);
 
 extern char pathname[256];
 extern char primitivepath[256];
@@ -145,9 +146,56 @@ char                *Dirs[] = {"\\P\\", "\\Parts\\", "\\Models\\",
 			       "\\Unofficial\\P\\", "\\Unofficial\\Parts\\",
                                "\\Unofficial\\Lsynth\\"};
 
+struct LDrawIniS *LDrawIni;
+int LDrawIniErrorCode;
+
 void GetLDrawSearchDirs(int *ErrorCode)
 {
-  // Stub for code from lpub3d.  Need to rewrite it in C.
+  int i;
+
+  //LDrawIniSetFileCaseCallback(&platform_fixcase);
+
+  LDrawIni = LDrawIniGet(NULL, NULL, &LDrawIniErrorCode);
+  if (!LDrawIni)
+  {
+    if (LDrawIniErrorCode == LDRAWINI_ERROR_LDRAWDIR_NOT_SET)
+    {
+      /* Neither environment variable, nor ldraw.ini, simply try current dir */
+      if (DirHasPandPARTS("."))
+	LDrawIni = LDrawIniGet(".", NULL, &LDrawIniErrorCode);
+    }
+  }
+  if (!LDrawIni)
+  {
+    printf("\
+Environment variable LDRAWDIR must be set to a directory with p,parts subdirs.\n"
+#ifdef _WIN32
+"e.g.  'set LDRAWDIR=c:\\LDraw'       (don't use long names)\n\
+You may type the set command at the DOS prompt or put it into C:\\AUTOEXEC.BAT\n"
+#else
+#endif
+);
+    exit(1);
+  }
+  else {
+    extern int LDSearchDirsGet(struct LDrawIniS * LDrawIni);
+    
+    i = LDSearchDirsGet(LDrawIni);
+    if (!i){
+      printf("Out of memory adding search dirs.\n");
+      exit(1);
+    }
+  }
+
+  strcpy(pathname, LDrawIni->LDrawDir); // Needed for old ldglite code.
+  
+  // That NULL at the end is the modelpath.  Do we have it yet?
+  // If not, then we may need to redo this when we do have it.
+  i = LDrawIniComputeRealDirs(LDrawIni, 1, 0, NULL);
+  if (!i){
+    printf("Failed to compute search dirs.\n");
+    exit(1);
+  }
 }
 
 #else
@@ -560,6 +608,18 @@ static FILE         *OpenDatFile2(char *DatName, char *Extension)
    if (!fp)
    {
       /* If not in current directory then look in P, PARTS and MODELS */
+#if 1     
+     for (i = 0; i < LDrawIni->nSearchDirs; i++)
+     {
+       concat_path(LDrawIni->SearchDirs[i].Dir, DatName, Path);
+       strcat(Path, Extension);
+       FileIsFromP = (LDrawIni->SearchDirs[i].Flags & LDSDF_DEFPRIM) ? 1 : 0;
+       FileIsFromPARTS = (LDrawIni->SearchDirs[i].Flags & LDSDF_DEFPART) ? 1 : 0;
+       fp = fopen(Path, "rt");
+       if (fp)
+         return fp;
+     }
+#else
       for (i = 0; i < sizeof(Dirs) / sizeof(char *); i++)
       {
 #ifdef USE_OPENGL
@@ -611,11 +671,11 @@ static FILE         *OpenDatFile2(char *DatName, char *Extension)
          strcat(Path, Extension);
          fp = fopen(Path, "rt");
       }
+#endif
       /* If still not found, try LDRAWDIR itself for ldconfig.ldr */
       if (!fp && (stricmp(DatName, "ldconfig.ldr") == 0))
       {
-    	 concat_path(LDrawDir, DatName, Path);
-         strcat(Path, Extension);
+    	 concat_path(pathname, DatName, Path);
          fp = fopen(Path, "rt");
       }
    }

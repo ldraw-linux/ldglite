@@ -27,6 +27,7 @@
 
 #include "platform.h"
 #include "ldliteVR.h"
+#include "LDrawIni.h"
 
 #  ifndef WINDOWS
      // This stuff gets pulled in by glut.h for windows.
@@ -38,7 +39,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.2.10     ";
+char ldgliteVersion[] = "Version 1.3.1      ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -2135,6 +2136,30 @@ int GetPrivateProfileString(char *appName, char *appVar, char *varDefault,
 #endif
 
 /***************************************************************/
+int platform_setdir()
+{
+  extern struct LDrawIniS *LDrawIni;
+
+  char filename[256];
+  int i;
+
+  // Redo the ldrawini real dirs whenever we set a new ModelDir.
+  // If ModelDir is unknown and model is still found then
+  // it's path is *already* being searched and ModelDir gets ".".
+  // This means the *current* dir is also searched.  Is that ok?
+
+  // FYI:  LDrawIniComputeRealDirs() expects path *with* model filename.
+  concat_path(datfilepath, datfilename, filename);
+  i = LDrawIniComputeRealDirs(LDrawIni, 1, 0, filename);
+  if (!i){
+    printf("Failed to recompute search dirs with ModelDir");
+    return(0);
+  }
+
+  return(1);
+}
+
+/***************************************************************/
 void platform_setpath()
 {
   char *env_str;
@@ -2168,6 +2193,11 @@ void platform_setpath()
 #endif
   }
 
+  // Get search directories from environment
+  int *ErrorCode;
+  GetLDrawSearchDirs(ErrorCode);
+  //printf("GetLDrawSearchDirs(%d)\n",ErrorCode);
+
   concat_path(pathname, use_uppercase ? "P" : "p", primitivepath);
   concat_path(pathname, use_uppercase ? "PARTS" : "parts", partspath);
 
@@ -2185,11 +2215,6 @@ void platform_setpath()
 
   concat_path(userpath, use_uppercase ? "MODELS" : "models", modelspath);
   concat_path(userpath, use_uppercase ? "BITMAP" : "bitmap", bitmappath);
-
-  // Get search directories from environment
-  int *ErrorCode;
-  GetLDrawSearchDirs(ErrorCode);
-  //printf("GetLDrawSearchDirs(%d)\n",ErrorCode);
 }
 
 /***************************************************************/
@@ -2222,7 +2247,7 @@ void platform_sethome()
 }
 
 /***************************************************************/
-void platform_fixcase(char *path_str)
+LDrawIniBoolT platform_fixcase(char *path_str)
 {
   int i;
 
@@ -2232,6 +2257,8 @@ void platform_fixcase(char *path_str)
   else
     for(i=0; i<strlen(path_str); i++) 
       path_str[i] = tolower(path_str[i]);
+
+  return 1;
 }
 
 /***************************************************************/
@@ -5072,6 +5099,7 @@ void loadnewdatfile(char *datpath, char *datfile)
   strcpy(datfilename, datfile);
   strcpy(datfilepath, datpath);
   strcpy(dirfilepath, datpath);
+  platform_setdir();
 
   SetTitle(1); // Change title of the window to show the new dat filename.
   
@@ -5101,6 +5129,7 @@ void saveasdatfile(char *datpath, char *datfile)
   strcpy(datfilename, datfile);
   strcpy(datfilepath, datpath);
   strcpy(dirfilepath, datpath); // I think this is only used by glut menus.
+  platform_setdir();
 
   if (editing)
     i = UnSelect1Part(curpiece); // Link part back in before printing
@@ -8948,6 +8977,23 @@ void ParseParams(int *argc, char **argv)
     }
   }
 
+#ifdef FORCE_2G2X
+  // DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG. 
+  // This is a nice spot to add test settings for LPub3d.
+  // Force -2g2x, set background to black, and lighting to head on.   
+  if (OffScreenRendering) // Scale up render window.
+  {
+    downsample = 1;
+    upscale = 2;
+    ldraw_commandline_opts.B = 0x2000000;
+    lightposition0[0] = 0.0;
+    lightposition0[1] = 1000.0;
+    lightposition0[2] = 1000.0;
+    lightposition0[3] = 0.0;
+  }
+  // DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG. 
+#endif
+
   // If upscaling (in preparation for eventual downsample) then scale up scene.
   if (upscale) {
     ldraw_commandline_opts.S *= upscale;
@@ -8969,16 +9015,6 @@ void ParseParams(int *argc, char **argv)
     double distance;
     double lo, la;
     double x, y, z;
-
-#if 0
-    // DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG. 
-    // This is a nice spot to add test settings for LPub3d.
-	downsample = 1;
-	ldraw_commandline_opts.S *= 2.0;
-	lineWidth *= 2;
-	// lightposition0[] = { 0.0, 1000.0, 1000.0, 0.0 };
-    // DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG. 
-#endif
 
     if (camera_distance <= 0.0)
     {
@@ -9112,6 +9148,8 @@ int setfilename(char *newfile)
   strcpy(datfilename, basename(newfile));
   strcpy(datfilepath, dirname(newfile));
   strcpy(dirfilepath, datfilepath);
+
+  platform_setdir();
 }
 
 
@@ -9631,6 +9669,9 @@ main(int argc, char **argv)
   // Go work in HOME dir for icon clickers.
   platform_sethome();
 #endif
+
+  // Setup things that need to know the directory containing the model.
+  platform_setdir();
 
 #if !defined(MAC)
 #  ifndef MACOS_X
