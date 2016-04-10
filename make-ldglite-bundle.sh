@@ -15,9 +15,9 @@ cat <<END > ldglite.app/Contents/Info.plist
     <key>CFBundlePackageType</key>		<string>APPL</string>
     <key>CFBundleSignature</key>		<string>LdGL</string>
     <key>CFBundleName</key>			<string>ldglite</string>
-    <key>CFBundleVersion</key>			<string>1.2.3</string>
-    <key>CFBundleShortVersionString</key>	<string>ldglite 1.2.3</string>
-    <key>CFBundleGetInfoString</key>		<string>ldglite 1.2.3 http://ldglite.sourceforge.net</string>
+    <key>CFBundleVersion</key>			<string>1.3.1</string>
+    <key>CFBundleShortVersionString</key>	<string>ldglite 1.3.1</string>
+    <key>CFBundleGetInfoString</key>		<string>ldglite 1.3.1 http://ldglite.sourceforge.net</string>
     <key>CFBundleIconFile</key>			<string>ldglite.icns</string>
     <key>CFBundleIdentifier</key>		<string>org.ldraw.ldglite</string>
     <key>CSResourcesFileMapped</key>		<true/>
