@@ -84,7 +84,7 @@ int parsername = L3_PARSER; // (was UNKNOWN_PARSER)
 int EPS_OUTPUT_FIGURED_OUT = 0;
 
 char *picfilename = NULL;
-char datfilename[256];
+char datfilename[256] = {0};
 char title[256];
 char progname[256];
 char progpath[256];
@@ -8408,6 +8408,8 @@ void ParseParams(int *argc, char **argv)
   int camera_znear_set = 0;
   int camera_zfar_set = 0;
 
+  if (!strlen(datfilename)) // Init datfilename if none parsed yet...
+  { 
   // Initialize datfilepath to none so we can take commands from stdin.
   strcpy(datfilename, " ");
 #if defined(UNIX)
@@ -8419,8 +8421,9 @@ void ParseParams(int *argc, char **argv)
 #else
 #error unspecified platform in ParseParams() definition
 #endif
-  
+
   strcpy(dirfilepath, datfilepath);
+  }  
 
   for (i = 1; i < *argc; i++)
   {
@@ -8963,7 +8966,7 @@ void ParseParams(int *argc, char **argv)
       }
     }
   }
-
+  
   // Tiled rendering does not work offscreen.  Just use one big bitmap.
   if (OffScreenRendering && tiledRendering)
   {
@@ -9672,6 +9675,18 @@ main(int argc, char **argv)
 
   // Setup things that need to know the directory containing the model.
   platform_setdir();
+
+#ifdef MACOS_X
+  // Finder seems to run apps from root, so chdir to dirfilepath or HOME.
+  if (strcmp(datfilename,  " ")) {
+    if (needargs) {
+      if (strlen(dirfilepath) > 2)
+	chdir(dirfilepath);
+      else if (platform_getenv("HOME"))
+	chdir(platform_getenv("HOME"));
+    }
+  }
+#endif
 
 #if !defined(MAC)
 #  ifndef MACOS_X
