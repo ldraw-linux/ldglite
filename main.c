@@ -8987,7 +8987,8 @@ void ParseParams(int *argc, char **argv)
   if (OffScreenRendering) // Scale up render window.
   {
     downsample = 1;
-    upscale = 2;
+    if (upscale == 0) 
+      upscale = 2;
     ldraw_commandline_opts.B = 0x2000000;
     lightposition0[0] = 0.0;
     lightposition0[1] = 1000.0;
@@ -9010,6 +9011,7 @@ void ParseParams(int *argc, char **argv)
       ldraw_commandline_opts.O.y *= upscale;
       ldraw_commandline_opts.O.z *= upscale;
     }
+    upscale = 1; // only apply once.  OSX can call ParseParams twice.
   }
 
   if (camera_globe_set)
