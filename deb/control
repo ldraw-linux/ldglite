@@ -7,7 +7,7 @@ Build-Depends: debhelper (>=9)
 Vcs-Git: https://github.com/ldraw-linux/ldglite.git
 
 Package: lglite
-Architecture: all
+Architecture: any
 Description: A program to view and edit Lego brick models stored in LDRAW format
  Ldglite is a program that lets you view and edit Lego brick models stored in
  LDRAW format. It was created by connecting the LDLite DAT file parser to an
