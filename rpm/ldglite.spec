@@ -15,8 +15,8 @@
 #
 
 Name:           ldglite
-Version:	__VERSION__
-Release:	0
+Version:	__UPSTREAM_VERSION__
+Release:	__RELEASE_VERSION__
 License:	GPL-2.0
 Summary:	LDraw LEGO CAD renderer
 Url:		http://ldglite.sourceforge.net/
@@ -27,6 +27,7 @@ BuildRequires:	freeglut-devel libpng-devel Mesa-devel gcc-c++
 Requires:       ldraw-library >= 2014.02.1
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Provides:	ldraw-renderer
+__PATCHES_DECLARE__
 
 %description
 ldglite is a renderer of LDraw LEGO models.
@@ -36,6 +37,8 @@ virtual LEGO models and scenes.
 
 %prep
 %setup -q -n ldglite
+
+__PATCHES_APPLY__
 
 %build
 make -f makefile.linux LDRAWDIR=/usr/share/ldraw

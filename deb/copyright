@@ -1,0 +1,20 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Ldglite
+Upstream-Contact: Don Heyse <dheyse@hotmail.com>
+Source: http://ldglite.sourceforge.net/
+
+Files: *
+Copyright: 2002-2003 Don Heyse <dheyse@hotmail.com>
+License: GPL-2+
+
+Files: L3*
+Copyright: 1997-1999 Lars C. Hassing <lch@ccieurope.com>
+License: GPL-2+
+
+Files: ldlite*
+Copyright: 1998 Paul J. Gyugyi <paul@gyugyi.com>
+License: GPL-2+
+
+Files: debian/*
+Copyright: 2016 Milan Vancura <milan.vancura@suse.com>
+License: GPL-2+

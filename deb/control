@@ -1,0 +1,18 @@
+Source: ldglite
+Maintainer: Milan Vancura <mvancura@suse.com>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.6
+Build-Depends: debhelper (>=9)
+Vcs-Git: https://github.com/ldraw-linux/ldglite.git
+
+Package: lglite
+Architecture: all
+Description: A program to view and edit Lego brick models stored in LDRAW format
+ Ldglite is a program that lets you view and edit Lego brick models stored in
+ LDRAW format. It was created by connecting the LDLite DAT file parser to an
+ OpenGL rendering engine, making it portable to other operating systems. Along
+ the way the L3 parser from L3P and a few nifty features from other DAT file
+ viewers such as L3Lab were added or emulated. Most recently, an LEdit emulation
+ mode was added. This gives you the ability to create and edit models in ldglite
+ in addition to the viewing capabilities.

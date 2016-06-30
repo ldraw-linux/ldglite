@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+DH_VERBOSE=
+MAKE="make -f makefile.linux"
+
+%:
+	dh $@
+
+override_dh_install:
+	dh_install
+	mv $(CURDIR)/debian/ldglite/usr/bin/ldglite $(CURDIR)/debian/ldglite/usr/bin/ldglite.bin
+	ln -s /usr/lib/ldraw-wrapper $(CURDIR)/debian/ldglite/usr/bin/ldglite
+	mv $(CURDIR)/debian/ldglite/usr/bin/l3glite $(CURDIR)/debian/ldglite/usr/bin/l3glite.bin
+	ln -s /usr/lib/ldraw-wrapper $(CURDIR)/debian/ldglite/usr/bin/l3glite
+	mv $(CURDIR)/debian/ldglite/usr/bin/l3ledit $(CURDIR)/debian/ldglite/usr/bin/l3ledit.bin
+	ln -s /usr/lib/ldraw-wrapper $(CURDIR)/debian/ldglite/usr/bin/l3ledit
