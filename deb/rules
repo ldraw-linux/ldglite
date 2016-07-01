@@ -1,21 +1,24 @@
 #!/usr/bin/make -f
 DH_VERBOSE=1
-PREFIX := /usr
 ENABLE_OFFSCREEN_RENDERING := Yes
+PACKAGE = $(firstword $(shell dh_listpackages))
+TMP     = $(CURDIR)/debian/$(PACKAGE)
+PREFIX  = /usr
 
 %:
 	dh $@
 
 override_dh_auto_clean:
 	make -f makefile.linux clean || true
+	find . -name \*.o | xargs rm || true
+	find . -name \*.a | xargs rm || true
+	rm -f l3gledit l3glite ldglite l3gledit.bin l3glite.bin ldglite.bin
 
 override_dh_auto_build:
 	make -f makefile.linux ldglite
 
 override_dh_auto_install:
-	mv $(CURDIR)/debian/ldglite/usr/bin/ldglite $(CURDIR)/debian/ldglite/usr/bin/ldglite.bin
-	ln -s /usr/lib/ldraw-wrapper $(CURDIR)/debian/ldglite/usr/bin/ldglite
-	mv $(CURDIR)/debian/ldglite/usr/bin/l3glite $(CURDIR)/debian/ldglite/usr/bin/l3glite.bin
-	ln -s /usr/lib/ldraw-wrapper $(CURDIR)/debian/ldglite/usr/bin/l3glite
-	mv $(CURDIR)/debian/ldglite/usr/bin/l3gledit $(CURDIR)/debian/ldglite/usr/bin/l3gledit.bin
-	ln -s /usr/lib/ldraw-wrapper $(CURDIR)/debian/ldglite/usr/bin/l3gledit
+	make -f makefile.linux DESTDIR=$(TMP) PREFIX=$(PREFIX) install
+	mv $(TMP)$(PREFIX)/bin/ldglite  $(TMP)$(PREFIX)/bin/ldglite.bin  ; ln -s /usr/lib/ldraw-wrapper $(TMP)$(PREFIX)/bin/ldglite
+	mv $(TMP)$(PREFIX)/bin/l3glite  $(TMP)$(PREFIX)/bin/l3glite.bin  ; ln -s /usr/lib/ldraw-wrapper $(TMP)$(PREFIX)/bin/l3glite
+	mv $(TMP)$(PREFIX)/bin/l3gledit $(TMP)$(PREFIX)/bin/l3gledit.bin ; ln -s /usr/lib/ldraw-wrapper $(TMP)$(PREFIX)/bin/l3gledit
