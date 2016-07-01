@@ -28,8 +28,9 @@
 #define LACKS_STRICMP 1
 #define LACKS_STRNICMP 1
 #define LACKS_DIRNAME 1
+#ifndef AGL_OFFSCREEN_OPTION
 #define LACKS_BASENAME 1
-
+#endif
 
 #elif defined(UNIX) 
 
@@ -91,6 +92,10 @@
 
 #endif
 
+#ifndef max
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+#define min(a,b) (((a) < (b)) ? (a) : (b))
+#endif
 
 // Declarations as needed
 

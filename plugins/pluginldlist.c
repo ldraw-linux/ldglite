@@ -3,7 +3,10 @@
 
 // I need to launch it and set it free so I can return from the fn.
 
+
+#ifdef _WIN32
 #include <windows.h>
+#endif
 #include <string.h>
 #include <stdlib.h>
 

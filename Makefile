@@ -2,8 +2,12 @@ CC=gcc
 
 # Comment these out to disable PNG output if no PNG lib is available.
 #
-PNG_FLAGS=-DUSE_PNG -I./win
-PNG_LIBS=-L./win -lpng -lz
+# Devcpp has static packages for libpng, libz, and glut so use them.  Need -lgdi though.
+#PNG_FLAGS=-DUSE_PNG -I./win
+#PNG_LIBS=-L./win -lpng -lz
+#
+PNG_FLAGS=-DUSE_PNG
+PNG_LIBS= -static -lpng -lz
 
 # Comment these out to disable tile rendering option.
 #
@@ -40,16 +44,13 @@ CFLAGS=-ggdb -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 $(PNG_FLAGS) $(TR_FLAGS) $(
 AR = ar
 RANLIB = ranlib
 
-## This is lame.  I don't know how to do both .c and .cpp for the OBJS line
-## so I pretend L3*.cpp is L3*.c and make rules for them later.
-#
 SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c lcolors.c y.tab.c lex.yy.c qbuf.c main.c ldglpr.c L3Edit.c L3Math.c L3Input.c L3View.c hoser.c ldglmenu.c plugins.c $(TR_SRC) $(GUI_SRC) 
 OBJS = $(SRCS:.c=.o) $(RES_SRC:.rc=.o)
 
 all	: ldglite
 
 ldglite:   $(OBJS) $(LIBS)
-	$(CC) $(CFLAGS) $(OBJS) -o ldglite.exe -I. $(PNG_LIBS) $(OFFSCREEN_LIBS) $(GUI_LIBS) -lglut32 -lglu32 -lopengl32 -lwinmm
+	$(CC) $(CFLAGS) $(OBJS) -o ldglite.exe -I. $(PNG_LIBS) $(OFFSCREEN_LIBS) $(GUI_LIBS) -lglut32 -lglu32 -lopengl32 -lwinmm -lgdi32
 	cp ldglite.exe l3glite.exe
 	cp ldglite.exe l3gledit.exe
 
@@ -64,15 +65,6 @@ l3glitepng:   ldglite
 
 ldglite.o: ldglite.rc
 	windres -i ldglite.rc -o ldglite.o
-
-## This is lame.  I don't know how to do both .c and .cpp for the OBJS line.
-#
-L3Math.o: L3Math.cpp
-	$(CC) -c $(CFLAGS) L3Math.cpp
-L3Input.o: L3Input.cpp
-	$(CC) -c $(CFLAGS) L3Input.cpp
-L3View.o: L3View.cpp
-	$(CC) -c $(CFLAGS) L3View.cpp
 
 clean:
 	rm *.o

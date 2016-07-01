@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <stdio.h>
+
+void hoseout(void);
 
 //************************************************************************
 // Adds 2 Points. Don't Just Use '+' ;)

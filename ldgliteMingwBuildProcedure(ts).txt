@@ -1,0 +1,87 @@
+"Sproaticus" Jeremy H. Sproat writes in lugnet.cad.dev message 7738 
+Sun, 25 Aug 2002 20:03:06 GMT
+
+> If you want an easy way to grab the latest stuff from CVS, I recently
+> put the CVS executable I use, and a batch file to fetch the entire CVS
+> archive for ldglite here:
+> ldglite.sf.net/cvswin.zip
+
+Updated by Trevor Sandy on December 29 2015
+
+My working directory is C:\ldgliteproject\
+
+I've been taking notes on my build process.  Here's what I logged so far:
+
+download and install mingw32 with msys
+
+- download MinGW from http://www.mingw.org/download.shtml
+- note: I installed mine in C:\mingw
+- install a1s directed.
+- make sure that C:\mingw\bin is in your PATH
+
+download, compile and install zlib 1.2.8
+
+- download source code from http://www.gzip.org/zlib/
+- note: I placed mine in C:\ldgliteproject\zlib\ 
+  (rename directory zlib128\ to zlib\)
+  (navigate to zlib\ directory)
+- copy win32/makefile.gcc makefile.gcc
+- mingw32-make -fmakefile.gcc
+- (navigate to zlib)
+- cd zlib
+- export "INCLUDE_PATH=../../mingw/include"
+- export "LIBRARY_PATH=../../mingw/lib"
+- export "BINARY_PATH=../../mingw/bin"
+- make install -fmakefile.gcc (Opt)
+manual move:
+STATICLIB = libz.a		=> mingw/lib
+IMPLIB    = libz.dll.a 	=> mingw/lib
+SHAREDLIB = zlib1.dll	=> mingw/bin
+		  = zlib.h   	=> mingw/include
+		  = zconf.h  	=> mingw/include
+		  = zlib.pc.in	=> mingw/lib/pkgconfig/zlib.pc
+
+download, compile and install libpng 1.6.20
+
+- download source code from http://www.libpng.org/pub/png/libpng.html
+- note: I placed mine in C:\ldgliteproject\lpng\
+  (rename directory lpng1620 to lpng)
+  (navigate to zlib)
+- cd lpng
+- cp scripts\makefile.gcc makefile.gcc
+  (manually edit makefile.gcc as follows)
+- EXEEXT =.exe
+- ZLIBLIB=../../mingw/lib
+- ZLIBINC=../../mingw/include
+- make -fmakefile.gcc
+manual move:
+		= libpng.a 		=> mingw/lib
+		= png.h 		=> mingw/include
+		= pngconf.h		=> mingw/include
+		= pngdebug.h	=> mingw/include
+		= pnginfo.h		=> mingw/include
+		= pngpriv.h		=> mingw/include
+		= pnglibconf.h 	=> mingw/include 
+		= pngstruct.h 	=> mingw/include 
+
+download and install glut headers and libraries
+
+- download glheaders.zip from ldglite page
+- move .lib files to C:\mingw\lib\
+- move .h files to C:\mingw\include\GL\
+
+download and compile ldglite
+
+- download ldglitesrc1_2_4src.zip from ldglite sourceforge page
+- note: I put mine in C:\ldgliteproject\ldglite\
+- delete the files in the ldglite\win directory.  It's older png stuff.
+- not necessary, but you may want to change the "cp ldglite.exe *" commands
+  to "copy ldglite.exe *"
+- main.c:1874: error: too few arguments to functino 'mkdir'
+  mkdir(filename); -> _mkdir(filename);
+- make
+
+Commands:
+(write console to log file - including errors)
+$mingw32-make -fMakefile > makelog.txt 2>&1
+

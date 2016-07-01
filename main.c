@@ -38,7 +38,7 @@
 #    endif
 #  endif
 
-char ldgliteVersion[] = "Version 1.2.4      ";
+char ldgliteVersion[] = "Version 1.2.10     ";
 
 // Use Glut popup menus if MUI is not available.
 #ifndef OFFSCREEN_ONLY
@@ -370,6 +370,9 @@ int LineChecking = 0;
 int preprintstep = 0;
 int dimLevel = 0; // Same as ldraw_commandline_opts.maxlevel=32767;  // a huge number
 float dimAmount = 0.0;
+
+int downsample = 0; // decimate output file by 2 with antialias filter.
+int upscale = 0;    // upscale everything needed for eventual downsample.
 
 #ifdef TILE_RENDER_OPTION
 #include "tr.h"
@@ -1107,12 +1110,12 @@ void printPOVMatrix(FILE *f)
   char perspectivestr[] = "\t//orthographic\n";
   char *projectionstr = orthographicstr;
 
-  extern ZCOLOR_DEF_TABLE_ENTRY zcolor_table_default[];
+  ZCOLOR zcp, zcs;
 
-  i = ldraw_commandline_opts.B;
-  bc[0] = zcolor_table_default[i].primary.r / 255.0;
-  bc[1] = zcolor_table_default[i].primary.b / 255.0;
-  bc[2] = zcolor_table_default[i].primary.g / 255.0;
+  translate_color(ldraw_commandline_opts.B, &zcp, &zcs);
+  bc[0] = zcp.r / 255.0;
+  bc[1] = zcp.b / 255.0;
+  bc[2] = zcp.g / 255.0;
  fprintf(f,"\nbackground { color rgb <%g,%g,%g>}\n", bc[0], bc[1], bc[2]);
 
   if (1) //(ldraw_projection_type)
@@ -1275,7 +1278,7 @@ void printLdrawMatrix(FILE *f)
   s = matrix_string;
   if(ldraw_commandline_opts.B != 15)
   {
-    sprintf(s,"-b%d ", ldraw_commandline_opts.S);
+    sprintf(s,"-b%d ", ldraw_commandline_opts.B);
     s = matrix_string + strlen(matrix_string);
   }
   if (lineWidth > 1.0)
@@ -2184,6 +2187,11 @@ void platform_setpath()
 
   concat_path(userpath, use_uppercase ? "MODELS" : "models", modelspath);
   concat_path(userpath, use_uppercase ? "BITMAP" : "bitmap", bitmappath);
+
+  // Get search directories from environment
+  int *ErrorCode;
+  GetLDrawSearchDirs(ErrorCode);
+  //printf("GetLDrawSearchDirs(%d)\n",ErrorCode);
 }
 
 /***************************************************************/
@@ -3071,6 +3079,13 @@ int ldlite_parse_with_rc(char *filename)
     if (filename[0] == '.') // I hate the ./filename thing.
       strcpy(filename, "ldconfig.ldr");
     fp = OpenDatFile(filename); // Try the l3p paths after current working dir.
+    if (fp == NULL)
+    {
+      strcpy(filename, primitivepath);
+      filename[strlen(filename)-1] = 0;
+      strcat(filename, "ldconfig.ldr");
+      fp = OpenDatFile(filename); // Try the l3p paths after current working dir.
+    }   
   }
   if (fp == NULL)
     fp = fopen("ldliterc.dat","rb"); // If that fails, try the ldliterc file.
@@ -5864,6 +5879,29 @@ char *ScanPoints(float m[4][4], int numpoints, char *str)
     return token; // This is not NULL if there is more of str left to parse.
 }
 
+/*****************************************************************************/
+char *ScanPOINTS(double m[4][4], int numpoints, char *str)
+{
+    int  i, j;
+    char seps[] = "()[]{}<> ,\t"; // Allow parens and commas for readability.
+    char *token;
+      
+    for (i = 0, j = 0,token = strtok( str, seps );
+	 token != NULL;
+	 token = strtok( NULL, seps ), i++ )
+    {
+      if (i > 2)
+      {
+	i = 0;
+	j++;
+      }
+      if (j >= numpoints)
+	break;
+      sscanf(token, "%lf", &m[j][i]);
+    }
+    return token; // This is not NULL if there is more of str left to parse.
+}
+
 /***************************************************************/
 char *getfilename(char *s, char *filename)
 {
@@ -7231,6 +7269,12 @@ void menuKeyEvent(int key, int x, int y)
 	break;
     case '0':
       m_viewMatrix = LdrawOblique;
+      if (ldraw_projection_type)
+      { // LdrawObliqe only makes sense with orthographic projection.
+	ldraw_projection_type = 0;
+	parse_view(m_viewMatrix);
+	reshape(Width, Height);
+      }
       newview = 1;
       break;
     case '1':
@@ -7271,10 +7315,20 @@ void menuKeyEvent(int key, int x, int y)
       break;
     case 'j':
       ldraw_projection_type = 0;
+      if (m_viewMatrix == LdrawOblique)
+      {
+	m_viewMatrix = Oblique;
+	parse_view(m_viewMatrix);
+      }
       reshape(Width, Height);
       break;
     case 'J':
       ldraw_projection_type = 1;
+      if (m_viewMatrix == LdrawOblique)
+      {
+	m_viewMatrix = Oblique;
+	parse_view(m_viewMatrix);
+      }
       reshape(Width, Height);
       break;
     case 'f':
@@ -7298,16 +7352,16 @@ void menuKeyEvent(int key, int x, int y)
       break;
     case 'B': // Bitmap
     case 'b':
-      if (key == 'B') 
+      if (key == 'B')
       {
 	ldraw_image_type = IMAGE_TYPE_PNG_RGB;
-	if (glutModifiers & GLUT_ACTIVE_CTRL)
+	if (glutModifiers & GLUT_ACTIVE_ALT)
 	  ldraw_image_type = IMAGE_TYPE_PNG_RGBA;
       }
       else 
       {
 	ldraw_image_type = IMAGE_TYPE_BMP8;
-	if (glutModifiers & GLUT_ACTIVE_CTRL)
+	if (glutModifiers & GLUT_ACTIVE_ALT)
 	  ldraw_image_type = IMAGE_TYPE_BMP;
       }
       c = ldraw_commandline_opts.M;
@@ -8103,7 +8157,7 @@ void myGlutIdle( void )
 #endif
 
 #ifdef WINDOWS
-    sleep(1); // Glut is a CPU hog.  Give back a millisecond.
+    Sleep(1); // Glut is a CPU hog.  Give back a millisecond.
     // need to use usleep on other platforms (add to platform.c)
 #endif
 
@@ -8404,10 +8458,11 @@ void ParseParams(int *argc, char **argv)
 	}
         else if (toupper(pszParam[1]) == 'C') // Camera location.
 	{
-	  float v[4][4];
+	  //float v[4][4];
+	  double v[4][4];
 	  v[0][0] = v[0][1] = v[0][2] = 0.0;
-	  ScanPoints(v, 1, &(pszParam[2]));
-	  printf("CAM = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
+	  ScanPOINTS(v, 1, &(pszParam[2]));
+	  printf("CAM = (%lg, %lg, %lg)\n", v[0][0], v[0][1], v[0][2]);
 	  projection_fromx = v[0][0];
 	  projection_fromy = -v[0][1]; // L3P uses LDRAW y (-OpenGL y).
 	  projection_fromz = v[0][2];
@@ -8449,10 +8504,11 @@ void ParseParams(int *argc, char **argv)
 	}
         else if (toupper(pszParam[1]) == 'G') // Camera location (on Globe)
 	{
-	  float v[4][4];
+	  //float v[4][4];
+	  double v[4][4];
 	  v[0][0] = v[0][1] = v[0][2] = 0.0;
-	  ScanPoints(v, 1, &(pszParam[2]));
-	  printf("FROM = (%g, %g, %g)\n", v[0][0], v[0][1], v[0][2]);
+	  ScanPOINTS(v, 1, &(pszParam[2]));
+	  printf("FROM = (%lg, %lg, %lg)\n", v[0][0], v[0][1], v[0][2]);
 	  camera_latitude = v[0][0];
 	  camera_longitude = v[0][1];
 	  camera_distance  = v[0][2];
@@ -8592,13 +8648,20 @@ void ParseParams(int *argc, char **argv)
 	}
 	break;
       case 'J':
-	ldraw_projection_type = 1;
-	break;
-      case 'j':
-	ldraw_projection_type = 0;
+	ldraw_projection_type = 1; // Use Perspective projection.
+	/* LdrawOblique only makes sense in ortho projection. */
 	if (m_viewMatrix == LdrawOblique)
 	{
-	  m_viewMatrix = Oblique;
+	  m_viewMatrix = Oblique; // Turn off LdrawOblique model/proj matrix.
+	  parse_view(m_viewMatrix);
+	}
+	break;
+      case 'j':
+	ldraw_projection_type = 0; // Use Orthographic projection.
+	/* Also disable LdrawOblique.  Press 0 key to view LdrawOblique. */
+	if (m_viewMatrix == LdrawOblique)
+	{
+	  m_viewMatrix = Oblique; // Turn off LdrawOblique model/proj matrix.
 	  parse_view(m_viewMatrix);
 	}
 	break;
@@ -8719,8 +8782,9 @@ void ParseParams(int *argc, char **argv)
 	ldraw_commandline_opts.output_depth=1;
 	printf("Save (%s)\n", output_file_name);
 	break;
-      case 'S':
       case 's':
+	//downsample = 1;
+      case 'S':
 #if 0
 	sscanf(pszParam,"%c%g",&type,&(ldraw_commandline_opts.S));
 #else
@@ -8851,6 +8915,24 @@ void ParseParams(int *argc, char **argv)
 #endif
 	}
 	break;
+      case '2': // Downsample when writing image file, and/or prescale up.  
+	{
+	  char *p;
+	  for (p = pszParam; p; p = strchr(p, ','))
+	  {
+	    int j, n;
+	    if (*p == ',')
+	      p++; // skip over the comma char.
+	    if (2 == sscanf(p,"%d%c",&j, &type)) {
+	      if (tolower(type) == 'g') // G for Gaussian blur filtered decimation.
+		downsample = 1; // Someday this could be j-1 for bigger filter.
+	      else if (tolower(type) == 'x') // X for eg. 2x upscale.
+		upscale = j;
+	    }
+	  }
+	  printf("Downsample = (%d, %d)\n", downsample, upscale);
+	break;
+	}
       }
     }
   }
@@ -8868,12 +8950,37 @@ void ParseParams(int *argc, char **argv)
     }
   }
 
+  // If upscaling (in preparation for eventual downsample) then scale up scene.
+  if (upscale) {
+    ldraw_commandline_opts.S *= upscale;
+    lineWidth *= upscale;
+    if (OffScreenRendering || camera_globe_set) // Scale up render window.
+    {
+      camera_distance *= upscale;
+      ldraw_commandline_opts.V_x *= upscale;
+      ldraw_commandline_opts.V_y *= upscale;
+      ldraw_commandline_opts.O.x *= upscale;
+      ldraw_commandline_opts.O.y *= upscale;
+      ldraw_commandline_opts.O.z *= upscale;
+    }
+  }
+
   if (camera_globe_set)
   {				 
     float v[4][4];
     double distance;
     double lo, la;
     double x, y, z;
+
+#if 0
+    // DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG. 
+    // This is a nice spot to add test settings for LPub3d.
+	downsample = 1;
+	ldraw_commandline_opts.S *= 2.0;
+	lineWidth *= 2;
+	// lightposition0[] = { 0.0, 1000.0, 1000.0, 0.0 };
+    // DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG.  DEBUG. 
+#endif
 
     if (camera_distance <= 0.0)
     {
@@ -8931,7 +9038,13 @@ void ParseParams(int *argc, char **argv)
     // L3p puts the origin at the center of model bbox, not ldraw (0,0,0).
     // Maybe I should offset by the center of the model bbox to match it.
     // Unfortunately I don't have that until I parse the model...
-    if (m_viewMatrix == LdrawOblique)
+
+    // When would it not be oblique in parseparams?  ALWAYS switch to Front for -cg.
+    // The real problem here is if someone passed a matrix in via -a.
+    // I'd still be *calling* it oblique, but it could be anything.
+    // Maybe we want to move the model by it and then apply the camera settings.
+    // Gotta think about that.  For now, just switch to front.
+    //if (m_viewMatrix == LdrawOblique) 
     {
       m_viewMatrix = Front;
       parse_view(m_viewMatrix);

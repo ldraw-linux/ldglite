@@ -6,8 +6,11 @@ ENABLE_TILE_RENDERING?=Yes
 ENABLE_OFFSCREEN_RENDERING?=Yes
 ENABLE_TEST_GUI?=Yes
 
-CC=$(TOOLPREFIX)gcc
-CXX=$(CC)
+MYCC?=gcc
+MYCXX?=$(CC)
+
+CC=$(TOOLPREFIX)$(MYCC)
+CXX=$(TOOLPREFIX)$(MYCXX)
 
 
 # PNG output option
@@ -46,10 +49,11 @@ ifdef LDRAWDIR
     LDRAWDIR_FLAGS=-DLDRAWDIR=\"$(LDRAWDIR)\"
 endif
 
-CFLAGS=-g -DUNIX -DUSE_OPENGL -DUSE_L3_PARSER -DUSE_BMP8 -DNEED_MIN_MAX $(PNG_FLAGS) $(TR_FLAGS) $(OFFSCREEN_FLAGS) $(GUI_FLAGS) $(LDRAWDIR_FLAGS)
+
+CFLAGS=-g -DUNIX -DUSE_OPENGL -DUSE_ALPHA_BUFFER -DUSE_L3_PARSER -DUSE_BMP8 $(PNG_FLAGS) $(TR_FLAGS) $(OFFSCREEN_FLAGS) $(GUI_FLAGS) $(LDRAWDIR_FLAGS)
 CXXFLAGS=$(CFLAGS)
 
-SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c lcolors.c y.tab.c lex.yy.c qbuf.c main.c ldglpr.c L3Edit.c L3Math.cpp L3Input.cpp L3View.cpp hoser.c ldglmenu.c plugstub.c $(TR_SRC) $(GUI_SRC)
+SRCS = ldliteVR_main.c platform.c dirscan.c gleps.c camera.c f00QuatC.c quant.c stub.c lcolors.c y.tab.c lex.yy.c qbuf.c main.c ldglpr.c L3Edit.c L3Math.c L3Input.c L3View.c hoser.c ldglmenu.c plugstub.c $(TR_SRC) $(GUI_SRC)
 OBJS = $(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(SRCS)))
 
 all: ldglite
