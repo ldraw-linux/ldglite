@@ -21,7 +21,7 @@ License:	GPL-2.0
 Summary:	LDraw LEGO CAD renderer
 Url:		http://ldglite.sourceforge.net/
 Group:		Productivity/Graphics/CAD
-Source:		ldglite.tar.bz2
+Source:		ldglite___UPSTREAM_VERSION__.orig.tar.gz
 BuildRequires:  ldraw-library >= 2014.02.1
 BuildRequires:	freeglut-devel libpng-devel Mesa-devel gcc-c++
 Requires:       ldraw-library >= 2014.02.1
@@ -36,22 +36,30 @@ LDraw is an open standard for LEGO CAD programs that allow the user to create
 virtual LEGO models and scenes.
 
 %prep
-%setup -q -n ldglite
+%setup -q
 
 __PATCHES_APPLY__
 
 %build
-make -f makefile.linux LDRAWDIR=/usr/share/ldraw
+make -f makefile.linux ldglite
 
 %install
 install -d %{buildroot}/%{_bindir}
 install -m 755 ldglite %{buildroot}/%{_bindir}/ldglite.bin
+ln -s ldglite.bin %{buildroot}/%{_bindir}/l3glite.bin
+ln -s ldglite.bin %{buildroot}/%{_bindir}/l3gledit.bin
 ln -s %{_libexecdir}/ldraw-wrapper %{buildroot}/%{_bindir}/ldglite
+ln -s %{_libexecdir}/ldraw-wrapper %{buildroot}/%{_bindir}/l3glite
+ln -s %{_libexecdir}/ldraw-wrapper %{buildroot}/%{_bindir}/l3gledit
 
 
 %files
 %defattr(-,root,root)
 %{_bindir}/ldglite
 %{_bindir}/ldglite.bin
+%{_bindir}/l3glite
+%{_bindir}/l3glite.bin
+%{_bindir}/l3gledit
+%{_bindir}/l3gledit.bin
 
 %changelog
